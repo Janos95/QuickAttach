@@ -77,14 +77,12 @@ time it makes one deliberate topology change:
 The deterministic sequence begins with a 55 mm gap, approaches the dock with
 constant coupling orientation, changes from a rack weld to magnetic capture,
 changes to the fail-locked positive-lock constraint as the arm withdraws, then
-opens and closes the stock jaw through the unchanged gripper actuator. It exits
-nonzero unless capture, lock, 45+ mm withdrawal, coupling retention, and at
-least 0.8 rad of ID-6 jaw travel are all observed.
-
-The current full-arm run ends in an attached hold after exercising the gripper;
-it does not yet return the tool to the rack. The smaller
-`sim/quick_change_demo.py` covers the complete attach/lock/use/return/release
-state sequence for the isolated coupling.
+opens and closes the stock jaw through the unchanged gripper actuator. It then
+returns the still-locked tool to the rack, switches off the simulated bus,
+opens the rack-actuated lock, and withdraws the bare wrist. It exits nonzero
+unless the complete attach/lock/use/return/release cycle, 45+ mm withdrawal in
+both directions, coupling retention, and at least 0.8 rad of ID-6 jaw travel
+are all observed.
 
 From the repository root:
 

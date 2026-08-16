@@ -34,7 +34,7 @@ GRIPPER_HOLD = 0.15
 GRIPPER_OPEN = 1.25
 GRIPPER_CLOSED = 0.0
 TOOL_SERVO_ID = 6
-DEMO_SECONDS = 7.0
+DEMO_SECONDS = 12.0
 
 
 def _mesh_assets(
@@ -275,8 +275,14 @@ class QuickChangeController:
         self.locked = False
         self.bus_connected = False
         self.simulated_id6_handshake = False
+        self.capture_achieved = False
+        self.lock_achieved = False
+        self.handshake_achieved = False
+        self.released_to_dock = False
         self.gripper_min = float(data.qpos[self.gripper_qpos])
         self.gripper_max = self.gripper_min
+        self.max_locked_position_error = 0.0
+        self.max_locked_angle_error = 0.0
         self.last_phase = ""
 
     def _phase(self, sim_time: float) -> str:
@@ -292,7 +298,15 @@ class QuickChangeController:
             return "ID-6 gripper open"
         if sim_time < 6.5:
             return "ID-6 gripper close"
-        return "attached hold"
+        if sim_time < 7.0:
+            return "attached hold"
+        if sim_time < 8.5:
+            return "locked return to rack"
+        if sim_time < 9.0:
+            return "rack unlock and bus disconnect"
+        if sim_time < 10.5:
+            return "bare wrist withdrawal"
+        return "cycle complete"
 
     def _arm_command(self, sim_time: float) -> np.ndarray:
         if sim_time < 0.5:
@@ -305,6 +319,16 @@ class QuickChangeController:
         if sim_time < 4.5:
             alpha = smoothstep((sim_time - 3.0) / 1.5)
             return CAPTURE_Q + alpha * (PRE_CAPTURE_Q - CAPTURE_Q)
+        if sim_time < 7.0:
+            return PRE_CAPTURE_Q
+        if sim_time < 8.5:
+            alpha = smoothstep((sim_time - 7.0) / 1.5)
+            return PRE_CAPTURE_Q + alpha * (CAPTURE_Q - PRE_CAPTURE_Q)
+        if sim_time < 9.0:
+            return CAPTURE_Q
+        if sim_time < 10.5:
+            alpha = smoothstep((sim_time - 9.0) / 1.5)
+            return CAPTURE_Q + alpha * (PRE_CAPTURE_Q - CAPTURE_Q)
         return PRE_CAPTURE_Q
 
     def update(self) -> None:
@@ -315,14 +339,14 @@ class QuickChangeController:
             self.last_phase = phase
 
         self.data.ctrl[self.arm_actuators] = self._arm_command(sim_time)
-        gripper_command = GRIPPER_HOLD
-        if self.locked and 4.5 <= sim_time < 5.5:
+        gripper_command = float(self.data.qpos[self.gripper_qpos])
+        if self.bus_connected and self.locked and 4.5 <= sim_time < 5.5:
             gripper_command = GRIPPER_OPEN
-        elif self.locked and sim_time >= 5.5:
+        elif self.bus_connected and self.locked and sim_time >= 5.5:
             gripper_command = GRIPPER_CLOSED
         self.data.ctrl[self.gripper_actuator] = gripper_command
 
-        if sim_time >= 2.25 and not self.captured:
+        if sim_time >= 2.25 and not self.captured and not self.released_to_dock:
             position_error, angle_error = pose_error(
                 self.data, self.mating_site, self.tool_body
             )
@@ -332,6 +356,8 @@ class QuickChangeController:
                 self.captured = True
                 self.bus_connected = True
                 self.simulated_id6_handshake = True
+                self.capture_achieved = True
+                self.handshake_achieved = True
                 print(
                     f"[{sim_time:5.2f}s] captured at {position_error * 1000:.2f} mm; "
                     f"simulated TTL handshake exposes gripper servo ID {TOOL_SERVO_ID} "
@@ -342,12 +368,36 @@ class QuickChangeController:
             set_weld(self.model, self.data, "positive_lock", True, update_pose=True)
             set_weld(self.model, self.data, "magnetic_capture", False)
             self.locked = True
+            self.lock_achieved = True
             print(f"[{sim_time:5.2f}s] rack cleared; spring-closed positive lock engaged")
 
-        if self.locked and sim_time >= 4.5:
+        if self.locked:
+            position_error, angle_error = pose_error(
+                self.data, self.mating_site, self.tool_body
+            )
+            self.max_locked_position_error = max(
+                self.max_locked_position_error, position_error
+            )
+            self.max_locked_angle_error = max(
+                self.max_locked_angle_error, angle_error
+            )
+
+        if self.locked and 4.5 <= sim_time < 8.5:
             gripper_value = float(self.data.qpos[self.gripper_qpos])
             self.gripper_min = min(self.gripper_min, gripper_value)
             self.gripper_max = max(self.gripper_max, gripper_value)
+
+        if sim_time >= 8.5 and self.locked and not self.released_to_dock:
+            set_weld(self.model, self.data, "tool_in_dock", True, update_pose=True)
+            set_weld(self.model, self.data, "positive_lock", False)
+            self.locked = False
+            self.captured = False
+            self.bus_connected = False
+            self.simulated_id6_handshake = False
+            self.released_to_dock = True
+            print(
+                f"[{sim_time:5.2f}s] rack cam opened lock; tool docked and ID-6 bus disconnected"
+            )
 
 
 def initialize(model: mujoco.MjModel, data: mujoco.MjData) -> np.ndarray:
@@ -384,10 +434,9 @@ def metrics(
     capture_position: np.ndarray,
 ) -> dict[str, object]:
     tool_position = data.body("tool_plate").xpos.copy()
-    dock_separation = float(np.linalg.norm(tool_position - capture_position))
-    coupling_position_error, coupling_angle_error = pose_error(
-        data, controller.mating_site, controller.tool_body
-    )
+    tool_dock_error = float(np.linalg.norm(tool_position - capture_position))
+    wrist_position = data.site_xpos[controller.mating_site].copy()
+    bare_wrist_withdrawal = float(np.linalg.norm(wrist_position - capture_position))
     gripper_span = controller.gripper_max - controller.gripper_min
     positive_active = bool(data.eq_active[model.equality("positive_lock").id])
     magnetic_active = bool(data.eq_active[model.equality("magnetic_capture").id])
@@ -401,16 +450,21 @@ def metrics(
     )
     success = (
         topology_split
-        and controller.captured
-        and controller.locked
-        and controller.bus_connected
-        and controller.simulated_id6_handshake
-        and positive_active
+        and controller.capture_achieved
+        and controller.lock_achieved
+        and controller.handshake_achieved
+        and controller.released_to_dock
+        and not controller.captured
+        and not controller.locked
+        and not controller.bus_connected
+        and not controller.simulated_id6_handshake
+        and not positive_active
         and not magnetic_active
-        and not dock_active
-        and dock_separation > 0.045
-        and coupling_position_error < 0.003
-        and coupling_angle_error < np.deg2rad(2.0)
+        and dock_active
+        and bare_wrist_withdrawal > 0.045
+        and tool_dock_error < 0.003
+        and controller.max_locked_position_error < 0.003
+        and controller.max_locked_angle_error < np.deg2rad(2.0)
         and gripper_span > 0.80
         and float(data.qpos[controller.gripper_qpos]) < 0.15
     )
@@ -418,13 +472,22 @@ def metrics(
         "success": bool(success),
         "arm_started_without_end_effector": bool(topology_split),
         "tool_servo_id": TOOL_SERVO_ID,
-        "simulated_id6_handshake": controller.simulated_id6_handshake,
+        "capture_achieved": controller.capture_achieved,
+        "positive_lock_achieved": controller.lock_achieved,
+        "simulated_id6_handshake_achieved": controller.handshake_achieved,
+        "released_to_dock": controller.released_to_dock,
         "positive_lock_active": positive_active,
         "magnetic_capture_active": magnetic_active,
         "tool_in_dock_active": dock_active,
-        "dock_withdrawal_mm": round(dock_separation * 1000.0, 2),
-        "coupling_position_error_mm": round(coupling_position_error * 1000.0, 3),
-        "coupling_angle_error_deg": round(float(np.rad2deg(coupling_angle_error)), 3),
+        "bus_connected": controller.bus_connected,
+        "bare_wrist_withdrawal_mm": round(bare_wrist_withdrawal * 1000.0, 2),
+        "tool_dock_position_error_mm": round(tool_dock_error * 1000.0, 3),
+        "max_locked_coupling_error_mm": round(
+            controller.max_locked_position_error * 1000.0, 3
+        ),
+        "max_locked_coupling_error_deg": round(
+            float(np.rad2deg(controller.max_locked_angle_error)), 3
+        ),
         "gripper_joint_min_rad": round(controller.gripper_min, 4),
         "gripper_joint_max_rad": round(controller.gripper_max, 4),
         "gripper_joint_span_rad": round(gripper_span, 4),

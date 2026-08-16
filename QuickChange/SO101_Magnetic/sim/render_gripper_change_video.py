@@ -19,6 +19,7 @@ from numba import njit
 from PIL import Image, ImageDraw, ImageFont
 
 from so101_gripper_change_demo import (
+    DEMO_SECONDS,
     QuickChangeController,
     build_model,
     initialize,
@@ -27,7 +28,7 @@ from so101_gripper_change_demo import (
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_OUTPUT = HERE.parent / "exports" / "so101_mujoco_quickattach_demo.mp4"
-VIDEO_SECONDS = 8.0
+VIDEO_SECONDS = DEMO_SECONDS
 
 
 def _box_triangles(size: np.ndarray) -> np.ndarray:
