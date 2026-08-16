@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+<!--
+  Scene overlay assembled with the calibrated SO-101 model by
+  so101_gripper_change_demo.py.  Keeping this as an overlay avoids maintaining
+  a stale copy of the upstream robot MJCF while still making all quick-change
+  geometry and constraints explicit in XML.
+-->
+<mujoco model="SO-101 detachable stock gripper demo">
+  <compiler angle="radian" meshdir="../exports" autolimits="true"/>
+  <option timestep="0.002" integrator="implicitfast" cone="elliptic"
+          gravity="0 0 -9.81"/>
+  <statistic center="0.20 0 0.18" extent="0.48"/>
+
+  <visual>
+    <headlight diffuse="0.70 0.70 0.70" ambient="0.32 0.32 0.32" specular="0.12 0.12 0.12"/>
+    <rgba haze="0.13 0.16 0.20 1"/>
+    <global azimuth="145" elevation="-20"/>
+  </visual>
+
+  <asset>
+    <mesh name="qc_robot_plate_mesh" file="so101_robot_plate.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="qc_stock_gripper_tool_plate_mesh" file="so101_stock_gripper_tool_plate.stl"
+          scale="0.001 0.001 0.001"/>
+    <mesh name="qc_tool_dock_mesh" file="so101_passive_tool_dock.stl" scale="0.001 0.001 0.001"/>
+
+    <texture type="skybox" builtin="gradient" rgb1="0.27 0.36 0.48" rgb2="0.025 0.03 0.045"
+             width="512" height="3072"/>
+    <texture type="2d" name="qc_floor_grid" builtin="checker" mark="edge"
+             rgb1="0.15 0.17 0.19" rgb2="0.08 0.09 0.11" markrgb="0.28 0.30 0.33"
+             width="300" height="300"/>
+    <material name="qc_floor_grid" texture="qc_floor_grid" texuniform="true" texrepeat="6 6"
+              reflectance="0.10"/>
+    <material name="qc_robot_yellow" rgba="0.96 0.69 0.08 1"/>
+    <material name="qc_tool_blue" rgba="0.10 0.38 0.90 1"/>
+    <material name="qc_dock_dark" rgba="0.16 0.18 0.21 1"/>
+    <material name="qc_magnet" rgba="0.62 0.18 0.82 1" metallic="0.35" roughness="0.25"/>
+    <material name="qc_steel" rgba="0.72 0.75 0.78 1" metallic="0.70" roughness="0.25"/>
+    <material name="qc_lock" rgba="0.10 0.75 0.34 1"/>
+    <material name="qc_contact" rgba="1.0 0.66 0.08 1" metallic="0.65" roughness="0.20"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0.0 -0.3 1.0" dir="0.2 0.2 -1" directional="true"/>
+    <light pos="0.55 0.35 0.55" dir="-0.6 -0.3 -0.6" directional="true"
+           diffuse="0.34 0.34 0.34"/>
+    <camera name="quick_change_overview" pos="0.63 -0.61 0.43"
+            xyaxes="0.70 0.72 0 -0.35 0.34 0.87"/>
+    <geom name="qc_floor" type="plane" pos="0 0 -0.002" size="0.8 0.8 0.04"
+          material="qc_floor_grid"/>
+
+    <!-- The controller places this mocap rack at the reachable capture pose. -->
+    <body name="tool_dock" mocap="true" pos="0.24 0 0.19">
+      <geom type="mesh" mesh="qc_tool_dock_mesh" material="qc_dock_dark"
+            contype="0" conaffinity="0"/>
+      <site name="dock_frame" pos="0 0 0" size="0.002" rgba="0.2 0.9 0.9 1"/>
+    </body>
+
+    <!--
+      Free tool root is the v0.2 tool-plate mating frame.  The Python builder
+      inserts the unmodified stock SO-101 gripper mesh subtree at the marked
+      placeholder after removing it from the wrist.
+    -->
+    <body name="tool_plate" pos="0.24 0 0.19">
+      <freejoint name="tool_plate_free"/>
+      <inertial pos="0 0 0.00475" mass="0.055" diaginertia="0.00004 0.00004 0.00006"/>
+      <geom type="mesh" mesh="qc_stock_gripper_tool_plate_mesh" material="qc_tool_blue"
+            contype="0" conaffinity="0"/>
+      <geom type="box" pos="0 -0.016 0.0015" size="0.006 0.006 0.0015"
+            material="qc_steel" contype="0" conaffinity="0"/>
+      <geom type="box" pos="0 0.016 0.0015" size="0.006 0.006 0.0015"
+            material="qc_steel" contype="0" conaffinity="0"/>
+      <geom type="cylinder" pos="0 -0.010 0.001" size="0.003 0.001"
+            material="qc_steel" contype="0" conaffinity="0"/>
+      <geom type="cylinder" pos="0 0.010 0.001" size="0.003 0.001"
+            material="qc_steel" contype="0" conaffinity="0"/>
+      <site name="tool_mating_face" pos="0 0 0" size="0.002" rgba="0.15 0.65 1 1"/>
+      <body name="stock_gripper_placeholder"/>
+    </body>
+  </worldbody>
+
+  <equality>
+    <weld name="tool_in_dock" body1="tool_dock" body2="tool_plate" active="true"
+          solref="0.003 1" solimp="0.98 0.995 0.001"/>
+    <weld name="magnetic_capture" body1="robot_plate_frame" body2="tool_plate" active="false"
+          solref="0.004 1" solimp="0.95 0.99 0.001"/>
+    <weld name="positive_lock" body1="robot_plate_frame" body2="tool_plate" active="false"
+          solref="0.003 1" solimp="0.98 0.995 0.001"/>
+  </equality>
+
+  <!-- This is metadata for the existing LeRobot/Feetech tool-address concept. -->
+  <custom>
+    <numeric name="tool_servo_id" data="6"/>
+  </custom>
+</mujoco>

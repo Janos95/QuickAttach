@@ -1,0 +1,21 @@
+assembly,quantity,part,specification,source,status_or_note
+robot,1,so101_robot_plate,printed PA12/PA-CF part,exports/so101_robot_plate.step,new
+robot,2,CS-Q-12-12-04-N,12x12x4 mm N35 screw-on magnet,https://www.supermagnete.de/eng/screw-on-neodymium-magnets/screw-on-block-magnet-12-x-12-x-4mm_CS-Q-12-12-04-N,new
+robot,2,ISO 10642 M3x10,countersunk screw for magnet,standard fastener,new
+robot,2,DIN 934 M3,nut for magnet screw,standard fastener,new
+robot,4,M3x10 socket-head,robot plate to existing wrist horn,standard fastener,new; verify engagement/no bottoming
+robot,1,304 stainless lock slider,1.5-1.6 mm sheet,exports/so101_positive_lock_slider_profile.dxf,new; STL is fit-check only
+robot,1,E-GUL4-10,"OD4 x L10 mm, 0.98 N/mm return spring",https://us.misumi-ec.com/vona2/detail/110310903689/?HissuCode=E-GUL4-10,new
+robot,1,M2x6 flat-head,slider guide/retainer,standard fastener,new
+robot,4,7983-1-15-20-75-14-11-0,high-current solder-cup spring pin,https://www.mill-max.com/products/new/high-current-small-scale-spring-loaded-pins,new
+tool,1,so101_stock_gripper_tool_plate,printed PA12/PA-CF part,exports/so101_stock_gripper_tool_plate.step,new
+tool,2,MC-12-12-03,12x12x3 mm Q235 steel magnet target,https://www.supermagnete.de/eng/magnet-counterparts-to-screw-on/metal-plates-with-countersunk-hole-12-x-12-x-3mm_MC-12-12-03,new
+tool,2,ISO 10642 M5x10,countersunk screw for steel target,standard fastener,new
+tool,2,DIN 934 M5,rear captive nut for steel target,standard fastener,new
+tool,2,McMaster 90318A720,M3; 4 mm dia x 5 mm shoulder pull stud,https://www.mcmaster.com/90318A720/,new
+tool,2,DIN 934 M3,"rear captive pull-stud nut, 5.5 AF x 2.4",https://accu-components.com/us/hexagon-nuts/7888-HPN-M3-A2,new
+tool,1,SO101 target PCB,"10x22x1.0 mm FR-4, 2 oz, ENIG",exports/tool_contact_board.kicad_pcb,fabricate
+gripper retrofit,4,Ruthex RX-M3x5.7,heat-set insert,https://www.ruthex.de/en/products/ruthex-gewindeeinsatz-m3-100-stuck-rx-m3x5-7-messing-gewindebuchsen,new
+gripper retrofit,4,M3x6,stock gripper to detachable tool plate,standard fastener,reuse original
+gripper retrofit,1,3-wire adapter harness,GND/+12V/TTL; mating stock connectors,electrical_pinout.csv,new; do not cut stock arm harness
+dock,1,so101_passive_tool_dock,printed PA12/PA-CF part,exports/so101_passive_tool_dock.step,new

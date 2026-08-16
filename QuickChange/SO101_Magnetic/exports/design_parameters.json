@@ -1,0 +1,129 @@
+{
+  "version": "0.2-powered-positive-lock",
+  "units": "mm",
+  "so101_retrofit": {
+    "horn_pattern_square": 9.9,
+    "robot_plate_screws": "4 x M3x10 socket-head",
+    "official_stock_gripper_joint_screws": "4 x M3x6",
+    "uses_existing_arm_holes": true,
+    "permanent_arm_modification": false
+  },
+  "robot_plate": [
+    48.0,
+    48.0,
+    9.5
+  ],
+  "tool_plate": [
+    56.0,
+    50.0,
+    9.5
+  ],
+  "magnet": {
+    "manufacturer": "Webcraft GmbH / supermagnete",
+    "part_number": "CS-Q-12-12-04-N",
+    "ean": "7640172691830",
+    "quantity_per_robot": 2,
+    "centres_xy": [
+      [
+        0.0,
+        -16.0
+      ],
+      [
+        0.0,
+        16.0
+      ]
+    ],
+    "dimensions": [
+      12.0,
+      12.0,
+      4.0
+    ],
+    "fastener_each": "ISO 10642 M3x10 countersunk screw + DIN 934 M3 nut",
+    "catalog_axial_force_each_N": 29.4,
+    "catalog_displacement_force_each_N": 5.88
+  },
+  "steel_target": {
+    "manufacturer": "Webcraft GmbH / supermagnete",
+    "part_number": "MC-12-12-03",
+    "ean": "7640172691892",
+    "quantity_per_tool": 2,
+    "dimensions": [
+      12.0,
+      12.0,
+      3.0
+    ],
+    "fastener_each": "ISO 10642 M5x10 countersunk screw + DIN 934 M5 nut"
+  },
+  "positive_lock": {
+    "type": "internal keyhole slider, spring locked, passively cammed open by dock",
+    "travel": 3.0,
+    "studs": "2 x McMaster 90318A720, M3, 4 mm shoulder dia, 5 mm shoulder length",
+    "stud_retention": "2 x rear-loaded DIN 934 M3 nuts, 5.5 mm AF x 2.4 mm",
+    "slider_material": "1.5-1.6 mm 304 stainless steel; printed copy for fit checks only",
+    "return_spring": "E-GUL4-10",
+    "fails_locked_on_power_loss": true
+  },
+  "electrical": {
+    "contacts": 4,
+    "signals": [
+      "GND",
+      "+12V",
+      "TTL_DATA",
+      "TOOL_ID_SPARE"
+    ],
+    "pogo_pin": "7983-1-15-20-75-14-11-0",
+    "pogo_catalog_max_current_A": 8.0,
+    "pogo_catalog_derated_current_A": 6.4,
+    "ground_first_mate_offset": 0.20000000000000007,
+    "stock_gripper_uses": [
+      "GND",
+      "+12V",
+      "TTL_DATA"
+    ],
+    "tool_board": [
+      10.0,
+      22.0,
+      1.0
+    ],
+    "tool_board_target_pad_x_from_board_center": -1.0,
+    "tool_board_wire_pad_x_from_board_center": 3.5,
+    "wire_pad_diameter_drill": [
+      2.0,
+      1.0
+    ],
+    "tool_board_connection": "direct solder to four plated through holes from rear"
+  },
+  "stock_gripper_adapter": {
+    "insert": "4 x Ruthex RX-M3x5.7 heat-set inserts for the stock gripper",
+    "lock_stud_nuts": "2 x DIN 934 M3 captive nuts",
+    "uses_original_gripper_holes": true,
+    "control": "Feetech motor ID 6 remains on the original half-duplex TTL bus through P1-P3"
+  },
+  "official_component_limits_not_arm_payload": {
+    "STS3215_rated_torque_kg_cm": 10.0,
+    "STS3215_peak_stall_torque_kg_cm": 30.0,
+    "STS3215_peak_stall_current_A": 2.7,
+    "whole_arm_payload_published_by_official_SO101_docs": false
+  },
+  "engineering_envelope": {
+    "servo_rated_torque_Nm": 0.9807,
+    "servo_peak_stall_torque_Nm": 2.942,
+    "proof_to_rated_ratio": 3.0,
+    "magnet_pair_catalog_axial_force_N": 58.8,
+    "magnet_only_ideal_pry_moment_Nm": 0.9408,
+    "edge_reaction_at_stall_envelope_N": 122.6,
+    "approx_reaction_per_lock_stud_N": 61.3,
+    "return_spring_locked_length_mm": 9.4,
+    "return_spring_unlocked_length_mm": 6.4,
+    "return_spring_max_design_deflection_mm": 3.6,
+    "return_spring_max_design_force_N": 3.53,
+    "pogo_force_four_contacts_at_midstroke_N": 2.35
+  },
+  "estimated_solid_volumes_cm3": {
+    "robot_plate": 21.18,
+    "generic_tool_plate": 24.62,
+    "stock_gripper_tool_plate": 25.12,
+    "passive_dock": 21.76,
+    "lock_slider": 0.24
+  }
+}

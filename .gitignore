@@ -1,0 +1,7 @@
+.DS_Store
+.venv/
+__pycache__/
+*.py[cod]
+Simulation/SO101/box_stack_preview.png
+QuickChange/SO101_Magnetic/exports/*.mp4
+QuickChange/SO101_Magnetic/exports/*.gif

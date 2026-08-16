@@ -1,0 +1,14 @@
+{
+  "servo_rated_torque_Nm": 0.9807,
+  "servo_peak_stall_torque_Nm": 2.942,
+  "proof_to_rated_ratio": 3.0,
+  "magnet_pair_catalog_axial_force_N": 58.8,
+  "magnet_only_ideal_pry_moment_Nm": 0.9408,
+  "edge_reaction_at_stall_envelope_N": 122.6,
+  "approx_reaction_per_lock_stud_N": 61.3,
+  "return_spring_locked_length_mm": 9.4,
+  "return_spring_unlocked_length_mm": 6.4,
+  "return_spring_max_design_deflection_mm": 3.6,
+  "return_spring_max_design_force_N": 3.53,
+  "pogo_force_four_contacts_at_midstroke_N": 2.35
+}
