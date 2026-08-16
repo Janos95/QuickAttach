@@ -7,3 +7,6 @@ QuickChange/SO101_Magnetic/exports/*.mp4
 QuickChange/SO101_Magnetic/exports/*.gif
 QuickChange/SO101_Magnetic/exports/*.zip
 QuickChange/SO101_Magnetic/exports/quick_change_overview*.png
+QuickChange/SO101_Magnetic/exports/hardware_*.stl
+QuickChange/SO101_Magnetic/render_animation.py
+Simulation/SO101/assets/*.part

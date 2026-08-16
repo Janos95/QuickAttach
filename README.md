@@ -11,6 +11,10 @@ The same interface carries power and the existing half-duplex TTL bus. The
 first tool can therefore be the standard SO-101 gripper on a detachable adapter
 plate while its STS3215 remains motor ID 6.
 
+The calibrated arm model, mesh assets, and stock-gripper STEP used here are
+derived from TheRobotStudio/SO-ARM100. Exact source revision and license details
+are recorded in the repository-root `THIRD_PARTY_NOTICES.md`.
+
 ## What is where
 
 - **Robot side:** 48 x 48 x 9.5 mm main plate, plus a left electrical wing;

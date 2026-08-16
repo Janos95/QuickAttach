@@ -1,5 +1,8 @@
 # SO101 Robot - URDF and MuJoCo Description
 
+> Modified for QuickAttach: box-stacking demo instructions were added to the
+> upstream SO-101 simulation documentation.
+
 This repository contains the URDF and MuJoCo (MJCF) files for the SO101 robot.
 
 ## Overview
