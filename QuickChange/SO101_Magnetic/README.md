@@ -99,6 +99,18 @@ For CI or a machine without a display:
 .venv/bin/python QuickChange/SO101_Magnetic/sim/so101_gripper_change_demo.py --headless
 ```
 
+To record the same MuJoCo state sequence on a headless machine without EGL,
+OSMesa, X11, or a GPU, use the deterministic CPU z-buffer renderer (system
+`ffmpeg` is required):
+
+```bash
+.venv/bin/python QuickChange/SO101_Magnetic/sim/render_gripper_change_video.py
+```
+
+The recorder produces a split-screen view of the complete arm and a tracked
+coupler close-up. It renders MuJoCo's compiled geometry and live body poses; it
+does not reuse the discarded conceptual animation.
+
 The XML file beside the controller is a scene overlay. The controller merges it
 with the upstream robot in memory so there is no duplicated SO-101 description
 to fall out of sync. `--save-preview PATH.png` is optional and requires a

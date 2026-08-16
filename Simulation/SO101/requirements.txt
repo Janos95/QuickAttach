@@ -2,3 +2,4 @@ mujoco>=3.2,<4
 numpy>=1.26
 Pillow>=10
 cadquery>=2.5,<3
+numba>=0.60
