@@ -32,8 +32,10 @@ plate while its STS3215 remains motor ID 6.
   TTL_DATA, and a spare TOOL_ID line. GND protrudes 0.2 mm farther so it mates
   first and breaks last.
 
-The animation uses purple for the two magnets, silver for their targets and
-pull studs, green for the positive-lock slider, and gold for the four contacts.
+In the CAD and MuJoCo model, purple identifies the two magnets, silver their
+targets and pull studs, green the positive-lock slider, and gold the four
+contacts. Use the full-arm MuJoCo example below as the executable acceptance
+check.
 
 ## Attach and detach sequence
 
@@ -53,6 +55,59 @@ pull studs, green for the positive-lock slider, and gold for the four contacts.
 The MuJoCo model uses conditional welds for capture and lock state. It validates
 this state sequence and geometry; it does not predict magnetic fields, contact
 arcing, printed-part strength, fatigue, or wear.
+
+## Full SO-101 detachable-gripper MuJoCo example
+
+`sim/so101_gripper_change_demo.py` builds on the calibrated upstream
+`Simulation/SO101/so101_new_calib.xml` rather than a simplified arm. At load
+time it makes one deliberate topology change:
+
+- motor 5's `wrist_roll` joint stays on the robot and receives the v0.2 robot
+  plate;
+- the exact stock fixed-gripper and moving-jaw mesh subtree, including the
+  original `gripper` joint and actuator, moves onto
+  `so101_stock_gripper_tool_plate.stl` as a free docked tool;
+- that existing gripper actuator represents the normal Feetech ID-6 control
+  path after the pogo-pin bus is connected.
+
+The deterministic sequence begins with a 55 mm gap, approaches the dock with
+constant coupling orientation, changes from a rack weld to magnetic capture,
+changes to the fail-locked positive-lock constraint as the arm withdraws, then
+opens and closes the stock jaw through the unchanged gripper actuator. It exits
+nonzero unless capture, lock, 45+ mm withdrawal, coupling retention, and at
+least 0.8 rad of ID-6 jaw travel are all observed.
+
+The current full-arm run ends in an attached hold after exercising the gripper;
+it does not yet return the tool to the rack. The smaller
+`sim/quick_change_demo.py` covers the complete attach/lock/use/return/release
+state sequence for the isolated coupling.
+
+From the repository root:
+
+```bash
+.venv/bin/pip install -r Simulation/SO101/requirements.txt
+.venv/bin/python QuickChange/SO101_Magnetic/sim/so101_gripper_change_demo.py
+```
+
+For CI or a machine without a display:
+
+```bash
+.venv/bin/python QuickChange/SO101_Magnetic/sim/so101_gripper_change_demo.py --headless
+```
+
+The XML file beside the controller is a scene overlay. The controller merges it
+with the upstream robot in memory so there is no duplicated SO-101 description
+to fall out of sync. `--save-preview PATH.png` is optional and requires a
+working OpenGL/EGL/OSMesa backend.
+
+This simulation intentionally treats magnetic seating and the positive lock as
+switched weld constraints. It checks kinematics, model topology, sequencing,
+retention, and continued jaw control. It does **not** simulate field strength,
+rack-cam contact, slider motion, electrical hot-plug behavior, compliance,
+strength, fatigue, or wear. The ID-6 handshake is a state-machine gate rather
+than a serial-protocol emulation, and quick-changer/gripper collision geometry
+is disabled, so this demo does not prove physical clearance. The physical
+validation plan below still applies.
 
 ## Retrofitting the standard gripper
 
@@ -175,7 +230,7 @@ Official references: [SO-101 assembly and motor IDs](https://huggingface.co/docs
   endpoints the spring is 9.4 mm locked and 6.4 mm unlocked: 3.6 mm maximum
   compression, leaving 0.4 mm margin to the catalog deflection limit.
 
-## Generate, inspect, simulate, and render
+## Generate, inspect, and simulate
 
 From the repository root:
 
@@ -183,14 +238,14 @@ From the repository root:
 .venv/bin/pip install -r Simulation/SO101/requirements.txt
 .venv/bin/python QuickChange/SO101_Magnetic/generate_cad.py
 .venv/bin/python QuickChange/SO101_Magnetic/load_check.py
-.venv/bin/python QuickChange/SO101_Magnetic/sim/quick_change_demo.py
-.venv/bin/python QuickChange/SO101_Magnetic/render_animation.py
+.venv/bin/python QuickChange/SO101_Magnetic/sim/so101_gripper_change_demo.py --headless
 ```
 
 The CAD generator exports printable STEP/STL parts, a stainless-slider DXF,
 reference models for every selected special component, complete assembly STEP
-files, design and engineering JSON, and PCB files. The MP4 renderer requires
-`ffmpeg` with H.264 support.
+files, design and engineering JSON, and PCB files. The older isolated-coupler
+demo remains useful for constraint debugging, but the full-arm demo is the
+integration example and acceptance check.
 
 ## Required physical validation
 

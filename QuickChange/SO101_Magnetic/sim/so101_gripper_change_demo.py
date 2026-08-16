@@ -274,7 +274,7 @@ class QuickChangeController:
         self.captured = False
         self.locked = False
         self.bus_connected = False
-        self.id6_verified = False
+        self.simulated_id6_handshake = False
         self.gripper_min = float(data.qpos[self.gripper_qpos])
         self.gripper_max = self.gripper_min
         self.last_phase = ""
@@ -285,7 +285,7 @@ class QuickChangeController:
         if sim_time < 2.0:
             return "axial approach"
         if sim_time < 2.9:
-            return "magnetic capture and ID-6 probe"
+            return "magnetic capture and simulated bus gate"
         if sim_time < 4.5:
             return "positive lock and rack withdrawal"
         if sim_time < 5.5:
@@ -331,10 +331,11 @@ class QuickChangeController:
                 set_weld(self.model, self.data, "tool_in_dock", False)
                 self.captured = True
                 self.bus_connected = True
-                self.id6_verified = True
+                self.simulated_id6_handshake = True
                 print(
                     f"[{sim_time:5.2f}s] captured at {position_error * 1000:.2f} mm; "
-                    f"TTL bus found gripper servo ID {TOOL_SERVO_ID} with torque held"
+                    f"simulated TTL handshake exposes gripper servo ID {TOOL_SERVO_ID} "
+                    "with torque held"
                 )
 
         if sim_time >= 2.9 and self.captured and not self.locked:
@@ -403,7 +404,7 @@ def metrics(
         and controller.captured
         and controller.locked
         and controller.bus_connected
-        and controller.id6_verified
+        and controller.simulated_id6_handshake
         and positive_active
         and not magnetic_active
         and not dock_active
@@ -417,7 +418,7 @@ def metrics(
         "success": bool(success),
         "arm_started_without_end_effector": bool(topology_split),
         "tool_servo_id": TOOL_SERVO_ID,
-        "id6_probe_succeeded": controller.id6_verified,
+        "simulated_id6_handshake": controller.simulated_id6_handshake,
         "positive_lock_active": positive_active,
         "magnetic_capture_active": magnetic_active,
         "tool_in_dock_active": dock_active,
