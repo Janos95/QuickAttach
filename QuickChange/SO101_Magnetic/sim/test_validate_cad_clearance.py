@@ -168,6 +168,33 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
         )
         self.assertEqual(result["maximum_sampled_overlap_volume_mm3"], 0.0)
         self.assertEqual(result["sample_step_mm"], 0.1)
+        contract = clearance.CAD.robot_cam_relief_contract()
+        self.assertTrue(contract["through_full_printed_plate_thickness"])
+        self.assertEqual(contract["bounds_native_mm"]["z"], [0.0, 9.5])
+
+    def test_guided_axial_capture_has_continuous_cam_clearance(self) -> None:
+        robot_plate = next(
+            component
+            for component in clearance._robot_side_components()
+            if component.name == "robot_plate"
+        )
+        result = clearance._axial_capture_cam_record(
+            robot_plate, clearance.CAD.positive_lock_cam().val()
+        )
+        self.assertTrue(result["passed"], result)
+        self.assertEqual(result["sample_count"], 151)
+        self.assertEqual(result["guided_open_side_offset_mm"], 0.20)
+        self.assertTrue(
+            math.isclose(result["minimum_sampled_distance_mm"], 0.30, abs_tol=1.0e-12)
+        )
+        self.assertTrue(
+            math.isclose(
+                result["continuous_certified_clearance_mm"],
+                0.25,
+                abs_tol=1.0e-12,
+            )
+        )
+        self.assertEqual(result["maximum_sampled_overlap_volume_mm3"], 0.0)
 
     def test_cam_relief_preserves_slider_and_keyhole_mechanism(self) -> None:
         cad = clearance.CAD
@@ -199,6 +226,38 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
             math.isclose(
                 cad.SLIDER_TAB_END_X + cad.SLIDER_TRAVEL - cad.DOCK_CAM_X_INNER,
                 2.95,
+                abs_tol=1.0e-12,
+            )
+        )
+        preservation = clearance._mechanism_preservation_record()
+        self.assertTrue(preservation["passed"], preservation)
+        self.assertTrue(all(preservation["checks"].values()))
+        self.assertGreaterEqual(
+            preservation["retained_volume_fraction"],
+            clearance.ROBOT_PLATE_MINIMUM_RETAINED_VOLUME_FRACTION,
+        )
+        self.assertTrue(
+            math.isclose(
+                preservation["removed_volume_mm3"],
+                106.30309519747607,
+                abs_tol=1.0e-6,
+            )
+        )
+        self.assertTrue(
+            math.isclose(
+                preservation["relief_contract"][
+                    "minimum_relief_to_stud_well_ligament_mm"
+                ],
+                8.225,
+                abs_tol=1.0e-12,
+            )
+        )
+        self.assertTrue(
+            math.isclose(
+                preservation["relief_contract"][
+                    "minimum_relief_to_slider_lobe_ligament_mm"
+                ],
+                7.15,
                 abs_tol=1.0e-12,
             )
         )

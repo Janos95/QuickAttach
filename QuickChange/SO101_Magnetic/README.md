@@ -34,8 +34,10 @@ are recorded in the repository-root `THIRD_PARTY_NOTICES.md`.
   the M2 guide screw, reacts separation load. Loss of power leaves it locked.
 - **Cam corridor:** the passive cam retains its full `x = 24.05 mm` unlock
   datum. A narrow local recess in the fixed robot plate provides 0.50 mm exact
-  clearance through the complete rack-exit sweep without changing slider
-  travel, keyhole alignment, spring stroke, or the 2.95 mm locked engagement.
+  radial clearance. The same X/Y footprint passes through the complete 9.5 mm
+  printed plate thickness, so the guard applies during axial capture and the
+  complete rack-exit sweep without changing slider travel, keyhole alignment,
+  spring stroke, or the 2.95 mm locked engagement.
 - **Electrical interface:** four Mill-Max pins on 5 mm pitch: GND, +12 V,
   TTL_DATA, and a spare TOOL_ID line. GND protrudes 0.2 mm farther so it mates
   first and breaks last.
@@ -67,8 +69,10 @@ arcing, printed-part strength, fatigue, or wear.
 ## CAD/simulation geometry contract
 
 `generate_cad.py` publishes the exact core dock-stop bounds, stock-gripper STEP
-mount, and robot-plate cam-relief bounds in both `design_parameters.json` and
-`exports/core_cad_manifest.json`. The stock dock stop is not interchangeable
+mount, and full-depth robot-plate cam-relief bounds in both
+`design_parameters.json` and `exports/core_cad_manifest.json`. The relief
+contract also records the 0.20 mm guided approach offset and retained 8.225 mm
+stud-well / 7.150 mm slider-lobe ligaments. The stock dock stop is not interchangeable
 with the spoon/whisk stops: core bounds are `X[-45,37]`, `Y[26,32]`,
 `Z[-3,12.5]` mm, while the two-bay matcha package publishes its own per-bay
 contracts. Simulation builders must consume the matching contract rather than
@@ -79,7 +83,9 @@ transform and the released CAD datum. `sim/validate_cad_clearance.py` records
 that composed transform and rejects a nonzero composition residual. It also
 checks the complete 0–80 mm rack path, using a focused 0.10 mm grid for the cam
 corridor; the 0.50 mm sampled clearance yields a conservative 0.45 mm
-continuous certificate against the 0.20 mm manufacturing floor.
+continuous certificate. A separate 15→0 mm axial-capture sweep uses the
+published 0.20 mm open-side offset and certifies 0.25 mm continuous clearance
+against the 0.20 mm manufacturing floor.
 
 Core exports are timestamp-canonicalized and hash-closed. To verify byte
 reproducibility in two temporary directories, run `generate_cad.py` twice with

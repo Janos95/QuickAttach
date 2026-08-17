@@ -147,13 +147,26 @@ ROBOT_CAM_RELIEF_X_MIN = DOCK_CAM_X_INNER - ROBOT_CAM_CLEARANCE_MM
 ROBOT_CAM_RELIEF_Y_MIN = DOCK_CAM_Y_MIN - ROBOT_CAM_CLEARANCE_MM
 # During rack exit the cam's 24.05 mm tip traverses the plate toward +Y.
 # Carry the narrow recess through the complete plate edge, plus the same
-# radial guard band, so the clearance is continuous rather than seated-only.
+# radial guard band.  The recess also spans the complete 9.5 mm printed plate
+# thickness: limiting it to the cam's seated Z envelope left only the 0.05 mm
+# outer-edge cap clearance while the robot approached axially.  The full-depth
+# cut preserves the slider/keyhole datums while making the same 0.50 mm radial
+# guard authoritative during both axial capture and rack exit.
 ROBOT_CAM_RELIEF_Y_MAX = ROBOT_HEIGHT / 2.0 + ROBOT_CAM_CLEARANCE_MM
-ROBOT_CAM_RELIEF_Z_MIN = (
-    PLATE_THICKNESS + DOCK_CAM_Z_MIN - ROBOT_CAM_CLEARANCE_MM
+ROBOT_CAM_RELIEF_Z_MIN = 0.0
+ROBOT_CAM_RELIEF_Z_MAX = PLATE_THICKNESS
+ROBOT_CAM_GUIDED_APPROACH_OFFSET_MM = 0.20
+
+# Feature-to-relief ligaments are public mechanism-preservation invariants.
+# The right stud well is the closest fixed functional cut; the right slider
+# lobe is the closest moving lock feature.  Neither datum is moved by the
+# relief correction.
+ROBOT_STUD_WELL_RADIUS = (KEYHOLE_ENTRY_DIAMETER + 0.15) / 2.0
+ROBOT_CAM_RELIEF_TO_STUD_WELL_LIGAMENT_MM = ROBOT_CAM_RELIEF_X_MIN - (
+    LOCK_STUD_X + ROBOT_STUD_WELL_RADIUS
 )
-ROBOT_CAM_RELIEF_Z_MAX = (
-    PLATE_THICKNESS + DOCK_CAM_Z_MIN + DOCK_CAM_THICKNESS + ROBOT_CAM_CLEARANCE_MM
+ROBOT_CAM_RELIEF_TO_SLIDER_LOBE_LIGAMENT_MM = ROBOT_CAM_RELIEF_X_MIN - (
+    LOCK_STUD_X + SLIDER_LOBE_RADIUS
 )
 
 # Released core stock-gripper dock stop.  Spoon and whisk stops belong to the
@@ -538,6 +551,34 @@ def stock_gripper_mount_contract() -> dict[str, object]:
         "fixed_step_tool_local_pos_mm": list(STOCK_FIXED_STEP_TOOL_LOCAL_POS_MM),
         "fixed_step_tool_local_quat_wxyz": list(
             STOCK_FIXED_STEP_TOOL_LOCAL_QUAT_WXYZ
+        ),
+    }
+
+
+def robot_cam_relief_contract() -> dict[str, object]:
+    """Return the complete fixed-plate/cam clearance source contract."""
+
+    return {
+        "required_clearance_mm": ROBOT_CAM_CLEARANCE_MM,
+        "bounds_native_mm": {
+            "x": [ROBOT_CAM_RELIEF_X_MIN, ROBOT_CAM_RELIEF_X_MAX],
+            "y": [ROBOT_CAM_RELIEF_Y_MIN, ROBOT_CAM_RELIEF_Y_MAX],
+            "z": [ROBOT_CAM_RELIEF_Z_MIN, ROBOT_CAM_RELIEF_Z_MAX],
+        },
+        "through_full_printed_plate_thickness": (
+            ROBOT_CAM_RELIEF_Z_MIN == 0.0
+            and ROBOT_CAM_RELIEF_Z_MAX == PLATE_THICKNESS
+        ),
+        "guided_axial_approach_offset_mm": ROBOT_CAM_GUIDED_APPROACH_OFFSET_MM,
+        "cam_inner_x_mm": DOCK_CAM_X_INNER,
+        "slider_travel_mm": SLIDER_TRAVEL,
+        "stud_centres_x_mm": [-LOCK_STUD_X, LOCK_STUD_X],
+        "stud_well_radius_mm": ROBOT_STUD_WELL_RADIUS,
+        "minimum_relief_to_stud_well_ligament_mm": (
+            ROBOT_CAM_RELIEF_TO_STUD_WELL_LIGAMENT_MM
+        ),
+        "minimum_relief_to_slider_lobe_ligament_mm": (
+            ROBOT_CAM_RELIEF_TO_SLIDER_LOBE_LIGAMENT_MM
         ),
     }
 
@@ -930,16 +971,7 @@ def write_core_manifest(output_dir: Path = EXPORT_DIR) -> dict[str, object]:
             "sha256": _sha256(Path(__file__)),
         },
         "contracts": {
-            "robot_plate_cam_relief": {
-                "required_clearance_mm": ROBOT_CAM_CLEARANCE_MM,
-                "bounds_native_mm": {
-                    "x": [ROBOT_CAM_RELIEF_X_MIN, ROBOT_CAM_RELIEF_X_MAX],
-                    "y": [ROBOT_CAM_RELIEF_Y_MIN, ROBOT_CAM_RELIEF_Y_MAX],
-                    "z": [ROBOT_CAM_RELIEF_Z_MIN, ROBOT_CAM_RELIEF_Z_MAX],
-                },
-                "cam_inner_x_mm": DOCK_CAM_X_INNER,
-                "slider_travel_mm": SLIDER_TRAVEL,
-            },
+            "robot_plate_cam_relief": robot_cam_relief_contract(),
             "core_dock_stop": core_dock_stop_spec(),
             "stock_gripper_mount": stock_gripper_mount_contract(),
         },
@@ -1335,11 +1367,10 @@ def main(argv: list[str] | None = None) -> None:
                     DOCK_CAM_Z_MIN + DOCK_CAM_THICKNESS,
                 ],
                 "robot_plate_required_clearance_mm": ROBOT_CAM_CLEARANCE_MM,
-                "robot_plate_relief_bounds_native_mm": {
-                    "x": [ROBOT_CAM_RELIEF_X_MIN, ROBOT_CAM_RELIEF_X_MAX],
-                    "y": [ROBOT_CAM_RELIEF_Y_MIN, ROBOT_CAM_RELIEF_Y_MAX],
-                    "z": [ROBOT_CAM_RELIEF_Z_MIN, ROBOT_CAM_RELIEF_Z_MAX],
-                },
+                "robot_plate_relief_bounds_native_mm": (
+                    robot_cam_relief_contract()["bounds_native_mm"]
+                ),
+                "robot_plate_relief": robot_cam_relief_contract(),
             },
         },
         "magnet": {
