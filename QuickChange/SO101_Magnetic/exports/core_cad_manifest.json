@@ -62,13 +62,22 @@
           24.5
         ],
         "z": [
-          4.85,
-          8.05
+          0.0,
+          9.5
         ]
       },
       "cam_inner_x_mm": 24.05,
+      "guided_axial_approach_offset_mm": 0.2,
+      "minimum_relief_to_slider_lobe_ligament_mm": 7.150000000000002,
+      "minimum_relief_to_stud_well_ligament_mm": 8.225000000000001,
       "required_clearance_mm": 0.5,
-      "slider_travel_mm": 3.0
+      "slider_travel_mm": 3.0,
+      "stud_centres_x_mm": [
+        -12.0,
+        12.0
+      ],
+      "stud_well_radius_mm": 3.325,
+      "through_full_printed_plate_thickness": true
     },
     "stock_gripper_mount": {
       "fixed_step_assembly_pos_mm": [
@@ -103,10 +112,10 @@
       "sha256": "d049abac30a46e681d8ae9a6c7fc064376984620c20e5dafb23e5197e4b828f3"
     },
     {
-      "bytes": 5604,
+      "bytes": 6335,
       "path": "QuickChange/SO101_Magnetic/exports/design_parameters.json",
       "role": "design_parameters",
-      "sha256": "dd27af35bfda441458d922fa831a4720bf5f8f220b3d87555ddf50e34e0c4e41"
+      "sha256": "38518a23085e0e6e90de93737dde43610464cd406ff4dd3bd2cea7bb4c7f4801"
     },
     {
       "bytes": 347,
@@ -187,28 +196,28 @@
       "sha256": "1fa42f24121b8d4d8b663d7ffefe12e61d5aacada197108e55b54c622b9725af"
     },
     {
-      "bytes": 1026648,
+      "bytes": 1011094,
       "path": "QuickChange/SO101_Magnetic/exports/so101_quick_change_assembly.step",
       "role": "complete_assembly_step",
-      "sha256": "03d4204e85519cfb88ee4f230cb75d8242307004cc19efc93e1d2acd5504196e"
+      "sha256": "e0f78fdd54fa03e5760196db24ed0d7e3c3ffc94c3c0a86da5a26352c50f9f4b"
     },
     {
-      "bytes": 378343,
+      "bytes": 363394,
       "path": "QuickChange/SO101_Magnetic/exports/so101_robot_plate.step",
       "role": "exact_cad_step",
-      "sha256": "a23866fb45be3aff64c13296a27de86a6f50c5b81d422b8355a0d53741bfd44d"
+      "sha256": "5fb829aa2334b975141e768f4bb0fea752e11832017947dc8b45e561478823bd"
     },
     {
-      "bytes": 642484,
+      "bytes": 638684,
       "path": "QuickChange/SO101_Magnetic/exports/so101_robot_plate.stl",
       "role": "tessellated_mesh_export",
-      "sha256": "ae7e415b7292a2e314b5d4f11c26f02b1dc1adbd45d21ae129ce2a0f9a137486"
+      "sha256": "dc6456400ce2f0e3d6101b44cc9e55f88c8565b6be3e6d3e731d14b9110506c9"
     },
     {
-      "bytes": 3324947,
+      "bytes": 3309398,
       "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_retrofit_assembly.step",
       "role": "complete_assembly_step",
-      "sha256": "286afe0afb4f19a2562c58610554172c594a5f05381ec0fd0c53e4883b815482"
+      "sha256": "f212ec0736413844da47df8897a606361b5d9530d81902114804107bdb9704b1"
     },
     {
       "bytes": 249124,
@@ -260,11 +269,11 @@
     }
   ],
   "generator": {
-    "bytes": 55780,
+    "bytes": 57128,
     "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-    "sha256": "7a1be4680e5ad98050040b09d269c900375f6bd96f292865c31336e2765c0db0"
+    "sha256": "7f7d0bbf99a4e06add7fc183a23f53bdcc56859375ba640115eb61986f774998"
   },
-  "inventory_sha256": "3f4d0cdbc4fe04ddc90ed545a2f6e6621d01098d2afd8afeab185ac5c39dad83",
+  "inventory_sha256": "caa5651d64ebb9380842217cceb129abe243830c4be2c4be4119032e8b83474d",
   "schema_version": "1.0",
   "units": "mm"
 }

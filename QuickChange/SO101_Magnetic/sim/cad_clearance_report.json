@@ -1,9 +1,9 @@
 {
   "authorities": {
     "cad_generator": {
-      "bytes": 55780,
+      "bytes": 57128,
       "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-      "sha256": "7a1be4680e5ad98050040b09d269c900375f6bd96f292865c31336e2765c0db0"
+      "sha256": "7f7d0bbf99a4e06add7fc183a23f53bdcc56859375ba640115eb61986f774998"
     },
     "calibrated_robot_xml": {
       "bytes": 13921,
@@ -11,15 +11,15 @@
       "sha256": "d75253eb568e8a7214db9c631ab7bed4217f608a26f7276ebe9a7636cac82580"
     },
     "core_cad_manifest": {
-      "bytes": 8415,
+      "bytes": 8751,
       "path": "QuickChange/SO101_Magnetic/exports/core_cad_manifest.json",
-      "sha256": "fd4d46ce92f3b104f1847b17e3b8f26c868e2fe98c1f850ab1f8ca1c189b09dd"
+      "sha256": "b43450f7ca11b38347f4989ae668a9ad392f2ea94187809d29d72cc38bfe149a"
     },
     "core_exports": [
       {
-        "bytes": 378343,
+        "bytes": 363394,
         "path": "QuickChange/SO101_Magnetic/exports/so101_robot_plate.step",
-        "sha256": "a23866fb45be3aff64c13296a27de86a6f50c5b81d422b8355a0d53741bfd44d"
+        "sha256": "5fb829aa2334b975141e768f4bb0fea752e11832017947dc8b45e561478823bd"
       },
       {
         "bytes": 249124,
@@ -32,9 +32,9 @@
         "sha256": "5dfe8ceee800063a188b2491578811f88e46ca0f4548120254d81b9ecf548a48"
       },
       {
-        "bytes": 3324947,
+        "bytes": 3309398,
         "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_retrofit_assembly.step",
-        "sha256": "286afe0afb4f19a2562c58610554172c594a5f05381ec0fd0c53e4883b815482"
+        "sha256": "f212ec0736413844da47df8897a606361b5d9530d81902114804107bdb9704b1"
       }
     ],
     "fixed_gripper_stl_crosscheck": {
@@ -53,10 +53,33 @@
       "sha256": "b7f9d59f7991f425fff784eab07f0bf65471903dd6d6177e7cb109bebcd02b35"
     },
     "validator": {
-      "bytes": 55478,
+      "bytes": 63677,
       "path": "QuickChange/SO101_Magnetic/sim/validate_cad_clearance.py",
-      "sha256": "b4a3b5aa39ad5787f342b10fa1a99c5f09cededa8147e4758f1e28fd32957265"
+      "sha256": "fe9d64f6c334308e2f0b826707cdeaa28d5b8b51f2c30cca491e76e01bfd5818"
     }
+  },
+  "axial_capture_sweep": {
+    "axis_dock_local": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "component": "robot_plate",
+    "continuous_certified_clearance_mm": 0.2500000000000043,
+    "dock_component": "positive_lock_cam",
+    "guided_open_side_offset_mm": 0.2,
+    "maximum_between_sample_motion_bound_mm": 0.05,
+    "maximum_sampled_overlap_volume_mm3": 0.0,
+    "method": "occt_brep_distance_with_near_witness_boolean",
+    "minimum_sampled_distance_mm": 0.30000000000000426,
+    "passed": true,
+    "preseat_end_mm": 0.0,
+    "preseat_start_mm": 15.0,
+    "sample_count": 151,
+    "sample_step_mm": 0.1,
+    "sampled_preseat_offsets_sha256": "90557260fa94cae26d560e574f0591856be0222645de3dea7cfc6862c87ccc87",
+    "semantics": "forbidden_cam_clearance_during_guided_axial_capture",
+    "witness_preseat_offset_mm": 4.1
   },
   "blockers": [],
   "cam_actuation_diagnostics": [
@@ -78,9 +101,9 @@
   "core_cad_manifest_validation": {
     "errors": [],
     "manifest": {
-      "bytes": 8415,
+      "bytes": 8751,
       "path": "QuickChange/SO101_Magnetic/exports/core_cad_manifest.json",
-      "sha256": "fd4d46ce92f3b104f1847b17e3b8f26c868e2fe98c1f850ab1f8ca1c189b09dd"
+      "sha256": "b43450f7ca11b38347f4989ae668a9ad392f2ea94187809d29d72cc38bfe149a"
     },
     "passed": true
   },
@@ -185,6 +208,111 @@
       "target_screw_1",
       "target_screw_2"
     ]
+  },
+  "mechanism_preservation": {
+    "checks": {
+      "keyhole_neck_clears_shoulder": true,
+      "keyhole_neck_retains_head": true,
+      "locked_cam_engagement_preserved": true,
+      "relief_spans_full_printed_plate_thickness": true,
+      "robot_plate_is_single_valid_solid": true,
+      "robot_plate_retains_minimum_volume_fraction": true,
+      "slider_lobe_ligament_preserved": true,
+      "slider_source_bounds_preserved": true,
+      "slider_source_volume_preserved": true,
+      "stud_keyhole_centres_aligned": true,
+      "stud_well_ligament_preserved": true,
+      "unlocked_cam_gap_preserved": true
+    },
+    "keyhole_entry_diameter_mm": 6.5,
+    "keyhole_neck_width_mm": 4.25,
+    "locked_slider_cam_overlap_volume_mm3": 5.135937500000003,
+    "passed": true,
+    "pre_full_depth_relief_baseline_volume_mm3": 21130.316397677383,
+    "relief_contract": {
+      "bounds_native_mm": {
+        "x": [
+          23.55,
+          25.0
+        ],
+        "y": [
+          -16.5,
+          24.5
+        ],
+        "z": [
+          0.0,
+          9.5
+        ]
+      },
+      "cam_inner_x_mm": 24.05,
+      "guided_axial_approach_offset_mm": 0.2,
+      "minimum_relief_to_slider_lobe_ligament_mm": 7.150000000000002,
+      "minimum_relief_to_stud_well_ligament_mm": 8.225000000000001,
+      "required_clearance_mm": 0.5,
+      "slider_travel_mm": 3.0,
+      "stud_centres_x_mm": [
+        -12.0,
+        12.0
+      ],
+      "stud_well_radius_mm": 3.325,
+      "through_full_printed_plate_thickness": true
+    },
+    "removed_volume_mm3": 106.30309519747607,
+    "retained_volume_fraction": 0.9949691668976068,
+    "robot_plate_bbox": {
+      "x_mm": [
+        -36.0,
+        24.0
+      ],
+      "y_mm": [
+        -24.0,
+        24.0
+      ],
+      "z_mm": [
+        0.0,
+        13.0
+      ]
+    },
+    "robot_plate_volume_mm3": 21024.013302479907,
+    "robot_stud_well_centres_xy_mm": [
+      [
+        -12.0,
+        0.0
+      ],
+      [
+        12.0,
+        0.0
+      ]
+    ],
+    "slider_bbox_native_mm": {
+      "x_mm": [
+        -16.4,
+        24.0
+      ],
+      "y_mm": [
+        -4.4,
+        4.4
+      ],
+      "z_mm": [
+        0.0,
+        1.6
+      ]
+    },
+    "slider_travel_mm": 3.0,
+    "slider_volume_mm3": 237.20848051509753,
+    "stud_centres_xy_mm": [
+      [
+        -12.0,
+        0.0
+      ],
+      [
+        12.0,
+        0.0
+      ]
+    ],
+    "stud_head_diameter_mm": 6.0,
+    "stud_shoulder_diameter_mm": 4.0,
+    "unlocked_slider_to_cam_gap_mm": 0.05000000000000071
   },
   "mount_composition": {
     "calibrated_xml_transform_chain": {
@@ -325,7 +453,7 @@
   },
   "passed": true,
   "release_ready": true,
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "stop_envelope": {
     "component_results": [
       {
@@ -672,12 +800,17 @@
     "unlocked_tab_to_cam_gap_mm": 0.05000000000000071
   },
   "thresholds": {
+    "axial_capture_guided_offset_mm": 0.2,
+    "axial_capture_preseat_mm": 15.0,
+    "axial_capture_sample_step_mm": 0.1,
     "manufacturing_clearance_mm": 0.2,
     "minimum_stud_to_cam_x_margin_mm": 1.0,
     "numeric_distance_tolerance_mm": 0.001,
     "overlap_volume_tolerance_mm3": 1e-06,
     "robot_plate_cam_required_clearance_mm": 0.5,
     "robot_plate_cam_sample_step_mm": 0.1,
+    "robot_plate_minimum_functional_ligament_mm": 5.0,
+    "robot_plate_minimum_retained_volume_fraction": 0.99,
     "stop_gap_range_mm": [
       0.5,
       1.5
@@ -687,7 +820,7 @@
   "validation": {
     "all_source_hashes_present": true,
     "failed_pair_result_count": 0,
-    "machine_json_canonical_sha256_without_this_field": "5e14fb38b365e3d397e3c054a544ef2290d6d340ebaaf224e683a6aff98bcf56",
+    "machine_json_canonical_sha256_without_this_field": "890b0216d9cedf81d405d553e96881c5d2c61bd4a4d1bfbd18a315d1bf506ffc",
     "pair_result_count": 37
   },
   "withdrawal_sweep": {

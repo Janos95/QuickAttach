@@ -127,9 +127,37 @@
           24.5
         ],
         "z": [
-          4.85,
-          8.05
+          0.0,
+          9.5
         ]
+      },
+      "robot_plate_relief": {
+        "required_clearance_mm": 0.5,
+        "bounds_native_mm": {
+          "x": [
+            23.55,
+            25.0
+          ],
+          "y": [
+            -16.5,
+            24.5
+          ],
+          "z": [
+            0.0,
+            9.5
+          ]
+        },
+        "through_full_printed_plate_thickness": true,
+        "guided_axial_approach_offset_mm": 0.2,
+        "cam_inner_x_mm": 24.05,
+        "slider_travel_mm": 3.0,
+        "stud_centres_x_mm": [
+          -12.0,
+          12.0
+        ],
+        "stud_well_radius_mm": 3.325,
+        "minimum_relief_to_stud_well_ligament_mm": 8.225000000000001,
+        "minimum_relief_to_slider_lobe_ligament_mm": 7.150000000000002
       }
     }
   },
@@ -235,7 +263,7 @@
     "pogo_force_four_contacts_at_midstroke_N": 2.35
   },
   "estimated_solid_volumes_cm3": {
-    "robot_plate": 21.13,
+    "robot_plate": 21.02,
     "generic_tool_plate": 24.62,
     "stock_gripper_tool_plate": 25.12,
     "passive_dock": 21.76,
