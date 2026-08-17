@@ -56,6 +56,18 @@ DEVELOPMENT_TESTS = (
         "test_production_pogo_authority_is_hash_bound_physical_and_qualified",
     ),
     qualified(
+        "PogoRuntimeAuthorityTests",
+        "test_pure_runtime_contract_rejects_legacy_frozen_and_cross_signal_models",
+    ),
+    qualified(
+        "PogoRuntimeAuthorityTests",
+        "test_dynamic_evidence_is_bounded_and_rejects_false_authority",
+    ),
+    qualified(
+        "PogoRuntimeAuthorityTests",
+        "test_compiled_runtime_geometry_fk_and_bus_are_exact",
+    ),
+    qualified(
         "ControllerSourceSafetyTests",
         "test_controller_call_graph_never_teleports_physical_state",
     ),

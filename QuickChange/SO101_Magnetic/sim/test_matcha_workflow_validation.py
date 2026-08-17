@@ -97,6 +97,30 @@ POGO_SIGNAL_CENTRES_MM = {
     "TOOL_ID_SPARE": [-31.0, 7.5],
 }
 POGO_STANDARD_SIGNALS = ["+12V", "TTL_DATA", "TOOL_ID_SPARE"]
+POGO_RUNTIME_SIGNAL_MAP = {
+    "ground": "GND",
+    "power": "+12V",
+    "data": "TTL_DATA",
+    "id": "TOOL_ID_SPARE",
+}
+POGO_RUNTIME_FIXED_SEGMENTS = (
+    ("solder_cup", "fixed_shell_solder_cup"),
+    (
+        "cup_to_knurl_transition_bound",
+        "fixed_shell_cup_to_knurl_transition_bound",
+    ),
+    ("knurl", "fixed_shell_knurl"),
+    ("shoulder", "shoulder_stop"),
+    ("plunger_side_fixed_features", "fixed_shell_plunger_side_fixed_features"),
+)
+POGO_RUNTIME_RELEASE_BLOCKERS = [
+    "ground_first_mate_tolerance_stack_unqualified",
+    "knurl_press_fit_process_and_pullout_unqualified",
+    "installed_electrical_cycle_reliability_unqualified",
+    "pogo_mass_properties_unqualified",
+    "pogo_spring_force_curve_unqualified",
+    "pogo_damping_unqualified",
+]
 POGO_LEDGER_PATH = (
     MAGNETIC_ROOT
     / "source_authority"
@@ -715,6 +739,378 @@ def canonical_json_sha256(value: Any) -> str:
             value, sort_keys=True, separators=(",", ":"), allow_nan=False
         ).encode()
     ).hexdigest()
+
+
+def _authority_file_record(path: Path) -> dict[str, Any]:
+    return {
+        "path": path.relative_to(REPOSITORY_ROOT).as_posix(),
+        "bytes": path.stat().st_size,
+        "sha256": sha256_file(path),
+    }
+
+
+def expected_pogo_runtime_geometry_contract(cad: ModuleType) -> dict[str, Any]:
+    """Compose the runtime geometry contract only from hash-bound CAD facts."""
+
+    source = cad.pogo_interface_authority_contract()
+    profile = source["dimensioned_profile"]
+    source_segments = {
+        segment["name"]: segment
+        for segment in profile["fixed_shell_collision_envelope_segments"]
+    }
+    datums = {
+        datum["signal"]: datum
+        for datum in source["selected_mounting_design"]["installed_datums"]
+    }
+    signals: dict[str, Any] = {}
+    for runtime_signal, source_signal in POGO_RUNTIME_SIGNAL_MAP.items():
+        datum = datums[source_signal]
+        fixed_body_name = f"qc_pogo_{runtime_signal}_fixed_shell_body"
+        fixed_segments = []
+        for source_name, runtime_suffix in POGO_RUNTIME_FIXED_SEGMENTS:
+            segment = source_segments[source_name]
+            z_min_mm, z_max_mm = [float(value) for value in segment["z_bounds_mm"]]
+            diameter_mm = float(segment["outer_diameter_mm"])
+            fixed_segments.append(
+                {
+                    "source_segment": source_name,
+                    "name": f"qc_col_pogo_{runtime_signal}_{runtime_suffix}",
+                    "geom_type": "cylinder",
+                    "local_pos_m": [0.0, 0.0, (z_min_mm + z_max_mm) / 2000.0],
+                    "size_m": [diameter_mm / 2000.0, (z_max_mm - z_min_mm) / 2000.0],
+                    "bus_contact_eligible": False,
+                }
+            )
+        fixed_length_m = float(profile["fixed_shell_length_mm"]) / 1000.0
+        exposed_length_m = float(profile["maximum_exposed_plunger_mm"]) / 1000.0
+        plunger_diameter_m = (
+            float(profile["moving_plunger"]["outer_diameter_mm"]) / 1000.0
+        )
+        range_max_m = float(source["stroke"]["maximum_full_stroke_mm"]) / 1000.0
+        signals[runtime_signal] = {
+            "source_signal": source_signal,
+            "installed_datum": datum,
+            "fixed_body": {
+                "name": fixed_body_name,
+                "parent": "robot_plate_frame",
+                "pos_m": [
+                    float(datum["centre_xy_mm"][0]) / 1000.0,
+                    float(datum["centre_xy_mm"][1]) / 1000.0,
+                    float(datum["base_z_mm"]) / 1000.0,
+                ],
+                "quat_wxyz": [1.0, 0.0, 0.0, 0.0],
+            },
+            "fixed_segments": fixed_segments,
+            "plunger": {
+                "body_name": f"qc_pogo_{runtime_signal}_plunger_body",
+                "parent": fixed_body_name,
+                "local_pos_m": [0.0, 0.0, fixed_length_m],
+                "quat_wxyz": [1.0, 0.0, 0.0, 0.0],
+                "joint_name": f"qc_pogo_{runtime_signal}_plunger",
+                "joint_type": "slide",
+                "axis": [0.0, 0.0, -1.0],
+                "range_m": [0.0, range_max_m],
+                "geom_name": f"qc_col_pogo_{runtime_signal}_plunger",
+                "geom_type": "cylinder",
+                "geom_local_pos_m": [0.0, 0.0, exposed_length_m / 2.0],
+                "geom_size_m": [plunger_diameter_m / 2.0, exposed_length_m / 2.0],
+                "bus_contact_eligible": True,
+            },
+        }
+    return {
+        "schema_version": "1.0",
+        "source_binding": {
+            "ledger_file": _authority_file_record(POGO_LEDGER_PATH),
+            "generator_file": _authority_file_record(MAGNETIC_ROOT / "generate_cad.py"),
+            "canonical_contract_sha256": canonical_json_sha256(source),
+        },
+        "runtime_to_source_signal": dict(POGO_RUNTIME_SIGNAL_MAP),
+        "signals": signals,
+        "dynamics_authority": {
+            "geometry_and_datum_authority": True,
+            "mass_properties_authority": False,
+            "spring_force_curve_authority": False,
+            "damping_authority": False,
+            "ground_first_mate_tolerance_stack_qualified": False,
+            "blockers": list(POGO_RUNTIME_RELEASE_BLOCKERS),
+            "release_ready": False,
+        },
+        "passed": True,
+        "release_ready": False,
+    }
+
+
+def _evidence_mismatches(observed: Any, expected: Any, path: str = "root") -> list[str]:
+    if isinstance(expected, bool) or expected is None or isinstance(expected, str):
+        return [] if observed == expected else [path]
+    if isinstance(expected, (int, float)):
+        return [] if _number_matches(observed, float(expected)) else [path]
+    if isinstance(expected, list):
+        if not isinstance(observed, list) or len(observed) != len(expected):
+            return [path]
+        return [
+            mismatch
+            for index, (left, right) in enumerate(
+                zip(observed, expected, strict=True)
+            )
+            for mismatch in _evidence_mismatches(left, right, f"{path}[{index}]")
+        ]
+    if isinstance(expected, dict):
+        if not isinstance(observed, dict) or set(observed) != set(expected):
+            return [path]
+        return [
+            mismatch
+            for key, value in expected.items()
+            for mismatch in _evidence_mismatches(
+                observed[key], value, f"{path}.{key}"
+            )
+        ]
+    return [] if observed == expected else [path]
+
+
+def pogo_runtime_geometry_contract_errors(
+    record: Any,
+    cad: ModuleType,
+    ledger: dict[str, Any],
+) -> list[str]:
+    source = cad.pogo_interface_authority_contract()
+    errors = [
+        f"source:{error}"
+        for error in pogo_authority_contract_errors(
+            source, ledger, require_release_ready=False
+        )
+    ]
+    if not isinstance(record, dict):
+        return [*errors, "runtime_contract_missing"]
+    return [
+        *errors,
+        *[
+            f"runtime:{path}"
+            for path in _evidence_mismatches(
+                record, expected_pogo_runtime_geometry_contract(cad)
+            )
+        ],
+    ]
+
+
+def expected_pogo_dynamic_evidence(
+    runtime_contract: dict[str, Any],
+) -> dict[str, Any]:
+    """Build a tiny endpoint trace that exercises evidence validation only.
+
+    This is deliberately not a manufacturer dynamics qualification.  Its two
+    samples prove that the evidence schema is tied to the runtime contract and
+    that the prismatic FK is interpreted consistently at both joint limits.
+    """
+
+    timestep_s = 0.00025
+    signals: dict[str, Any] = {}
+    for runtime_signal, contract in runtime_contract["signals"].items():
+        plunger = contract["plunger"]
+        q_max_m = float(plunger["range_m"][1])
+        local_pos_m = [float(value) for value in plunger["local_pos_m"]]
+        signals[runtime_signal] = {
+            "source_signal": contract["source_signal"],
+            "joint_name": plunger["joint_name"],
+            "qualifying_bus_geom_name": plunger["geom_name"],
+            "samples": [
+                {
+                    "physics_substep": 0,
+                    "time_s": 0.0,
+                    "q_m": 0.0,
+                    "plunger_body_local_pos_m": list(local_pos_m),
+                },
+                {
+                    "physics_substep": 1,
+                    "time_s": timestep_s,
+                    "q_m": q_max_m,
+                    "plunger_body_local_pos_m": [
+                        local_pos_m[0],
+                        local_pos_m[1],
+                        local_pos_m[2] - q_max_m,
+                    ],
+                },
+            ],
+            "fixed_shell_qualified_contact_count": 0,
+            "cross_signal_qualified_contact_count": 0,
+        }
+    return {
+        "schema_version": "1.0",
+        "evidence_kind": "bounded_physics_substep_trace_contract_fixture",
+        "runtime_contract_sha256": canonical_json_sha256(runtime_contract),
+        "physics_timestep_s": timestep_s,
+        "every_physics_substep_recorded": True,
+        "direct_joint_state_write_count": 0,
+        "signals": signals,
+        "dynamics_authority": copy.deepcopy(
+            runtime_contract["dynamics_authority"]
+        ),
+        "development_passed": True,
+        "release_ready": False,
+    }
+
+
+def pogo_dynamic_evidence_errors(
+    record: Any,
+    runtime_contract: dict[str, Any],
+) -> list[str]:
+    """Independently validate bounded pogo trace evidence fail closed."""
+
+    if not isinstance(record, dict):
+        return ["evidence_missing"]
+    errors: list[str] = []
+    expected_keys = {
+        "schema_version",
+        "evidence_kind",
+        "runtime_contract_sha256",
+        "physics_timestep_s",
+        "every_physics_substep_recorded",
+        "direct_joint_state_write_count",
+        "signals",
+        "dynamics_authority",
+        "development_passed",
+        "release_ready",
+    }
+    if set(record) != expected_keys:
+        errors.append("evidence:keys")
+    if record.get("schema_version") != "1.0":
+        errors.append("evidence:schema_version")
+    if record.get("evidence_kind") != (
+        "bounded_physics_substep_trace_contract_fixture"
+    ):
+        errors.append("evidence:kind")
+    if record.get("runtime_contract_sha256") != canonical_json_sha256(
+        runtime_contract
+    ):
+        errors.append("evidence:runtime_contract_sha256")
+    timestep_s = _finite_real(record.get("physics_timestep_s"))
+    if timestep_s is None or timestep_s <= 0.0:
+        errors.append("evidence:physics_timestep_s")
+    if record.get("every_physics_substep_recorded") is not True:
+        errors.append("evidence:substep_coverage")
+    if record.get("direct_joint_state_write_count") != 0:
+        errors.append("evidence:direct_joint_state_write_count")
+
+    evidence_signals = record.get("signals")
+    expected_signals = runtime_contract.get("signals")
+    if not isinstance(evidence_signals, dict) or not isinstance(
+        expected_signals, dict
+    ) or set(evidence_signals) != set(expected_signals):
+        errors.append("evidence:signal_inventory")
+        evidence_signals = {}
+    for runtime_signal, contract in expected_signals.items():
+        evidence = evidence_signals.get(runtime_signal)
+        if not isinstance(evidence, dict):
+            errors.append(f"signal:{runtime_signal}:missing")
+            continue
+        expected_signal_keys = {
+            "source_signal",
+            "joint_name",
+            "qualifying_bus_geom_name",
+            "samples",
+            "fixed_shell_qualified_contact_count",
+            "cross_signal_qualified_contact_count",
+        }
+        if set(evidence) != expected_signal_keys:
+            errors.append(f"signal:{runtime_signal}:keys")
+        plunger = contract["plunger"]
+        if evidence.get("source_signal") != contract["source_signal"]:
+            errors.append(f"signal:{runtime_signal}:source_signal")
+        if evidence.get("joint_name") != plunger["joint_name"]:
+            errors.append(f"signal:{runtime_signal}:joint_name")
+        if evidence.get("qualifying_bus_geom_name") != plunger["geom_name"]:
+            errors.append(f"signal:{runtime_signal}:qualifying_bus_geom")
+        if evidence.get("fixed_shell_qualified_contact_count") != 0:
+            errors.append(f"signal:{runtime_signal}:fixed_shell_contact")
+        if evidence.get("cross_signal_qualified_contact_count") != 0:
+            errors.append(f"signal:{runtime_signal}:cross_signal_contact")
+
+        samples = evidence.get("samples")
+        if not isinstance(samples, list) or len(samples) < 2:
+            errors.append(f"signal:{runtime_signal}:samples")
+            continue
+        q_min_m, q_max_m = [float(value) for value in plunger["range_m"]]
+        base_position = np.asarray(plunger["local_pos_m"], dtype=np.float64)
+        previous_substep: int | None = None
+        observed_q: list[float] = []
+        for sample_index, sample in enumerate(samples):
+            prefix = f"signal:{runtime_signal}:sample:{sample_index}"
+            if not isinstance(sample, dict) or set(sample) != {
+                "physics_substep",
+                "time_s",
+                "q_m",
+                "plunger_body_local_pos_m",
+            }:
+                errors.append(f"{prefix}:keys")
+                continue
+            substep = sample.get("physics_substep")
+            if isinstance(substep, bool) or not isinstance(substep, int):
+                errors.append(f"{prefix}:physics_substep")
+                continue
+            if previous_substep is not None and substep != previous_substep + 1:
+                errors.append(f"{prefix}:substep_continuity")
+            previous_substep = substep
+            time_s = _finite_real(sample.get("time_s"))
+            if (
+                time_s is None
+                or timestep_s is None
+                or not _number_matches(time_s, substep * timestep_s)
+            ):
+                errors.append(f"{prefix}:time")
+            q_m = _finite_real(sample.get("q_m"))
+            if q_m is None or not (q_min_m - 1.0e-12 <= q_m <= q_max_m + 1.0e-12):
+                errors.append(f"{prefix}:q_range")
+                continue
+            observed_q.append(q_m)
+            position = sample.get("plunger_body_local_pos_m")
+            if not isinstance(position, list) or len(position) != 3:
+                errors.append(f"{prefix}:fk_position")
+                continue
+            expected_position = base_position + np.asarray(
+                plunger["axis"], dtype=np.float64
+            ) * q_m
+            observed_position = np.asarray(position, dtype=np.float64)
+            if not np.all(np.isfinite(observed_position)) or not np.allclose(
+                observed_position,
+                expected_position,
+                rtol=0.0,
+                atol=1.0e-12,
+            ):
+                errors.append(f"{prefix}:fk_position")
+        if not observed_q or not _number_matches(observed_q[0], q_min_m):
+            errors.append(f"signal:{runtime_signal}:q0_endpoint")
+        if not observed_q or not _number_matches(observed_q[-1], q_max_m):
+            errors.append(f"signal:{runtime_signal}:qmax_endpoint")
+        if observed_q and max(observed_q) - min(observed_q) <= 1.0e-12:
+            errors.append(f"signal:{runtime_signal}:frozen_plunger")
+
+    if record.get("dynamics_authority") != runtime_contract.get(
+        "dynamics_authority"
+    ):
+        errors.append("evidence:dynamics_authority")
+    authority = record.get("dynamics_authority")
+    if not isinstance(authority, dict):
+        errors.append("evidence:dynamics_authority_type")
+    else:
+        if authority.get("geometry_and_datum_authority") is not True:
+            errors.append("evidence:geometry_and_datum_authority")
+        for field in (
+            "mass_properties_authority",
+            "spring_force_curve_authority",
+            "damping_authority",
+            "ground_first_mate_tolerance_stack_qualified",
+        ):
+            if authority.get(field) is not False:
+                errors.append(f"evidence:{field}")
+        if authority.get("blockers") != POGO_RUNTIME_RELEASE_BLOCKERS:
+            errors.append("evidence:blockers")
+        if authority.get("release_ready") is not False:
+            errors.append("evidence:authority_release_ready")
+    if record.get("development_passed") is not True:
+        errors.append("evidence:development_passed")
+    if record.get("release_ready") is not False:
+        errors.append("evidence:release_ready")
+    return errors
 
 
 def iter_file_records(value: Any) -> Iterable[dict[str, Any]]:
@@ -1346,14 +1742,671 @@ class PogoInterfaceAuthorityContractTests(unittest.TestCase):
                     {"datum": datum, "filled_counterbore_point_mm": above.toTuple()},
                 )
 
-        # The gate remains deliberately red until the four-term tolerance
-        # proof, process/pullout qualification, and cycle evidence all close.
+        # The source geometry is physically bound, while release remains
+        # deliberately fail closed until the four-term tolerance proof,
+        # process/pullout qualification, and cycle evidence all close.
         self.assertEqual(
             pogo_authority_contract_errors(
                 self.contract, self.ledger, require_release_ready=True
             ),
+            ["release_authority:not_ready"],
+        )
+        self.assertIs(self.contract["release_authority"]["release_ready"], False)
+
+
+class PogoRuntimeAuthorityTests(unittest.TestCase):
+    """Bind source-derived moving pins to the compiled contact bus."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        try:
+            cls.cad = import_file(
+                MAGNETIC_ROOT / "generate_cad.py",
+                "core_cad_runtime_pogo_validation",
+                "core CAD runtime pogo authority",
+            )
+            cls.ledger = load_json(
+                POGO_LEDGER_PATH, "Mill-Max 7983 authority ledger"
+            )
+        except unittest.SkipTest as error:
+            raise AssertionError(
+                "runtime pogo authority dependencies are validation inputs and may not skip"
+            ) from error
+        cls.expected_contract = expected_pogo_runtime_geometry_contract(cls.cad)
+
+    def test_pure_runtime_contract_rejects_legacy_frozen_and_cross_signal_models(
+        self,
+    ) -> None:
+        baseline = self.expected_contract
+        self.assertEqual(
+            pogo_runtime_geometry_contract_errors(
+                baseline, self.cad, self.ledger
+            ),
             [],
         )
+
+        mutations: dict[str, Any] = {}
+        mutations["altered_source_hash"] = copy.deepcopy(baseline)
+        mutations["altered_source_hash"]["source_binding"]["ledger_file"][
+            "sha256"
+        ] = "0" * 64
+
+        mutations["missing_fixed_segment"] = copy.deepcopy(baseline)
+        mutations["missing_fixed_segment"]["signals"]["ground"][
+            "fixed_segments"
+        ].pop()
+
+        mutations["wrong_fixed_radius"] = copy.deepcopy(baseline)
+        mutations["wrong_fixed_radius"]["signals"]["power"][
+            "fixed_segments"
+        ][0]["size_m"][0] *= 0.5
+
+        mutations["legacy_sphere_plunger"] = copy.deepcopy(baseline)
+        mutations["legacy_sphere_plunger"]["signals"]["data"]["plunger"].update(
+            {
+                "geom_name": "qc_col_pogo_data",
+                "geom_type": "sphere",
+            }
+        )
+
+        mutations["frozen_plunger"] = copy.deepcopy(baseline)
+        mutations["frozen_plunger"]["signals"]["id"]["plunger"][
+            "range_m"
+        ] = [0.0, 0.0]
+
+        mutations["wrong_joint_axis"] = copy.deepcopy(baseline)
+        mutations["wrong_joint_axis"]["signals"]["ground"]["plunger"][
+            "axis"
+        ] = [0.0, 0.0, 1.0]
+
+        mutations["fixed_shell_eligible_for_bus"] = copy.deepcopy(baseline)
+        mutations["fixed_shell_eligible_for_bus"]["signals"]["power"][
+            "fixed_segments"
+        ][2]["bus_contact_eligible"] = True
+
+        mutations["cross_signal_source_mapping"] = copy.deepcopy(baseline)
+        mutations["cross_signal_source_mapping"]["signals"]["data"][
+            "source_signal"
+        ] = "+12V"
+
+        mutations["qualified_missing_dynamics"] = copy.deepcopy(baseline)
+        mutations["qualified_missing_dynamics"]["dynamics_authority"][
+            "mass_properties_authority"
+        ] = True
+
+        mutations["omitted_blocker"] = copy.deepcopy(baseline)
+        mutations["omitted_blocker"]["dynamics_authority"]["blockers"].pop()
+
+        mutations["release_promotion"] = copy.deepcopy(baseline)
+        mutations["release_promotion"]["release_ready"] = True
+        mutations["release_promotion"]["dynamics_authority"][
+            "release_ready"
+        ] = True
+
+        for name, mutated in mutations.items():
+            with self.subTest(name=name):
+                self.assertNotEqual(
+                    pogo_runtime_geometry_contract_errors(
+                        mutated, self.cad, self.ledger
+                    ),
+                    [],
+                    name,
+                )
+
+    def test_dynamic_evidence_is_bounded_and_rejects_false_authority(
+        self,
+    ) -> None:
+        baseline = expected_pogo_dynamic_evidence(self.expected_contract)
+        self.assertEqual(
+            pogo_dynamic_evidence_errors(baseline, self.expected_contract), []
+        )
+
+        mutations: dict[str, Any] = {}
+        mutations["altered_contract_hash"] = copy.deepcopy(baseline)
+        mutations["altered_contract_hash"]["runtime_contract_sha256"] = "0" * 64
+
+        mutations["direct_joint_write"] = copy.deepcopy(baseline)
+        mutations["direct_joint_write"]["direct_joint_state_write_count"] = 1
+
+        mutations["fixed_shell_contact"] = copy.deepcopy(baseline)
+        mutations["fixed_shell_contact"]["signals"]["ground"][
+            "fixed_shell_qualified_contact_count"
+        ] = 1
+
+        mutations["cross_signal_contact"] = copy.deepcopy(baseline)
+        mutations["cross_signal_contact"]["signals"]["power"][
+            "cross_signal_qualified_contact_count"
+        ] = 1
+
+        mutations["wrong_qualifying_geom"] = copy.deepcopy(baseline)
+        mutations["wrong_qualifying_geom"]["signals"]["data"][
+            "qualifying_bus_geom_name"
+        ] = "qc_col_pogo_data_fixed_shell_knurl"
+
+        mutations["frozen_plunger"] = copy.deepcopy(baseline)
+        mutations["frozen_plunger"]["signals"]["id"]["samples"][1][
+            "q_m"
+        ] = 0.0
+        mutations["frozen_plunger"]["signals"]["id"]["samples"][1][
+            "plunger_body_local_pos_m"
+        ] = list(
+            mutations["frozen_plunger"]["signals"]["id"]["samples"][0][
+                "plunger_body_local_pos_m"
+            ]
+        )
+
+        mutations["out_of_range"] = copy.deepcopy(baseline)
+        mutations["out_of_range"]["signals"]["ground"]["samples"][1][
+            "q_m"
+        ] = 1.0
+
+        mutations["wrong_fk"] = copy.deepcopy(baseline)
+        mutations["wrong_fk"]["signals"]["power"]["samples"][1][
+            "plunger_body_local_pos_m"
+        ][2] += 0.001
+
+        mutations["decimated_substeps"] = copy.deepcopy(baseline)
+        mutations["decimated_substeps"]["signals"]["data"]["samples"][1][
+            "physics_substep"
+        ] = 2
+        mutations["decimated_substeps"]["signals"]["data"]["samples"][1][
+            "time_s"
+        ] = 0.0005
+
+        mutations["qualified_mass"] = copy.deepcopy(baseline)
+        mutations["qualified_mass"]["dynamics_authority"][
+            "mass_properties_authority"
+        ] = True
+
+        mutations["removed_blocker"] = copy.deepcopy(baseline)
+        mutations["removed_blocker"]["dynamics_authority"]["blockers"].pop()
+
+        mutations["release_promotion"] = copy.deepcopy(baseline)
+        mutations["release_promotion"]["release_ready"] = True
+        mutations["release_promotion"]["dynamics_authority"][
+            "release_ready"
+        ] = True
+
+        for name, mutated in mutations.items():
+            with self.subTest(name=name):
+                self.assertNotEqual(
+                    pogo_dynamic_evidence_errors(
+                        mutated, self.expected_contract
+                    ),
+                    [],
+                    name,
+                )
+
+    def test_compiled_runtime_geometry_fk_and_bus_are_exact(self) -> None:
+        demo = import_file(
+            MATCHA_DEMO,
+            "matcha_workflow_runtime_pogo_validation",
+            "matcha workflow runtime pogo geometry",
+        )
+        runtime_factory = getattr(demo.qc, "pogo_runtime_geometry_contract", None)
+        self.assertTrue(callable(runtime_factory))
+        runtime_contract = runtime_factory()
+        self.assertEqual(
+            pogo_runtime_geometry_contract_errors(
+                runtime_contract, self.cad, self.ledger
+            ),
+            [],
+        )
+        self.assertIs(runtime_contract["passed"], True)
+        self.assertIs(runtime_contract["release_ready"], False)
+
+        model = demo.build_model()
+        mujoco = demo.mujoco
+        cylinder_type = int(mujoco.mjtGeom.mjGEOM_CYLINDER)
+        slide_type = int(mujoco.mjtJoint.mjJNT_SLIDE)
+        expected_body_names: set[str] = set()
+        expected_geom_names: set[str] = set()
+        expected_joint_names: set[str] = set()
+        plunger_geom_names: set[str] = set()
+        fixed_geom_names: set[str] = set()
+        qpos_addresses: dict[str, int] = {}
+
+        for runtime_signal, signal_contract in runtime_contract["signals"].items():
+            fixed_body = signal_contract["fixed_body"]
+            fixed_body_name = fixed_body["name"]
+            fixed_body_id = int(model.body(fixed_body_name).id)
+            fixed_parent_id = int(model.body(fixed_body["parent"]).id)
+            expected_body_names.add(fixed_body_name)
+            self.assertEqual(int(model.body_parentid[fixed_body_id]), fixed_parent_id)
+            np.testing.assert_allclose(
+                model.body_pos[fixed_body_id],
+                fixed_body["pos_m"],
+                rtol=0.0,
+                atol=1.0e-12,
+            )
+            np.testing.assert_allclose(
+                model.body_quat[fixed_body_id],
+                fixed_body["quat_wxyz"],
+                rtol=0.0,
+                atol=1.0e-12,
+            )
+
+            for segment in signal_contract["fixed_segments"]:
+                geom_name = segment["name"]
+                geom_id = int(model.geom(geom_name).id)
+                expected_geom_names.add(geom_name)
+                fixed_geom_names.add(geom_name)
+                self.assertEqual(int(model.geom_bodyid[geom_id]), fixed_body_id)
+                self.assertEqual(int(model.geom_type[geom_id]), cylinder_type)
+                np.testing.assert_allclose(
+                    model.geom_pos[geom_id],
+                    segment["local_pos_m"],
+                    rtol=0.0,
+                    atol=1.0e-12,
+                )
+                np.testing.assert_allclose(
+                    model.geom_size[geom_id, :2],
+                    segment["size_m"],
+                    rtol=0.0,
+                    atol=1.0e-12,
+                )
+                self.assertIs(segment["bus_contact_eligible"], False)
+
+            plunger = signal_contract["plunger"]
+            plunger_body_name = plunger["body_name"]
+            plunger_body_id = int(model.body(plunger_body_name).id)
+            expected_body_names.add(plunger_body_name)
+            self.assertEqual(int(model.body_parentid[plunger_body_id]), fixed_body_id)
+            np.testing.assert_allclose(
+                model.body_pos[plunger_body_id],
+                plunger["local_pos_m"],
+                rtol=0.0,
+                atol=1.0e-12,
+            )
+            np.testing.assert_allclose(
+                model.body_quat[plunger_body_id],
+                plunger["quat_wxyz"],
+                rtol=0.0,
+                atol=1.0e-12,
+            )
+
+            joint_name = plunger["joint_name"]
+            joint_id = int(model.joint(joint_name).id)
+            expected_joint_names.add(joint_name)
+            self.assertEqual(int(model.jnt_bodyid[joint_id]), plunger_body_id)
+            self.assertEqual(int(model.jnt_type[joint_id]), slide_type)
+            np.testing.assert_allclose(
+                model.jnt_axis[joint_id],
+                plunger["axis"],
+                rtol=0.0,
+                atol=1.0e-12,
+            )
+            np.testing.assert_allclose(
+                model.jnt_range[joint_id],
+                plunger["range_m"],
+                rtol=0.0,
+                atol=1.0e-12,
+            )
+            qpos_addresses[runtime_signal] = int(model.jnt_qposadr[joint_id])
+
+            geom_name = plunger["geom_name"]
+            geom_id = int(model.geom(geom_name).id)
+            expected_geom_names.add(geom_name)
+            plunger_geom_names.add(geom_name)
+            self.assertEqual(int(model.geom_bodyid[geom_id]), plunger_body_id)
+            self.assertEqual(int(model.geom_type[geom_id]), cylinder_type)
+            np.testing.assert_allclose(
+                model.geom_pos[geom_id],
+                plunger["geom_local_pos_m"],
+                rtol=0.0,
+                atol=1.0e-12,
+            )
+            np.testing.assert_allclose(
+                model.geom_size[geom_id, :2],
+                plunger["geom_size_m"],
+                rtol=0.0,
+                atol=1.0e-12,
+            )
+            self.assertIs(plunger["bus_contact_eligible"], True)
+
+        observed_body_names = {
+            str(model.body(body_id).name)
+            for body_id in range(model.nbody)
+            if str(model.body(body_id).name).startswith("qc_pogo_")
+        }
+        observed_geom_names = {
+            str(model.geom(geom_id).name)
+            for geom_id in range(model.ngeom)
+            if str(model.geom(geom_id).name).startswith("qc_col_pogo_")
+        }
+        observed_joint_names = {
+            str(model.joint(joint_id).name)
+            for joint_id in range(model.njnt)
+            if str(model.joint(joint_id).name).startswith("qc_pogo_")
+        }
+        self.assertEqual(observed_body_names, expected_body_names)
+        self.assertEqual(observed_geom_names, expected_geom_names)
+        self.assertEqual(observed_joint_names, expected_joint_names)
+
+        data = mujoco.MjData(model)
+        demo.initialize(model, data)
+        sentinel = {
+            runtime_signal: 0.1
+            * (index + 1)
+            * float(runtime_contract["signals"][runtime_signal]["plunger"]["range_m"][1])
+            for index, runtime_signal in enumerate(sorted(qpos_addresses))
+        }
+        for runtime_signal, q_m in sentinel.items():
+            data.qpos[qpos_addresses[runtime_signal]] = q_m
+        demo.initialize(model, data)
+        for runtime_signal, q_m in sentinel.items():
+            self.assertAlmostEqual(
+                float(data.qpos[qpos_addresses[runtime_signal]]), q_m, places=15
+            )
+
+        for address in qpos_addresses.values():
+            data.qpos[address] = 0.0
+        mujoco.mj_forward(model, data)
+        q0_body_positions = {
+            runtime_signal: np.array(
+                data.xpos[
+                    int(
+                        model.body(
+                            runtime_contract["signals"][runtime_signal]["plunger"][
+                                "body_name"
+                            ]
+                        ).id
+                    )
+                ],
+                dtype=np.float64,
+                copy=True,
+            )
+            for runtime_signal in qpos_addresses
+        }
+        q0_geom_positions = {
+            runtime_signal: np.array(
+                data.geom_xpos[
+                    int(
+                        model.geom(
+                            runtime_contract["signals"][runtime_signal]["plunger"][
+                                "geom_name"
+                            ]
+                        ).id
+                    )
+                ],
+                dtype=np.float64,
+                copy=True,
+            )
+            for runtime_signal in qpos_addresses
+        }
+        for runtime_signal, address in qpos_addresses.items():
+            data.qpos[address] = float(
+                runtime_contract["signals"][runtime_signal]["plunger"]["range_m"][1]
+            )
+        mujoco.mj_forward(model, data)
+        for runtime_signal in qpos_addresses:
+            plunger = runtime_contract["signals"][runtime_signal]["plunger"]
+            fixed_body_id = int(model.body(plunger["parent"]).id)
+            fixed_rotation = np.asarray(
+                data.xmat[fixed_body_id], dtype=np.float64
+            ).reshape(3, 3)
+            displacement = fixed_rotation @ (
+                np.asarray(plunger["axis"], dtype=np.float64)
+                * float(plunger["range_m"][1])
+            )
+            plunger_body_id = int(model.body(plunger["body_name"]).id)
+            plunger_geom_id = int(model.geom(plunger["geom_name"]).id)
+            np.testing.assert_allclose(
+                data.xpos[plunger_body_id] - q0_body_positions[runtime_signal],
+                displacement,
+                rtol=0.0,
+                atol=1.0e-12,
+            )
+            np.testing.assert_allclose(
+                data.geom_xpos[plunger_geom_id]
+                - q0_geom_positions[runtime_signal],
+                displacement,
+                rtol=0.0,
+                atol=1.0e-12,
+            )
+
+        # Source seated compression is 0.95 mm for GND and 0.75 mm for the
+        # other signals.  The moving +Z tip must then land on the actual
+        # copper exposed plane at robot-frame z=9.45 mm, not the nominal
+        # 9.50 mm mating datum (which would bury it 0.05 mm into the pad).
+        for runtime_signal, address in qpos_addresses.items():
+            datum = runtime_contract["signals"][runtime_signal][
+                "installed_datum"
+            ]
+            data.qpos[address] = float(datum["mated_compression_mm"]) / 1000.0
+        mujoco.mj_forward(model, data)
+        robot_frame_id = int(model.body("robot_plate_frame").id)
+        robot_frame_position = np.asarray(
+            data.xpos[robot_frame_id], dtype=np.float64
+        )
+        robot_frame_rotation = np.asarray(
+            data.xmat[robot_frame_id], dtype=np.float64
+        ).reshape(3, 3)
+        for runtime_signal in qpos_addresses:
+            signal_contract = runtime_contract["signals"][runtime_signal]
+            datum = signal_contract["installed_datum"]
+            plunger = signal_contract["plunger"]
+            plunger_geom_id = int(model.geom(plunger["geom_name"]).id)
+            plunger_axis = np.asarray(
+                data.geom_xmat[plunger_geom_id], dtype=np.float64
+            ).reshape(3, 3)[:, 2]
+            tip_world = (
+                np.asarray(data.geom_xpos[plunger_geom_id], dtype=np.float64)
+                + plunger_axis * float(plunger["geom_size_m"][1])
+            )
+            tip_robot_frame = robot_frame_rotation.T @ (
+                tip_world - robot_frame_position
+            )
+            np.testing.assert_allclose(
+                tip_robot_frame,
+                [
+                    float(datum["centre_xy_mm"][0]) / 1000.0,
+                    float(datum["centre_xy_mm"][1]) / 1000.0,
+                    float(datum["target_pad_exposed_contact_plane_z_mm"])
+                    / 1000.0,
+                ],
+                rtol=0.0,
+                atol=1.0e-12,
+                err_msg=runtime_signal,
+            )
+        expected_pairs = {
+            frozenset(
+                {
+                    runtime_contract["signals"][runtime_signal]["plunger"][
+                        "geom_name"
+                    ],
+                    f"{tool}_pad_{runtime_signal}_collision",
+                }
+            )
+            for tool in demo.ALL_TOOL_IDS
+            for runtime_signal in POGO_RUNTIME_SIGNAL_MAP
+        }
+        for tool in demo.ALL_TOOL_IDS:
+            equality_id = int(model.equality(f"attach_{tool}").id)
+            self.assertEqual(
+                int(model.eq_obj1id[equality_id]), robot_frame_id, tool
+            )
+            self.assertEqual(
+                int(model.eq_obj2id[equality_id]),
+                int(model.body(f"tool_{tool}").id),
+                tool,
+            )
+            np.testing.assert_allclose(
+                model.eq_data[equality_id, 3:10],
+                [0.0, 0.0, 0.0095, 1.0, 0.0, 0.0, 0.0],
+                rtol=0.0,
+                atol=1.0e-12,
+                err_msg=tool,
+            )
+            for runtime_signal in POGO_RUNTIME_SIGNAL_MAP:
+                pad_name = f"{tool}_pad_{runtime_signal}_collision"
+                pad_id = int(model.geom(pad_name).id)
+                self.assertEqual(int(model.geom_type[pad_id]), cylinder_type)
+                np.testing.assert_allclose(
+                    model.geom_pos[pad_id],
+                    [-0.031, float(demo.qc.SIGNAL_Y_M[runtime_signal]), -0.000025],
+                    rtol=0.0,
+                    atol=1.0e-12,
+                    err_msg=pad_name,
+                )
+                self.assertAlmostEqual(
+                    float(model.eq_data[equality_id, 5])
+                    + float(model.geom_pos[pad_id, 2])
+                    - float(model.geom_size[pad_id, 1]),
+                    0.00945,
+                    places=12,
+                    msg=pad_name,
+                )
+                np.testing.assert_allclose(
+                    model.geom_size[pad_id, :2],
+                    [0.002, 0.000025],
+                    rtol=0.0,
+                    atol=1.0e-12,
+                    err_msg=pad_name,
+                )
+        observed_pairs = {
+            frozenset(
+                {
+                    str(model.geom(int(model.pair_geom1[pair_id])).name),
+                    str(model.geom(int(model.pair_geom2[pair_id])).name),
+                }
+            )
+            for pair_id in range(model.npair)
+            if {
+                str(model.geom(int(model.pair_geom1[pair_id])).name),
+                str(model.geom(int(model.pair_geom2[pair_id])).name),
+            }
+            & expected_geom_names
+        }
+        self.assertEqual(observed_pairs, expected_pairs)
+        self.assertTrue(
+            all(not pair.intersection(fixed_geom_names) for pair in observed_pairs)
+        )
+
+        controller = demo.MatchaWorkflowController(model, data)
+        self.assertEqual(set(controller.pogo_pair_contract), expected_pairs)
+        for pair, (tool, runtime_signal) in controller.pogo_pair_contract.items():
+            self.assertIn(runtime_signal, POGO_RUNTIME_SIGNAL_MAP)
+            self.assertEqual(
+                pair,
+                frozenset(
+                    {
+                        runtime_contract["signals"][runtime_signal]["plunger"][
+                            "geom_name"
+                        ],
+                        f"{tool}_pad_{runtime_signal}_collision",
+                    }
+                ),
+            )
+            self.assertEqual(len(pair.intersection(plunger_geom_names)), 1)
+
+        # The electrical witness is directional.  A finite unit vector alone
+        # cannot distinguish the source +Z pogo-to-pad normal from a lateral
+        # scrape or the reversed pad-to-pogo direction.
+        with mock.patch.object(
+            controller, "_capture_pose_is_valid", return_value=True
+        ), mock.patch.object(controller, "_equality_active", return_value=True):
+            for runtime_signal in POGO_RUNTIME_SIGNAL_MAP:
+                tool = "gripper"
+                plunger_name = runtime_contract["signals"][runtime_signal][
+                    "plunger"
+                ]["geom_name"]
+                pad_name = f"{tool}_pad_{runtime_signal}_collision"
+                plunger_id = int(model.geom(plunger_name).id)
+                pad_id = int(model.geom(pad_name).id)
+                plunger_rotation = np.asarray(
+                    data.geom_xmat[plunger_id], dtype=np.float64
+                ).reshape(3, 3)
+                source_positive_z = plunger_rotation[:, 2]
+                lateral = plunger_rotation[:, 0]
+                pad_center = np.array(
+                    data.geom_xpos[pad_id], dtype=np.float64, copy=True
+                )
+                pad_rotation = np.asarray(
+                    data.geom_xmat[pad_id], dtype=np.float64
+                ).reshape(3, 3)
+                pad_positive_z = pad_rotation[:, 2]
+                pad_half_height_m = float(model.geom_size[pad_id, 1])
+                plunger_radius_m = float(model.geom_size[plunger_id, 0])
+                penetration_m = -1.0e-6
+                exposed_axial_m = -pad_half_height_m - penetration_m / 2.0
+
+                def contact(
+                    normal: np.ndarray,
+                    *,
+                    axial_m: float = exposed_axial_m,
+                    radial_m: float = 0.0,
+                    distance_m: float = penetration_m,
+                ) -> SimpleNamespace:
+                    return SimpleNamespace(
+                        geom=np.asarray([plunger_id, pad_id], dtype=np.int32),
+                        dist=distance_m,
+                        pos=(
+                            pad_center
+                            + pad_positive_z * axial_m
+                            + lateral * radial_m
+                        ),
+                        frame=np.concatenate(
+                            (np.asarray(normal, dtype=np.float64), np.zeros(6))
+                        ),
+                    )
+
+                self.assertTrue(
+                    controller._matching_pogo_contact_is_valid(
+                        contact(source_positive_z), tool, runtime_signal
+                    )
+                )
+                self.assertFalse(
+                    controller._matching_pogo_contact_is_valid(
+                        contact(lateral), tool, runtime_signal
+                    )
+                )
+                self.assertFalse(
+                    controller._matching_pogo_contact_is_valid(
+                        contact(-source_positive_z), tool, runtime_signal
+                    )
+                )
+                self.assertFalse(
+                    controller._matching_pogo_contact_is_valid(
+                        contact(source_positive_z, axial_m=0.0),
+                        tool,
+                        runtime_signal,
+                    ),
+                    "a pad-center witness is not its exposed underside",
+                )
+                self.assertFalse(
+                    controller._matching_pogo_contact_is_valid(
+                        contact(
+                            source_positive_z,
+                            axial_m=pad_half_height_m,
+                        ),
+                        tool,
+                        runtime_signal,
+                    ),
+                    "a back-face witness cannot qualify the electrical bus",
+                )
+                self.assertFalse(
+                    controller._matching_pogo_contact_is_valid(
+                        contact(
+                            source_positive_z,
+                            radial_m=plunger_radius_m + 10.0e-6,
+                        ),
+                        tool,
+                        runtime_signal,
+                    ),
+                    "a contact outside the plunger crown cannot qualify",
+                )
+                self.assertFalse(
+                    controller._matching_pogo_contact_is_valid(
+                        contact(
+                            source_positive_z,
+                            axial_m=-pad_half_height_m,
+                        ),
+                        tool,
+                        runtime_signal,
+                    ),
+                    "penetrating witnesses must include MuJoCo's dist/2 shift",
+                )
 
 
 FORBIDDEN_STATE_FIELDS = {"qpos", "qvel", "time", "eq_data"}
@@ -1826,7 +2879,7 @@ class SimCadPlacementContractTests(unittest.TestCase):
         expected_pogo_pairs = {
             frozenset(
                 {
-                    f"qc_col_pogo_{signal}",
+                    f"qc_col_pogo_{signal}_plunger",
                     f"{tool}_pad_{signal}_collision",
                 }
             ): (tool, signal)
