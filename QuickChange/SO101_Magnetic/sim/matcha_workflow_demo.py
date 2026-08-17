@@ -79,7 +79,68 @@ ALIGNED_CAPTURE_BASE_Q = (
     (-0.548510866399194, 0.83658660199164, -0.288075735592447),
     (-0.5, 0.8, -0.3),
 )
-ALIGNED_CAPTURE_STATIC_MAX_LATERAL_DEVIATION_M = 0.000040539
+# Core-CAD-authorized +0.20 mm open-side guide route.  These deterministic
+# 1 mm-spaced IK roots hold dock-local X=+0.200 mm and the mating orientation
+# from 50 mm pre-seat through zero.  A dense joint-linear FK sweep measures
+# 0.201841 mm maximum lateral deviation.  The released full-depth cam relief
+# certifies >=0.250 mm continuous clearance at the nominal offset.  A same-Z
+# final row establishes the exact five keeper datums.
+CORE_GUIDED_CAPTURE_OFFSETS_MM = tuple(range(50, -1, -1))
+CORE_GUIDED_CAPTURE_BASE_Q = (
+    (-1.05309039863527, 1.11032046570321, -0.0572300670679406),
+    (-1.04038114070762, 1.10546950157827, -0.0650883608706501),
+    (-1.02774127826731, 1.10055035586343, -0.0728090775961235),
+    (-1.01517138886496, 1.09556398173715, -0.080392592872194),
+    (-1.00267196498263, 1.09051131632805, -0.0878393513454215),
+    (-0.990243417310746, 1.08539328029565, -0.0951498629849015),
+    (-0.977886078014275, 1.08021077745593, -0.102324699441657),
+    (-0.965600203977752, 1.07496469444963, -0.109364490471876),
+    (-0.953385980019733, 1.06965590045103, -0.116269920431296),
+    (-0.941243522068057, 1.06428524691521, -0.123041724847152),
+    (-0.929172880288271, 1.05885356736148, -0.12968068707321),
+    (-0.91717404215838, 1.053361677191, -0.136187635032616),
+    (-0.905246935483918, 1.04781037353641, -0.142563438052487),
+    (-0.893391431348073, 1.04220043514156, -0.14880900379349),
+    (-0.881607346992348, 1.03653262226929, -0.154925275276938),
+    (-0.869894448623887, 1.03080767663523, -0.160913228011342),
+    (-0.858252454146261, 1.02502632136603, -0.166773867219772),
+    (-0.846681035811087, 1.0191892609799, -0.172508225168813),
+    (-0.835179822788373, 1.01329718138788, -0.17811735859951),
+    (-0.823748403654037, 1.00735074991418, -0.183602346260142),
+    (-0.812386328793482, 1.00135061533383, -0.188964286540347),
+    (-0.801093112720501, 0.995297407926249, -0.194204295205748),
+    (-0.789868236311269, 0.989191739543146, -0.199323503231877),
+    (-0.778711148953391, 0.983034203689355, -0.204323054735964),
+    (-0.767621270610429, 0.976825375615287, -0.209204105004859),
+    (-0.756597993802488, 0.970565812419668, -0.213967818617179),
+    (-0.745640685503797, 0.964256053161365, -0.218615367657567),
+    (-0.734748688958348, 0.957896618979131, -0.223147930020783),
+    (-0.723921325414918, 0.951488013218161, -0.227566687803243),
+    (-0.713157895782947, 0.94503072156243, -0.231872825779483),
+    (-0.702457682210844, 0.938525212171808, -0.236067529960964),
+    (-0.6918199495885, 0.931971935823044, -0.240151986234544),
+    (-0.681243946975805, 0.925371326053714, -0.244127379077908),
+    (-0.670728908959097, 0.918723799308316, -0.24799489034922),
+    (-0.66027405693752, 0.91202975508574, -0.25175569814822),
+    (-0.649878600341329, 0.905289576087353, -0.255410975746024),
+    (-0.639541737784195, 0.898503628365028, -0.258961890580834),
+    (-0.629262658151594, 0.891672261468451, -0.262409603316857),
+    (-0.619040541627407, 0.8847958085911, -0.265755266963694),
+    (-0.608874560660782, 0.877874586714305, -0.269000026053524),
+    (-0.598763880875414, 0.870908896748876, -0.272145015873463),
+    (-0.588707661923249, 0.863899023673746, -0.275191361750497),
+    (-0.578705058284712, 0.856845236671178, -0.278140178386465),
+    (-0.568755220017467, 0.849747789258067, -0.2809925692406),
+    (-0.558857293455671, 0.842606919412918, -0.283749625957247),
+    (-0.549010421861703, 0.835422849698069, -0.286412427836367),
+    (-0.539213746032241, 0.828195787376817, -0.288982041344575),
+    (-0.529466404860554, 0.820925924525033, -0.291459519664479),
+    (-0.519767535856783, 0.813613438136955, -0.293845902280172),
+    (-0.510116275628005, 0.80625849022481, -0.296142214596805),
+    (-0.500511760319716, 0.798861227911943, -0.298349467592227),
+)
+CORE_GUIDED_CAPTURE_LATERAL_OFFSET_M = 0.0002
+ALIGNED_CAPTURE_STATIC_MAX_LATERAL_DEVIATION_M = 0.000205
 CAM_RELIEF_CORRIDOR_M = 0.0005
 CORE_KEEPER_MAX_PENETRATION_MM = 0.020
 CORE_KEEPER_MAX_SEPARATION_MM = 0.020
@@ -184,6 +245,126 @@ CORE_KEEPER_CONTACT_CONTRACT = (
     },
 )
 
+CORE_POSITIVE_LOCK_CONTRACT = {
+    "slider_body": "qc_positive_lock_slider",
+    "slider_body_parent": "robot_plate_frame",
+    "slider_body_pos_at_joint_reference_m": list(
+        qc.POSITIVE_LOCK_SLIDER_BASE_POS_M
+    ),
+    "slider_joint": "qc_positive_lock_slider_joint",
+    "slider_joint_axis": [1.0, 0.0, 0.0],
+    "slider_joint_range_m": list(qc.POSITIVE_LOCK_SLIDER_JOINT_RANGE_M),
+    "slider_joint_reference_m": qc.POSITIVE_LOCK_SLIDER_JOINT_RANGE_M[1],
+    "slider_spring_reference_m": qc.POSITIVE_LOCK_SLIDER_SPRINGREF_M,
+    "slider_stiffness_n_m": qc.POSITIVE_LOCK_SLIDER_STIFFNESS_N_M,
+    "slider_material": "304 stainless steel",
+    "slider_source_density_kg_m3": qc.POSITIVE_LOCK_SLIDER_DENSITY_KG_M3,
+    "slider_source_volume_mm3": qc.POSITIVE_LOCK_SLIDER_SOURCE_VOLUME_MM3,
+    "slider_source_mass_kg": qc.POSITIVE_LOCK_SLIDER_SOURCE_MASS_KG,
+    "slider_source_com_m": list(qc.POSITIVE_LOCK_SLIDER_SOURCE_COM_M),
+    "slider_source_full_inertia_kg_m2": list(
+        qc.POSITIVE_LOCK_SLIDER_SOURCE_FULL_INERTIA_KG_M2
+    ),
+    "collision_prisms_contribute_inertia": False,
+    "lock_hardware_material": "stainless steel",
+    "lock_hardware_density_kg_m3": qc.POSITIVE_LOCK_HARDWARE_DENSITY_KG_M3,
+    "lock_hardware_rigid_body_pattern": "tool_<tool>_positive_lock_hardware",
+    "lock_hardware_body_parent_pattern": "tool_<tool>",
+    "lock_hardware_body_pos_m": [0.0, 0.0, 0.0],
+    "lock_hardware_body_quat_wxyz": [1.0, 0.0, 0.0, 0.0],
+    "lock_hardware_has_joint": False,
+    "lock_hardware_collision_geoms_contribute_inertia": False,
+    "lock_hardware_source_volume_mm3": (
+        qc.POSITIVE_LOCK_HARDWARE_SOURCE_VOLUME_MM3
+    ),
+    "lock_hardware_source_mass_kg": qc.POSITIVE_LOCK_HARDWARE_SOURCE_MASS_KG,
+    "lock_hardware_source_com_m": list(qc.POSITIVE_LOCK_HARDWARE_SOURCE_COM_M),
+    "lock_hardware_source_full_inertia_kg_m2": list(
+        qc.POSITIVE_LOCK_HARDWARE_SOURCE_FULL_INERTIA_KG_M2
+    ),
+    "lock_hardware_source_components": [
+        {
+            "component_id": "shoulder_screw_pair",
+            "source_artifact": (
+                "QuickChange/SO101_Magnetic/exports/"
+                "hardware_McMaster_90318A720_shoulder_screw.step"
+            ),
+            "source_artifact_sha256": (
+                qc.POSITIVE_LOCK_SHOULDER_SCREW_STEP_SHA256
+            ),
+            "placements_tool_root_m": [
+                {"pos": [x_value, 0.0, 0.0], "quat_wxyz": [1.0, 0.0, 0.0, 0.0]}
+                for x_value in qc.POSITIVE_LOCK_HARDWARE_STACK_X_M
+            ],
+        },
+        {
+            "component_id": "holed_din934_m3_nut_pair",
+            "source_artifact": (
+                "QuickChange/SO101_Magnetic/exports/"
+                "hardware_DIN934_M3_lock_stud_nut.step"
+            ),
+            "source_artifact_sha256": qc.POSITIVE_LOCK_STUD_NUT_STEP_SHA256,
+            "placements_tool_root_m": [
+                {
+                    "pos": [
+                        x_value,
+                        qc.POSITIVE_LOCK_HARDWARE_NUT_TRANSLATION_M[1],
+                        qc.POSITIVE_LOCK_HARDWARE_NUT_TRANSLATION_M[2],
+                    ],
+                    "quat_wxyz": [1.0, 0.0, 0.0, 0.0],
+                }
+                for x_value in qc.POSITIVE_LOCK_HARDWARE_STACK_X_M
+            ],
+        },
+    ],
+    "damping_authority": None,
+    "dynamic_settling_release_ready": False,
+    "source_artifact": (
+        "QuickChange/SO101_Magnetic/exports/so101_positive_lock_slider.step"
+    ),
+    "source_artifact_sha256": qc.POSITIVE_LOCK_SLIDER_STEP_SHA256,
+    "source_absolute_mesh_requested_deflection_mm": (
+        qc.POSITIVE_LOCK_SLIDER_ABSOLUTE_DEFLECTION_MM
+    ),
+    "source_angular_deflection_rad": (
+        qc.POSITIVE_LOCK_SLIDER_ANGULAR_DEFLECTION_RAD
+    ),
+    "conservative_void_expansion_mm": (
+        qc.POSITIVE_LOCK_SLIDER_VOID_EXPANSION_MM
+    ),
+    "slider_collision_exact_source_subset": True,
+    "slider_collision_continuous_clearance_authority": False,
+    "source_prism_z_bounds_m": list(qc.POSITIVE_LOCK_SLIDER_Z_BOUNDS_M),
+    "active_geom_prefixes": [
+        "qc_col_lock_slider_bridge_part_",
+        "qc_col_lock_slider_left_lobe_part_",
+        "qc_col_lock_slider_right_lobe_part_",
+        "qc_col_lock_slider_tab_part_",
+    ],
+    "tool_lock_features": {
+        "centres_x_m": [-0.012, 0.012],
+        "centre_y_m": 0.0,
+        "shoulder_diameter_m": 0.004,
+        "head_diameter_m": 0.006,
+        "tools": ["gripper", "spoon", "whisk"],
+    },
+    "state_semantics": {
+        "unlocked_q_m": 0.0,
+        "locked_q_m": 0.003,
+        "unlocked_source_translation_x_m": 0.0,
+        "locked_source_translation_x_m": 0.003,
+    },
+    "dynamic_negative_api": None,
+    "broad_plate_proxy_contract": {
+        "role": "approximate dynamics broadphase",
+        "exact_named_critical_lock_voids": True,
+        "exact_source_subset": False,
+        "continuous_clearance": False,
+        "release_ready": False,
+    },
+    "release_ready": False,
+}
+
 
 def _aligned_capture_waypoints(
     tool: str, *, reverse: bool = False
@@ -193,10 +374,15 @@ def _aligned_capture_waypoints(
     if tool not in DOCK_CAPTURE_Q:
         raise ValueError(f"unsupported aligned capture tool {tool!r}")
     pan = float(DOCK_CAPTURE_Q[tool][0])
+    base_rows = (
+        CORE_GUIDED_CAPTURE_BASE_Q if tool == "gripper" else ALIGNED_CAPTURE_BASE_Q
+    )
     forward = tuple(
         (pan, lift, elbow, wrist_flex, 0.0)
-        for lift, elbow, wrist_flex in ALIGNED_CAPTURE_BASE_Q
+        for lift, elbow, wrist_flex in base_rows
     )
+    if tool == "gripper":
+        forward = (*forward, tuple(float(value) for value in DOCK_CAPTURE_Q[tool]))
     if not reverse:
         return forward
     # The caller starts at the seated row, so omit it and finish at the exact
@@ -411,7 +597,10 @@ def _split_stock_gripper(robot_root: ET.Element) -> ET.Element:
             "diaginertia": "0.00001 0.00001 0.00001",
         },
     )
-    qc.add_robot_quick_change_interface(original)
+    asset = robot_root.find("asset")
+    if asset is None:
+        raise RuntimeError("Calibrated robot no longer has an asset container")
+    qc.add_robot_quick_change_interface(original, asset)
     return stock
 
 
@@ -1433,18 +1622,61 @@ class MatchaWorkflowController:
             and orientation_error <= CAPTURE_ORIENTATION_TOLERANCE_RAD
         )
 
+    def _core_keeper_oriented_normal_dock_local(
+        self,
+        contact: mujoco.MjContact,
+        contract: dict[str, Any],
+        dock_rotation: np.ndarray,
+    ) -> np.ndarray:
+        normal_world = np.asarray(contact.frame[:3], dtype=float)
+        runtime_pair = list(contract["runtime_pair"])
+        contact_geom0 = str(self.model.geom(int(contact.geom[0])).name)
+        if contact_geom0 != runtime_pair[0]:
+            normal_world = -normal_world
+        normal_local = dock_rotation.T @ normal_world
+        length = float(np.linalg.norm(normal_local))
+        if not math.isfinite(length) or length <= 0.0:
+            return np.full(3, np.nan, dtype=float)
+        return normal_local / length
+
     @staticmethod
+    def _core_keeper_normal_is_valid(
+        contact: mujoco.MjContact,
+        contract: dict[str, Any],
+        dock_rotation: np.ndarray,
+    ) -> bool:
+        normal_local = dock_rotation.T @ np.asarray(contact.frame[:3], dtype=float)
+        length = float(np.linalg.norm(normal_local))
+        if not math.isfinite(length) or length <= 0.0:
+            return False
+        normal_local = normal_local / length
+        if contract.get("expected_local_normal_subspace") == "dock_xz_plane":
+            if float(np.linalg.norm(normal_local[[0, 2]])) < CORE_KEEPER_MIN_NORMAL_ALIGNMENT:
+                return False
+            product = float(normal_local[0] * normal_local[2])
+            if contract["source_pair"][1] == "left_lower_rail":
+                return product >= -1.0e-12
+            if contract["source_pair"][1] == "right_lower_rail":
+                return product <= 1.0e-12
+            return False
+        axis_index = 0 if contract["expected_local_normal_axis"] == "x" else 2
+        return abs(float(normal_local[axis_index])) >= CORE_KEEPER_MIN_NORMAL_ALIGNMENT
+
     def _core_keeper_normal_alignment(
+        self,
         contact: mujoco.MjContact,
         contract: dict[str, Any],
         dock_rotation: np.ndarray,
     ) -> float:
-        normal_world = np.asarray(contact.frame[:3], dtype=float)
+        normal_local = self._core_keeper_oriented_normal_dock_local(
+            contact, contract, dock_rotation
+        )
+        if not np.all(np.isfinite(normal_local)):
+            return 0.0
         if contract.get("expected_local_normal_subspace") == "dock_xz_plane":
-            normal_local = dock_rotation.T @ normal_world
             return float(np.linalg.norm(normal_local[[0, 2]]))
         axis_index = 0 if contract["expected_local_normal_axis"] == "x" else 2
-        return abs(float(normal_world @ dock_rotation[:, axis_index]))
+        return abs(float(normal_local[axis_index]))
 
     def _core_keeper_contact_is_valid(self, contact: mujoco.MjContact) -> bool:
         geom_names = {
@@ -1490,7 +1722,10 @@ class MatchaWorkflowController:
         alignment = self._core_keeper_normal_alignment(
             contact, contract, dock_rotation
         )
-        return alignment >= CORE_KEEPER_MIN_NORMAL_ALIGNMENT
+        return bool(
+            alignment >= CORE_KEEPER_MIN_NORMAL_ALIGNMENT
+            and self._core_keeper_normal_is_valid(contact, contract, dock_rotation)
+        )
 
     def _core_robot_tool_wing_mating_contact_is_valid(
         self, contact: mujoco.MjContact
@@ -1529,6 +1764,127 @@ class MatchaWorkflowController:
             np.asarray(point_world, dtype=float) - np.asarray(dock.xpos, dtype=float)
         )
         return [float(value * 1000.0) for value in local]
+
+    def _runtime_geom_edges_dock_local_mm(self, geom_id: int) -> list[np.ndarray]:
+        """Return the live topological edges of one keeper geom in dock space.
+
+        The optional lower-keeper witness is a true edge/edge tangency.  A
+        proximity window over vertices is not sufficient here: the rounded
+        tool-plate corner has vertices only a few microns from the straight
+        source edge, and joining unrelated nearby vertices invents a locus
+        that is not on either collision surface.  Preserve the compiled box or
+        mesh topology and rank complete edges instead.
+        """
+
+        geom_type = int(self.model.geom_type[geom_id])
+        if geom_type == int(mujoco.mjtGeom.mjGEOM_BOX):
+            size = np.asarray(self.model.geom_size[geom_id], dtype=float)
+            vertices_local = np.asarray(
+                [
+                    (sx * size[0], sy * size[1], sz * size[2])
+                    for sx in (-1.0, 1.0)
+                    for sy in (-1.0, 1.0)
+                    for sz in (-1.0, 1.0)
+                ],
+                dtype=float,
+            )
+            # The comprehension above orders sign triplets lexicographically;
+            # box edges differ in exactly one sign bit.
+            edge_indices = [
+                (index, index ^ bit)
+                for index in range(8)
+                for bit in (1, 2, 4)
+                if index < (index ^ bit)
+            ]
+        elif geom_type == int(mujoco.mjtGeom.mjGEOM_MESH):
+            mesh_id = int(self.model.geom_dataid[geom_id])
+            vertex_start = int(self.model.mesh_vertadr[mesh_id])
+            vertex_count = int(self.model.mesh_vertnum[mesh_id])
+            vertices_local = np.asarray(
+                self.model.mesh_vert[
+                    vertex_start : vertex_start + vertex_count
+                ],
+                dtype=float,
+            )
+            face_start = int(self.model.mesh_faceadr[mesh_id])
+            face_count = int(self.model.mesh_facenum[mesh_id])
+            faces = np.asarray(
+                self.model.mesh_face[face_start : face_start + face_count],
+                dtype=np.int64,
+            )
+            edge_indices = sorted(
+                {
+                    tuple(sorted((int(face[index]), int(face[(index + 1) % 3]))))
+                    for face in faces
+                    for index in range(3)
+                    if int(face[index]) != int(face[(index + 1) % 3])
+                }
+            )
+        else:
+            raise RuntimeError("keeper line fallback requires box/mesh geometry")
+        geom_rotation = np.asarray(
+            self.data.geom_xmat[geom_id], dtype=float
+        ).reshape(3, 3)
+        vertices_world = (
+            np.asarray(self.data.geom_xpos[geom_id], dtype=float)
+            + vertices_local @ geom_rotation.T
+        )
+        dock = self.data.body("dock_gripper")
+        dock_rotation = np.asarray(dock.xmat, dtype=float).reshape(3, 3)
+        vertices_dock_mm = (
+            (vertices_world - np.asarray(dock.xpos, dtype=float)) @ dock_rotation
+        ) * 1000.0
+        return [vertices_dock_mm[list(edge)] for edge in edge_indices]
+
+    def _analytic_keeper_line_closest_points_mm(
+        self, geom_ids: list[int], source_witness: dict[str, Any]
+    ) -> list[list[float]]:
+        fixed = source_witness["fixed_coordinates_mm"]
+        fixed_x = float(fixed["x"])
+        fixed_z = float(fixed["z"])
+        candidate_edges: list[np.ndarray] = []
+        for geom_id in geom_ids:
+            edges = [
+                edge
+                for edge in self._runtime_geom_edges_dock_local_mm(geom_id)
+                if abs(float(edge[1, 1] - edge[0, 1])) > 1.0e-12
+            ]
+            if not edges:
+                raise RuntimeError("could not reconstruct keeper line edge")
+            # Minimize the worst endpoint error, not a pooled vertex error.
+            # This selects the complete straight support edge and cannot join
+            # two unrelated vertices from neighboring rounded-corner chords.
+            def edge_key(edge: np.ndarray) -> tuple[float, float, float]:
+                scores = (edge[:, 0] - fixed_x) ** 2 + (
+                    edge[:, 2] - fixed_z
+                ) ** 2
+                return (
+                    float(np.max(scores)),
+                    float(np.mean(scores)),
+                    -abs(float(edge[1, 1] - edge[0, 1])),
+                )
+
+            candidate_edges.append(min(edges, key=edge_key))
+        lower = max(
+            float(source_witness["line_axis_bounds_mm"][0]),
+            *(float(np.min(edge[:, 1])) for edge in candidate_edges),
+        )
+        upper = min(
+            float(source_witness["line_axis_bounds_mm"][1]),
+            *(float(np.max(edge[:, 1])) for edge in candidate_edges),
+        )
+        if not math.isfinite(lower) or not math.isfinite(upper) or lower > upper:
+            raise RuntimeError("live keeper edges have no source-line overlap")
+        witness_y = (lower + upper) / 2.0
+        points: list[list[float]] = []
+        for edge in candidate_edges:
+            low = edge[int(np.argmin(edge[:, 1]))]
+            high = edge[int(np.argmax(edge[:, 1]))]
+            span = float(high[1] - low[1])
+            alpha = 0.5 if abs(span) <= 1.0e-12 else (witness_y - low[1]) / span
+            point = low + alpha * (high - low)
+            points.append([float(value) for value in point])
+        return points
 
     @staticmethod
     def _source_witness_point_error_mm(
@@ -1586,6 +1942,7 @@ class MatchaWorkflowController:
         records: list[dict[str, Any]] = []
         for contract in CORE_KEEPER_CONTACT_CONTRACT:
             runtime_pair = list(contract["runtime_pair"])
+            source_witness = copy.deepcopy(contract["source_witness"])
             geom_ids = [int(self.model.geom(name).id) for name in runtime_pair]
             matching_contacts = [
                 self.data.contact[index]
@@ -1593,7 +1950,7 @@ class MatchaWorkflowController:
                 if {int(value) for value in self.data.contact[index].geom}
                 == set(geom_ids)
             ]
-            from_to = np.empty(6, dtype=np.float64)
+            from_to = np.full(6, np.nan, dtype=np.float64)
             signed_distance_m = float(
                 mujoco.mj_geomDistance(
                     self.model,
@@ -1604,10 +1961,41 @@ class MatchaWorkflowController:
                     from_to,
                 )
             )
-            closest_points_dock_local_mm = [
-                self._dock_local_point_mm(from_to[:3]),
-                self._dock_local_point_mm(from_to[3:]),
-            ]
+            raw_closest_points = (
+                [
+                    self._dock_local_point_mm(from_to[:3]),
+                    self._dock_local_point_mm(from_to[3:]),
+                ]
+                if np.all(np.isfinite(from_to))
+                else []
+            )
+            raw_closest_points_valid = bool(
+                raw_closest_points
+                and all(
+                    self._source_witness_point_error_mm(point, source_witness)
+                    <= float(source_witness["point_tolerance_mm"])
+                    for point in raw_closest_points
+                )
+            )
+            if (
+                source_witness["kind"] == "line_tangency"
+                and not raw_closest_points_valid
+                and not matching_contacts
+                and abs(signed_distance_m) <= CONTACT_NUMERICAL_EPSILON_M
+            ):
+                closest_points_dock_local_mm = (
+                    self._analytic_keeper_line_closest_points_mm(
+                        geom_ids, source_witness
+                    )
+                )
+                closest_point_method = (
+                    "analytic_box_box_line_tangency_from_live_geom_transforms"
+                )
+                mujoco_from_to_valid = False
+            else:
+                closest_points_dock_local_mm = raw_closest_points
+                closest_point_method = "mujoco_mj_geomDistance"
+                mujoco_from_to_valid = raw_closest_points_valid
             contact_points_dock_local_mm = [
                 self._dock_local_point_mm(np.asarray(contact.pos, dtype=float))
                 for contact in matching_contacts
@@ -1620,6 +2008,18 @@ class MatchaWorkflowController:
                 default=max(0.0, -signed_distance_m) * 1000.0,
             )
             if matching_contacts:
+                oriented_normals = [
+                    self._core_keeper_oriented_normal_dock_local(
+                        contact, contract, dock_rotation
+                    )
+                    for contact in matching_contacts
+                ]
+                normals_valid = all(
+                    self._core_keeper_normal_is_valid(
+                        contact, contract, dock_rotation
+                    )
+                    for contact in matching_contacts
+                )
                 alignments = [
                     self._core_keeper_normal_alignment(
                         contact, contract, dock_rotation
@@ -1633,6 +2033,8 @@ class MatchaWorkflowController:
                 # distance plus both live geom frames still proves the same
                 # active physical geometry without inventing contact force.
                 alignments = [1.0]
+                oriented_normals = []
+                normals_valid = True
                 witness_method = (
                     "live_mujoco_signed_geom_distance_and_source_semantics"
                 )
@@ -1642,21 +2044,24 @@ class MatchaWorkflowController:
                 source_pair[1].endswith("upper_rail")
                 or source_pair[0] == "robot_plate"
             )
-            source_witness = copy.deepcopy(contract["source_witness"])
             witness_points = (
                 contact_points_dock_local_mm
                 if matching_contacts
                 else closest_points_dock_local_mm
             )
             maximum_source_witness_error_mm = max(
-                self._source_witness_point_error_mm(point, source_witness)
-                for point in witness_points
+                (
+                    self._source_witness_point_error_mm(point, source_witness)
+                    for point in witness_points
+                ),
+                default=1.0e9,
             )
             passed = bool(
                 math.isfinite(signed_distance_m)
                 and signed_distance_m * 1000.0 <= CORE_KEEPER_MAX_SEPARATION_MM
                 and max_penetration_mm <= CORE_KEEPER_MAX_PENETRATION_MM
                 and minimum_alignment >= CORE_KEEPER_MIN_NORMAL_ALIGNMENT
+                and normals_valid
                 and (matching_contacts or not live_contact_required)
                 and maximum_source_witness_error_mm
                 <= float(source_witness["point_tolerance_mm"])
@@ -1669,7 +2074,13 @@ class MatchaWorkflowController:
                 "signed_distance_mm": signed_distance_m * 1000.0,
                 "max_penetration_mm": max_penetration_mm,
                 "closest_points_dock_local_mm": closest_points_dock_local_mm,
+                "closest_point_method": closest_point_method,
+                "mujoco_from_to_valid": mujoco_from_to_valid,
                 "contact_points_dock_local_mm": contact_points_dock_local_mm,
+                "contact_normals_from_runtime_pair_0_to_1_dock_local": [
+                    [float(value) for value in normal]
+                    for normal in oriented_normals
+                ],
                 "maximum_contact_point_source_witness_error_mm": (
                     maximum_source_witness_error_mm
                 ),
@@ -1743,11 +2154,15 @@ class MatchaWorkflowController:
         robot_lands = {
             "qc_col_robot_plate_core__mating_land",
             "qc_col_robot_plate_cam_relief_part_01",
-            "qc_col_robot_plate_cam_relief_part_02",
-            "qc_col_robot_plate_cam_relief_part_03",
-            "qc_col_stud_well_left_mating_land__locator_land",
-            "qc_col_stud_well_right_mating_land__locator_land",
         }
+        robot_lands.update(
+            str(self.model.geom(geom_id).name)
+            for geom_id in range(self.model.ngeom)
+            if str(self.model.geom(geom_id).name).startswith(
+                "qc_col_robot_plate_upper_well_partition_"
+            )
+            and str(self.model.geom(geom_id).name).endswith("__mating_land")
+        )
         matching_robot_lands = robot_lands.intersection({geom_a, geom_b})
         if len(matching_robot_lands) != 1:
             return False
@@ -1775,49 +2190,6 @@ class MatchaWorkflowController:
         ).reshape(3, 3)
         mating_normal = tool_rotation[:, 2]
         return abs(float(np.asarray(contact.frame[:3]) @ mating_normal)) >= 0.999
-
-    def _locator_land_contact_is_valid(
-        self, contact: mujoco.MjContact, tool: str
-    ) -> bool:
-        geom_a = str(self.model.geom(int(contact.geom[0])).name)
-        geom_b = str(self.model.geom(int(contact.geom[1])).name)
-        robot_lands = {
-            "qc_col_stud_well_left_mating_land__locator_land",
-            "qc_col_stud_well_right_mating_land__locator_land",
-        }
-        matching_robot_lands = robot_lands.intersection({geom_a, geom_b})
-        if len(matching_robot_lands) != 1:
-            return False
-        robot_land = next(iter(matching_robot_lands))
-        tool_land = geom_b if geom_a == robot_land else geom_a
-        if not (
-            tool_land.startswith(f"matcha_col_{tool}_plate_")
-            and "__locator_land" in tool_land
-        ):
-            return False
-        if float(contact.dist) < -1.0e-5 or not self._capture_pose_is_valid(tool):
-            return False
-        if not (
-            self._equality_active(f"dock_{tool}_hold")
-            or self._equality_active(f"attach_{tool}")
-        ):
-            return False
-        tool_rotation = np.asarray(
-            self.data.body(f"tool_{tool}").xmat, dtype=float
-        ).reshape(3, 3)
-        coupling_axis = tool_rotation[:, 2]
-        robot_geom_id = int(self.model.geom(robot_land).id)
-        center = np.asarray(self.data.geom_xpos[robot_geom_id], dtype=float)
-        offset = np.asarray(contact.pos, dtype=float) - center
-        axial = abs(float(offset @ coupling_axis))
-        radial = float(
-            np.linalg.norm(offset - (offset @ coupling_axis) * coupling_axis)
-        )
-        return (
-            axial <= 2.0e-4
-            and 2.8e-3 <= radial <= 4.2e-3
-            and np.all(np.isfinite(contact.frame[:3]))
-        )
 
     def _interface_guard(self, tool: str) -> bool:
         signals = self._pogo_contact_signals(tool)
@@ -1855,8 +2227,6 @@ class MatchaWorkflowController:
             if self._dock_stop_contact_is_valid(contact, tool):
                 return True
             if self._mating_land_contact_is_valid(contact, tool):
-                return True
-            if self._locator_land_contact_is_valid(contact, tool):
                 return True
             for signal in qc.SIGNALS:
                 if self._matching_pogo_contact_is_valid(contact, tool, signal):

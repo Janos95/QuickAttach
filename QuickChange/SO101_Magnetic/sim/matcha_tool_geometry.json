@@ -21,6 +21,14 @@
     "loads_continuous_swept_guard_as_one_mesh": false,
     "cad_coverage_validation_required": true,
     "runtime_proxy_is_clearance_authority": false,
+    "broad_plate_proxy_role": "approximate dynamics broadphase with exact named critical lock voids",
+    "broad_plate_proxy_exact_source_subset": false,
+    "broad_plate_proxy_continuous_clearance_authority": false,
+    "positive_lock_inertia_authority": {
+      "slider": "explicit 304SS mass, COM, and tensor from hash-pinned corrected STEP; collision prisms massless",
+      "tool_hardware": "one rigid no-joint child per tool with exact paired shoulder-screw/nut source inertia in tool-root frame; collision pieces massless",
+      "collision_proxy_mass_accounting": false
+    },
     "all_physics_substeps_contact_audited": true,
     "rejected_architecture": "large undifferentiated CoACD part bundle"
   },
