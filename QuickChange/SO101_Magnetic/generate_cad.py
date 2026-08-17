@@ -2173,7 +2173,11 @@ def main(argv: list[str] | None = None) -> None:
             "pogo_pin": POGO_PART_NUMBER,
             "pogo_catalog_max_current_A": 8.0,
             "pogo_catalog_derated_current_A": 6.2,
-            "ground_first_mate_offset": POGO_GROUND_PROTRUSION - POGO_STANDARD_PROTRUSION,
+            "ground_first_mate_nominal_reference_offset_mm": (
+                POGO_GROUND_PROTRUSION - POGO_STANDARD_PROTRUSION
+            ),
+            "ground_first_mate_guaranteed_worst_case_lead_mm": -0.10,
+            "ground_first_mate_release_qualified": False,
             "stock_gripper_uses": ["GND", "+12V", "TTL_DATA"],
             "tool_board": [CONTACT_BOARD_WIDTH, CONTACT_BOARD_HEIGHT, CONTACT_BOARD_THICKNESS],
             "tool_board_target_pad_x_from_board_center": CONTACT_TARGET_PAD_OFFSET_X,
