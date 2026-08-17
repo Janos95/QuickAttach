@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
 import math
 import re
 import xml.etree.ElementTree as ET
@@ -190,13 +191,235 @@ CORE_DOCK_CAM_POLYGON_M = (
     (0.02405, 0.0),
 )
 CORE_DOCK_CAM_Z_BOUNDS_M = (-0.00415, -0.00195)
-MATCHA_DOCK_CAM_POLYGON_M = (
-    (0.028, -0.017),
-    (0.034, -0.017),
-    (0.034, 0.001),
-    (0.024, 0.001),
+CORE_DOCK_CAM_AXIAL_LEAD_LOWER_RECTANGLE_M = {
+    "x_bounds": (0.02725, 0.029),
+    "y_bounds": (0.0, 0.002),
+    "z": -0.0096,
+}
+CORE_DOCK_CAM_AXIAL_LEAD_UPPER_RECTANGLE_M = {
+    "x_bounds": (0.02405, 0.029),
+    "y_bounds": (0.0, 0.002),
+    "z": -0.0064,
+}
+CORE_DOCK_CAM_HOLD_FINGER_BOUNDS_M = (
+    (0.02405, 0.029),
+    (0.0, 0.002),
+    (-0.0064, -0.00415),
 )
-MATCHA_DOCK_CAM_Z_BOUNDS_M = (-0.0042, -0.0020)
+CORE_DOCK_CAM_OUTER_ROOT_BRIDGE_BOUNDS_M = (
+    (0.028, 0.029),
+    (-0.001, 0.001),
+    (-0.00465, -0.00365),
+)
+CORE_DOCK_CAM_OUTER_ROOT_REMAINDER_BOUNDS_M = (
+    ((0.028, 0.029), (-0.001, 0.0), (-0.00465, -0.00415)),
+    ((0.028, 0.029), (0.0, 0.001), (-0.00415, -0.00365)),
+)
+CORE_DOCK_CAM_CONTRACT_CANONICAL_SHA256 = (
+    "ce86f014833452eedcbdccc04e9f6c0e182718c293c718be5d02dab673a6c633"
+)
+def positive_lock_cam_collision_geom_names(tool: str) -> tuple[str, ...]:
+    if tool not in {"gripper", "spoon", "whisk"}:
+        raise ValueError(f"unsupported positive-lock cam tool {tool!r}")
+    return (
+        f"dock_{tool}_cam_collision",
+        f"dock_{tool}_cam_axial_lead_collision",
+        f"dock_{tool}_cam_hold_finger_collision",
+        f"dock_{tool}_cam_outer_root_lower_collision",
+        f"dock_{tool}_cam_outer_root_upper_collision",
+    )
+
+
+CORE_DOCK_CAM_COLLISION_GEOM_NAMES = positive_lock_cam_collision_geom_names(
+    "gripper"
+)
+
+
+def _canonical_json_sha256(value: object) -> str:
+    return hashlib.sha256(
+        json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode()
+    ).hexdigest()
+
+
+def positive_lock_cam_runtime_contract() -> dict[str, object]:
+    """Return the source-bound nominal runtime cam geometry contract.
+
+    The four source roles reproduce the authored set union exactly.  The
+    runtime keeps only the root's two nonoverlapping remainder boxes, avoiding
+    duplicate solver contacts while retaining the authored 0.5 mm3 overlap
+    provenance.  No contact-force or dynamics authority is claimed.
+    """
+
+    component_inputs = (
+        (
+            "main_xy_wedge",
+            "single_convex_prism_mesh",
+            {
+                "polygon_xy": [list(point) for point in CORE_DOCK_CAM_POLYGON_M],
+                "z_bounds": list(CORE_DOCK_CAM_Z_BOUNDS_M),
+            },
+            (CORE_DOCK_CAM_COLLISION_GEOM_NAMES[0],),
+            280.72,
+            280.72,
+        ),
+        (
+            "axial_lead",
+            "single_convex_ruled_loft_mesh",
+            {
+                "lower_rectangle": {
+                    "x_bounds": list(
+                        CORE_DOCK_CAM_AXIAL_LEAD_LOWER_RECTANGLE_M["x_bounds"]
+                    ),
+                    "y_bounds": list(
+                        CORE_DOCK_CAM_AXIAL_LEAD_LOWER_RECTANGLE_M["y_bounds"]
+                    ),
+                    "z": CORE_DOCK_CAM_AXIAL_LEAD_LOWER_RECTANGLE_M["z"],
+                },
+                "upper_rectangle": {
+                    "x_bounds": list(
+                        CORE_DOCK_CAM_AXIAL_LEAD_UPPER_RECTANGLE_M["x_bounds"]
+                    ),
+                    "y_bounds": list(
+                        CORE_DOCK_CAM_AXIAL_LEAD_UPPER_RECTANGLE_M["y_bounds"]
+                    ),
+                    "z": CORE_DOCK_CAM_AXIAL_LEAD_UPPER_RECTANGLE_M["z"],
+                },
+            },
+            (CORE_DOCK_CAM_COLLISION_GEOM_NAMES[1],),
+            21.439999999999994,
+            21.439999999999994,
+        ),
+        (
+            "hold_finger",
+            "analytic_axis_aligned_box",
+            {
+                "bounds": [
+                    list(bounds) for bounds in CORE_DOCK_CAM_HOLD_FINGER_BOUNDS_M
+                ]
+            },
+            (CORE_DOCK_CAM_COLLISION_GEOM_NAMES[2],),
+            22.275,
+            22.275,
+        ),
+        (
+            "outer_root_bridge",
+            "two_nonoverlapping_analytic_boxes_exact_union_remainder",
+            {
+                "authored_bounds": [
+                    list(bounds)
+                    for bounds in CORE_DOCK_CAM_OUTER_ROOT_BRIDGE_BOUNDS_M
+                ],
+                "runtime_remainder_bounds": [
+                    [list(bounds) for bounds in remainder]
+                    for remainder in CORE_DOCK_CAM_OUTER_ROOT_REMAINDER_BOUNDS_M
+                ],
+            },
+            CORE_DOCK_CAM_COLLISION_GEOM_NAMES[3:5],
+            2.000000000000001,
+            1.0,
+        ),
+    )
+    components: list[dict[str, object]] = []
+    for (
+        source_component,
+        representation,
+        source_geometry_m,
+        geom_names,
+        source_volume,
+        runtime_volume,
+    ) in component_inputs:
+        digest_preimage = {
+            "source_component": source_component,
+            "representation": representation,
+            "source_geometry_m": source_geometry_m,
+        }
+        components.append(
+            {
+                **digest_preimage,
+                "runtime_geom_names": list(geom_names),
+                "source_volume_mm3": source_volume,
+                "runtime_volume_mm3": runtime_volume,
+                "canonical_geometry_sha256": _canonical_json_sha256(
+                    digest_preimage
+                ),
+            }
+        )
+
+    repository_root = Path(__file__).resolve().parents[3]
+    matcha_bays = {}
+    for tool in ("spoon", "whisk"):
+        matcha_bays[tool] = {
+            "frame": f"dock_{tool}",
+            "source_function": "INTERFACE.positive_lock_cam",
+            "runtime_geom_names": list(
+                positive_lock_cam_collision_geom_names(tool)
+            ),
+            "uses_core_canonical_geometry": True,
+            "geometry_and_placement_authority": True,
+        }
+    blockers = [
+        "positive_lock_cam_friction_coefficient_unqualified",
+        "positive_lock_cam_load_capacity_unqualified",
+        "positive_lock_cam_dynamics_unqualified",
+    ]
+    return {
+        "schema_version": "1.0",
+        "source_binding": {
+            "generator_file": {
+                "path": str(POGO_CAD_SOURCE_PATH.relative_to(repository_root)),
+                "bytes": POGO_CAD_SOURCE_BYTES,
+                "sha256": POGO_CAD_SOURCE_SHA256,
+            },
+            "positive_lock_cam_contract_sha256": (
+                CORE_DOCK_CAM_CONTRACT_CANONICAL_SHA256
+            ),
+        },
+        "authority_scope": {
+            "geometry_and_placement_authority": True,
+            "friction_coefficient_authority": False,
+            "load_capacity_authority": False,
+            "dynamics_authority": False,
+            "overlapping_component_contact_force_authority": False,
+            "blockers": blockers,
+            "release_ready": False,
+        },
+        "core_gripper": {
+            "frame": "dock_gripper",
+            "source_function": "positive_lock_cam",
+            "runtime_geom_names": list(CORE_DOCK_CAM_COLLISION_GEOM_NAMES),
+            "components": components,
+            "expected_union": {
+                "bounds_m": [
+                    [0.02405, 0.034],
+                    [-0.016, 0.002],
+                    [-0.0096, -0.00195],
+                ],
+                "component_volume_sum_mm3": 326.435,
+                "runtime_component_volume_sum_mm3": 325.435,
+                "authored_pair_overlaps": [
+                    {
+                        "components": ["main_xy_wedge", "outer_root_bridge"],
+                        "volume_mm3": 0.5,
+                    },
+                    {
+                        "components": ["hold_finger", "outer_root_bridge"],
+                        "volume_mm3": 0.5,
+                    },
+                ],
+                "authored_pair_overlap_total_mm3": 1.0,
+                "runtime_pairwise_overlap_total_mm3": 0.0,
+                "source_volume_mm3": 325.435,
+            },
+        },
+        "matcha_bays": matcha_bays,
+        "passed": True,
+        "release_ready": False,
+    }
 
 # The released core plate carries a local fixed-side recess around the full
 # passive-cam sweep.  Values are the published 0.50 mm guarded source cutter;
@@ -388,6 +611,102 @@ def _add_convex_prism_mesh(
         },
     )
     return name
+
+
+def _add_convex_polyhedron_mesh(
+    asset: ET.Element,
+    *,
+    name: str,
+    vertices: tuple[tuple[float, float, float], ...],
+    faces: tuple[tuple[int, int, int], ...],
+) -> str:
+    """Install one closed, outward-oriented deterministic convex mesh."""
+
+    if len(vertices) < 4 or len(faces) < 4:
+        raise ValueError(f"polyhedron {name} is incomplete")
+    if any(not math.isfinite(value) for vertex in vertices for value in vertex):
+        raise ValueError(f"polyhedron {name} has a nonfinite vertex")
+    edge_counts: dict[tuple[int, int], int] = {}
+    signed_volume = 0.0
+    for face in faces:
+        if len(set(face)) != 3 or any(index < 0 or index >= len(vertices) for index in face):
+            raise ValueError(f"polyhedron {name} has an invalid face")
+        first, second, third = (vertices[index] for index in face)
+        edge_a = tuple(second[axis] - first[axis] for axis in range(3))
+        edge_b = tuple(third[axis] - first[axis] for axis in range(3))
+        cross = (
+            edge_a[1] * edge_b[2] - edge_a[2] * edge_b[1],
+            edge_a[2] * edge_b[0] - edge_a[0] * edge_b[2],
+            edge_a[0] * edge_b[1] - edge_a[1] * edge_b[0],
+        )
+        if math.sqrt(sum(value * value for value in cross)) <= 1.0e-18:
+            raise ValueError(f"polyhedron {name} has a degenerate face")
+        signed_volume += sum(first[axis] * cross[axis] for axis in range(3)) / 6.0
+        for edge_index in range(3):
+            edge = tuple(
+                sorted((face[edge_index], face[(edge_index + 1) % 3]))
+            )
+            edge_counts[edge] = edge_counts.get(edge, 0) + 1
+    if any(count != 2 for count in edge_counts.values()):
+        raise ValueError(f"polyhedron {name} is not closed")
+    if signed_volume <= 1.0e-18:
+        raise ValueError(f"polyhedron {name} is not outward-oriented")
+    existing = asset.find(f"./mesh[@name='{name}']")
+    if existing is not None:
+        return name
+    ET.SubElement(
+        asset,
+        "mesh",
+        {
+            "name": name,
+            "vertex": " ".join(
+                f"{coordinate:.12g}"
+                for vertex in vertices
+                for coordinate in vertex
+            ),
+            "face": " ".join(str(index) for face in faces for index in face),
+        },
+    )
+    return name
+
+
+def _core_cam_axial_lead_mesh_geometry() -> tuple[
+    tuple[tuple[float, float, float], ...],
+    tuple[tuple[int, int, int], ...],
+]:
+    """Return the exact eight-vertex ruled source lead."""
+
+    lower = CORE_DOCK_CAM_AXIAL_LEAD_LOWER_RECTANGLE_M
+    upper = CORE_DOCK_CAM_AXIAL_LEAD_UPPER_RECTANGLE_M
+    lower_x_min, lower_x_max = lower["x_bounds"]
+    lower_y_min, lower_y_max = lower["y_bounds"]
+    upper_x_min, upper_x_max = upper["x_bounds"]
+    upper_y_min, upper_y_max = upper["y_bounds"]
+    vertices = (
+        (lower_x_min, lower_y_min, lower["z"]),
+        (lower_x_max, lower_y_min, lower["z"]),
+        (lower_x_max, lower_y_max, lower["z"]),
+        (lower_x_min, lower_y_max, lower["z"]),
+        (upper_x_min, upper_y_min, upper["z"]),
+        (upper_x_max, upper_y_min, upper["z"]),
+        (upper_x_max, upper_y_max, upper["z"]),
+        (upper_x_min, upper_y_max, upper["z"]),
+    )
+    faces = (
+        (0, 2, 1),
+        (0, 3, 2),
+        (4, 5, 6),
+        (4, 6, 7),
+        (0, 1, 5),
+        (0, 5, 4),
+        (1, 2, 6),
+        (1, 6, 5),
+        (2, 3, 7),
+        (2, 7, 6),
+        (0, 4, 7),
+        (0, 7, 3),
+    )
+    return vertices, faces
 
 
 def _expand_slider_void_boundary_vertex_mm(
@@ -1773,6 +2092,95 @@ def add_tool_quick_change_interface(
     return names
 
 
+@cache
+def _require_core_cam_runtime_source() -> None:
+    observed_bytes = POGO_CAD_SOURCE_PATH.stat().st_size
+    if observed_bytes != POGO_CAD_SOURCE_BYTES:
+        raise RuntimeError(
+            "core cam source byte-count mismatch: "
+            f"expected {POGO_CAD_SOURCE_BYTES}, got {observed_bytes}"
+        )
+    observed_sha256 = hashlib.sha256(POGO_CAD_SOURCE_PATH.read_bytes()).hexdigest()
+    if observed_sha256 != POGO_CAD_SOURCE_SHA256:
+        raise RuntimeError(
+            "core cam source hash mismatch: "
+            f"expected {POGO_CAD_SOURCE_SHA256}, got {observed_sha256}"
+        )
+
+
+def _add_positive_lock_cam_geoms(
+    dock: ET.Element,
+    asset: ET.Element,
+    *,
+    tool: str,
+    rgba: str,
+) -> list[str]:
+    """Install one dock-local exact nonoverlapping source cam partition."""
+
+    _require_core_cam_runtime_source()
+    geom_names = positive_lock_cam_collision_geom_names(tool)
+    names: list[str] = []
+    main_mesh_name = _add_convex_prism_mesh(
+        asset,
+        name=f"dock_{tool}_positive_lock_cam_source_mesh",
+        polygon_xy=CORE_DOCK_CAM_POLYGON_M,
+        z_bounds=CORE_DOCK_CAM_Z_BOUNDS_M,
+    )
+    _geom(
+        dock,
+        name=geom_names[0],
+        geom_type="mesh",
+        size=None,
+        mesh=main_mesh_name,
+        rgba=rgba,
+        mass="0",
+    )
+    names.append(geom_names[0])
+
+    lead_vertices, lead_faces = _core_cam_axial_lead_mesh_geometry()
+    lead_mesh_name = _add_convex_polyhedron_mesh(
+        asset,
+        name=f"dock_{tool}_positive_lock_cam_axial_lead_source_mesh",
+        vertices=lead_vertices,
+        faces=lead_faces,
+    )
+    _geom(
+        dock,
+        name=geom_names[1],
+        geom_type="mesh",
+        size=None,
+        mesh=lead_mesh_name,
+        rgba=rgba,
+        mass="0",
+    )
+    names.append(geom_names[1])
+
+    _add_box_from_bounds(
+        dock,
+        name=geom_names[2],
+        bounds=CORE_DOCK_CAM_HOLD_FINGER_BOUNDS_M,
+        rgba=rgba,
+        mass="0",
+    )
+    names.append(geom_names[2])
+    for name, bounds in zip(
+        geom_names[3:],
+        CORE_DOCK_CAM_OUTER_ROOT_REMAINDER_BOUNDS_M,
+        strict=True,
+    ):
+        _add_box_from_bounds(
+            dock,
+            name=name,
+            bounds=bounds,
+            rgba=rgba,
+            mass="0",
+        )
+        names.append(name)
+    if tuple(names) != geom_names:
+        raise RuntimeError(f"{tool} cam runtime component inventory drifted")
+    return names
+
+
 def add_supported_dock(
     worldbody: ET.Element,
     asset: ET.Element,
@@ -1880,8 +2288,6 @@ def add_supported_dock(
                 solref="0.0005 1",
                 solimp="0.99 0.9999 0.00001",
             )
-        cam_polygon = CORE_DOCK_CAM_POLYGON_M
-        cam_z_bounds = CORE_DOCK_CAM_Z_BOUNDS_M
     elif tool in {"spoon", "whisk"}:
         _add_box_from_bounds(
             dock,
@@ -1891,8 +2297,6 @@ def add_supported_dock(
             solref="0.0005 1",
             solimp="0.99 0.9999 0.00001",
         )
-        cam_polygon = MATCHA_DOCK_CAM_POLYGON_M
-        cam_z_bounds = MATCHA_DOCK_CAM_Z_BOUNDS_M
     else:
         raise ValueError(f"unsupported dock source contract for {tool!r}")
     if tool == "gripper":
@@ -1937,18 +2341,10 @@ def add_supported_dock(
                 size=(0.034, 0.003, 0.010),
                 rgba=rgba,
             )
-    cam_mesh_name = _add_convex_prism_mesh(
-        asset,
-        name=f"dock_{tool}_positive_lock_cam_source_mesh",
-        polygon_xy=cam_polygon,
-        z_bounds=cam_z_bounds,
-    )
-    _geom(
+    _add_positive_lock_cam_geoms(
         dock,
-        name=f"dock_{tool}_cam_collision",
-        geom_type="mesh",
-        size=None,
-        mesh=cam_mesh_name,
+        asset,
+        tool=tool,
         rgba="0.12 0.75 0.35 1",
     )
     ET.SubElement(

@@ -2038,9 +2038,13 @@ class MatchaWorkflowController:
             for geom_id, name in enumerate(self.geom_names)
             if name.startswith("qc_col_lock_slider_tab_part_")
         )
-        self.dock_gripper_cam_geom_id = int(
-            model.geom("dock_gripper_cam_collision").id
+        self.dock_gripper_cam_geom_ids = tuple(
+            int(model.geom(name).id)
+            for name in qc.positive_lock_cam_collision_geom_names("gripper")
         )
+        # Preserve the published legacy scalar as the main-wedge ID while all
+        # physical clearance/contact queries consume the complete roster.
+        self.dock_gripper_cam_geom_id = self.dock_gripper_cam_geom_ids[0]
         self.action_index = 0
         self.action_started_s = float(data.time)
         # Trajectories start from the preceding actuator command, not the
@@ -2361,25 +2365,29 @@ class MatchaWorkflowController:
             self.slider_settled_cam_contact_count = 0
 
     def _slider_cam_runtime_clearance(self) -> tuple[float, int]:
-        cam_id = self.dock_gripper_cam_geom_id
+        cam_ids = self.dock_gripper_cam_geom_ids
         tab_ids = self.slider_tab_geom_ids
         if not tab_ids:
             raise RuntimeError("positive-lock slider has no active cam-tab prisms")
         distances: list[float] = []
         for geom_id in tab_ids:
-            from_to = np.empty(6, dtype=np.float64)
-            distance = float(
-                mujoco.mj_geomDistance(
-                    self.model, self.data, geom_id, cam_id, 0.1, from_to
+            for cam_id in cam_ids:
+                from_to = np.empty(6, dtype=np.float64)
+                distance = float(
+                    mujoco.mj_geomDistance(
+                        self.model, self.data, geom_id, cam_id, 0.1, from_to
+                    )
                 )
-            )
-            if not math.isfinite(distance):
-                raise RuntimeError("nonfinite slider/cam runtime distance")
-            distances.append(distance)
+                if not math.isfinite(distance):
+                    raise RuntimeError("nonfinite slider/cam runtime distance")
+                distances.append(distance)
         cam_contacts = sum(
             1
             for index in range(self.data.ncon)
-            if cam_id in {int(value) for value in self.data.contact[index].geom}
+            if any(
+                cam_id in {int(value) for value in self.data.contact[index].geom}
+                for cam_id in cam_ids
+            )
             and any(
                 int(value) in tab_ids for value in self.data.contact[index].geom
             )
