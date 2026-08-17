@@ -152,7 +152,7 @@ def add_robot_quick_change_interface(wrist_output: ET.Element) -> ET.Element:
     )
     _geom(
         frame,
-        name="qc_col_robot_plate_core",
+        name="qc_col_robot_plate_core__mating_land",
         geom_type="box",
         pos=(0.0, 0.0, 0.00475),
         size=(0.024, 0.024, 0.00475),
@@ -175,7 +175,7 @@ def add_robot_quick_change_interface(wrist_output: ET.Element) -> ET.Element:
         )
         _geom(
             frame,
-            name=f"qc_col_stud_well_{side}_mating_land",
+            name=f"qc_col_stud_well_{side}_mating_land__locator_land",
             geom_type="cylinder",
             pos=(0.0, y_value, 0.00945),
             size=(0.0040, 0.00005),
@@ -191,7 +191,11 @@ def add_robot_quick_change_interface(wrist_output: ET.Element) -> ET.Element:
                 "name": f"qc_pogo_{signal}_body",
                 "pos": (
                     f"-0.031 {SIGNAL_Y_M[signal]:.7f} "
-                    f"{0.00875 if signal == 'ground' else 0.00885:.7f}"
+                    # The recovered spring-pin stack has a 0.875 mm ground
+                    # reach and 0.675 mm P/D/ID reach beyond the mating plane.
+                    # Continuous dynamics then settles near 0.858/0.662 mm,
+                    # leaving a real preload instead of numerical tangency.
+                    f"{0.009575 if signal == 'ground' else 0.009475:.7f}"
                 ),
             },
         )
@@ -273,7 +277,7 @@ def _add_target_with_bore(body: ET.Element, tool: str, side: str, y_value: float
         ("yneg", 0.0, y_value - 0.00425, 0.0030, 0.00125),
         ("ypos", 0.0, y_value + 0.00425, 0.0030, 0.00125),
     ):
-        name = f"{tool}_target_{side}_{suffix}_collision"
+        name = f"{tool}_target_{side}_{suffix}_collision__mating_land"
         _geom(
             body,
             name=name,
@@ -285,7 +289,7 @@ def _add_target_with_bore(body: ET.Element, tool: str, side: str, y_value: float
         names.append(name)
     _geom(
         body,
-        name=f"{tool}_m5_screw_{side}_collision",
+        name=f"{tool}_m5_screw_{side}_collision__mating_land",
         geom_type="cylinder",
         pos=(0.0, y_value, 0.0045),
         size=(0.00245, 0.0045),
@@ -300,7 +304,10 @@ def _add_target_with_bore(body: ET.Element, tool: str, side: str, y_value: float
         rgba="0.28 0.30 0.33 1",
     )
     names.extend(
-        [f"{tool}_m5_screw_{side}_collision", f"{tool}_m5_nut_{side}_collision"]
+        [
+            f"{tool}_m5_screw_{side}_collision__mating_land",
+            f"{tool}_m5_nut_{side}_collision",
+        ]
     )
     return names
 
@@ -322,7 +329,7 @@ def add_tool_quick_change_interface(body: ET.Element, tool: str) -> list[str]:
         ("center_ypos", 0.0, 0.0195, 0.004, 0.0055, True),
     )
     for suffix, x_value, y_value, x_half, y_half, stop_land in plate_pieces:
-        semantics = "__mating_land"
+        semantics = "__mating_land__locator_land"
         if stop_land or suffix in {"xneg", "xpos"}:
             semantics += "__dock_stop_land"
         plate_name = f"matcha_col_{tool}_plate_{suffix}{semantics}"

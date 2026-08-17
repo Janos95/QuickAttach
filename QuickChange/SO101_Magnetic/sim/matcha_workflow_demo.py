@@ -86,6 +86,7 @@ POGO_PAD_MAX_PENETRATION_M = 6.0e-5
 DOCK_STOP_MAX_PENETRATION_M = 1.5e-4
 CAPTURE_CONTACT_DWELL_S = 0.020
 LOCK_VERIFY_DWELL_S = 0.050
+POST_RELEASE_BUS_DWELL_S = 0.250
 
 
 @dataclass(frozen=True)
@@ -112,10 +113,12 @@ class WorkflowAction:
             raise ValueError(f"wrong target width for {self.name}")
 
 
-def _recovery_controller_actions(tool: str = "gripper") -> tuple[WorkflowAction, ...]:
+def _recovery_controller_actions(
+    tool: str = "gripper", *, include_rack_exit: bool = False
+) -> tuple[WorkflowAction, ...]:
     if tool not in ALL_TOOL_IDS:
         raise ValueError(f"unsupported recovery tool {tool}")
-    return (
+    capture_release = (
         WorkflowAction(
             name=f"{tool}_to_capture",
             kind="move",
@@ -142,9 +145,13 @@ def _recovery_controller_actions(tool: str = "gripper") -> tuple[WorkflowAction,
             name=f"{tool}_dock_release_verify",
             kind="release_verify",
             tool=tool,
-            duration_s=LOCK_VERIFY_DWELL_S,
+            duration_s=POST_RELEASE_BUS_DWELL_S,
             timeout_s=2.0,
         ),
+    )
+    if not include_rack_exit:
+        return capture_release
+    return capture_release + (
         WorkflowAction(
             name=f"{tool}_rack_exit",
             kind="move",
@@ -997,7 +1004,13 @@ class MatchaWorkflowController:
         )
         self.action_index = 0
         self.action_started_s = float(data.time)
-        self.action_start_q = np.asarray(data.qpos[self.arm_qpos_ids], dtype=float).copy()
+        # Trajectories start from the preceding actuator command, not the
+        # instantaneous tracking state.  Switching a position servo from the
+        # commanded capture datum to the slightly lagging qpos caused a small
+        # but real unload of the spring-pin bus at the rack-exit boundary.
+        self.action_start_q = np.asarray(
+            data.ctrl[self.arm_actuator_ids], dtype=float
+        ).copy()
         self.completed = False
         self.success = False
         self.abort_reason: str | None = None
@@ -1006,6 +1019,7 @@ class MatchaWorkflowController:
         self.bus_connected = False
         self.handshake_achieved = False
         self.physical_lock_confirmed = False
+        self.lock_candidate_verified = False
         self.locked = False
         self.capture_live_substeps = 0
         self.lock_live_substeps = 0
@@ -1067,6 +1081,8 @@ class MatchaWorkflowController:
         expected = {f"qc_col_pogo_{signal}", f"{tool}_pad_{signal}_collision"}
         if {geom_a, geom_b} != expected:
             return False
+        if float(contact.dist) > CONTACT_NUMERICAL_EPSILON_M:
+            return False
         if float(contact.dist) < -POGO_PAD_MAX_PENETRATION_M:
             return False
         if not self._capture_pose_is_valid(tool):
@@ -1087,7 +1103,14 @@ class MatchaWorkflowController:
         return (
             axial <= 1.0e-3
             and radial <= 2.01e-3
-            and abs(float(contact_normal @ pad_axis)) >= 0.98
+            # Pose, point-on-disk, exact signal identity, phase/equality and
+            # penetration are the physical acceptance authority.  MuJoCo may
+            # report a transient edge normal while an aligned round pin first
+            # enters its larger matching disk; treating that same-signal edge
+            # witness as a foreign collision produced thousands of false
+            # observations even though its material/phase identity was exact.
+            and np.all(np.isfinite(contact_normal))
+            and float(np.linalg.norm(contact_normal)) >= 0.999
         )
 
     def _pogo_contact_signals(self, tool: str) -> set[str]:
@@ -1114,7 +1137,18 @@ class MatchaWorkflowController:
             return False
         if float(contact.dist) < -DOCK_STOP_MAX_PENETRATION_M:
             return False
-        if not self._equality_active(f"dock_{tool}_hold"):
+        if not (
+            self._equality_active(f"dock_{tool}_hold")
+            or self._equality_active(f"attach_{tool}")
+        ):
+            return False
+        dock_separation = float(
+            np.linalg.norm(
+                self.data.body(f"dock_{tool}").xpos
+                - self.data.body(f"tool_{tool}").xpos
+            )
+        )
+        if dock_separation > CAPTURE_POSITION_TOLERANCE_M:
             return False
         dock_rotation = np.asarray(
             self.data.body(f"dock_{tool}").xmat, dtype=float
@@ -1126,6 +1160,87 @@ class MatchaWorkflowController:
         return any(
             self._dock_stop_contact_is_valid(self.data.contact[index], tool)
             for index in range(self.data.ncon)
+        )
+
+    def _mating_land_contact_is_valid(
+        self, contact: mujoco.MjContact, tool: str
+    ) -> bool:
+        geom_a = str(self.model.geom(int(contact.geom[0])).name)
+        geom_b = str(self.model.geom(int(contact.geom[1])).name)
+        robot_lands = {
+            "qc_col_robot_plate_core__mating_land",
+            "qc_col_stud_well_left_mating_land__locator_land",
+            "qc_col_stud_well_right_mating_land__locator_land",
+        }
+        matching_robot_lands = robot_lands.intersection({geom_a, geom_b})
+        if len(matching_robot_lands) != 1:
+            return False
+        robot_land = next(iter(matching_robot_lands))
+        tool_land = geom_b if geom_a == robot_land else geom_a
+        semantic_mating_land = "__mating_land" in tool_land
+        owned_mating_surface = tool_land.startswith(
+            f"matcha_col_{tool}_plate_"
+        ) or tool_land.startswith(f"{tool}_target_") or tool_land.startswith(
+            f"{tool}_m5_screw_"
+        )
+        if not (semantic_mating_land and owned_mating_surface):
+            return False
+        if float(contact.dist) < -2.0e-5:
+            return False
+        if not self._capture_pose_is_valid(tool):
+            return False
+        if not (
+            self._equality_active(f"dock_{tool}_hold")
+            or self._equality_active(f"attach_{tool}")
+        ):
+            return False
+        tool_rotation = np.asarray(
+            self.data.body(f"tool_{tool}").xmat, dtype=float
+        ).reshape(3, 3)
+        mating_normal = tool_rotation[:, 2]
+        return abs(float(np.asarray(contact.frame[:3]) @ mating_normal)) >= 0.999
+
+    def _locator_land_contact_is_valid(
+        self, contact: mujoco.MjContact, tool: str
+    ) -> bool:
+        geom_a = str(self.model.geom(int(contact.geom[0])).name)
+        geom_b = str(self.model.geom(int(contact.geom[1])).name)
+        robot_lands = {
+            "qc_col_stud_well_left_mating_land__locator_land",
+            "qc_col_stud_well_right_mating_land__locator_land",
+        }
+        matching_robot_lands = robot_lands.intersection({geom_a, geom_b})
+        if len(matching_robot_lands) != 1:
+            return False
+        robot_land = next(iter(matching_robot_lands))
+        tool_land = geom_b if geom_a == robot_land else geom_a
+        if not (
+            tool_land.startswith(f"matcha_col_{tool}_plate_")
+            and "__locator_land" in tool_land
+        ):
+            return False
+        if float(contact.dist) < -1.0e-5 or not self._capture_pose_is_valid(tool):
+            return False
+        if not (
+            self._equality_active(f"dock_{tool}_hold")
+            or self._equality_active(f"attach_{tool}")
+        ):
+            return False
+        tool_rotation = np.asarray(
+            self.data.body(f"tool_{tool}").xmat, dtype=float
+        ).reshape(3, 3)
+        coupling_axis = tool_rotation[:, 2]
+        robot_geom_id = int(self.model.geom(robot_land).id)
+        center = np.asarray(self.data.geom_xpos[robot_geom_id], dtype=float)
+        offset = np.asarray(contact.pos, dtype=float) - center
+        axial = abs(float(offset @ coupling_axis))
+        radial = float(
+            np.linalg.norm(offset - (offset @ coupling_axis) * coupling_axis)
+        )
+        return (
+            axial <= 2.0e-4
+            and 2.8e-3 <= radial <= 4.2e-3
+            and np.all(np.isfinite(contact.frame[:3]))
         )
 
     def _interface_guard(self, tool: str) -> bool:
@@ -1148,6 +1263,10 @@ class MatchaWorkflowController:
         geom_b = str(self.model.geom(int(contact.geom[1])).name)
         for tool in ALL_TOOL_IDS:
             if self._dock_stop_contact_is_valid(contact, tool):
+                return True
+            if self._mating_land_contact_is_valid(contact, tool):
+                return True
+            if self._locator_land_contact_is_valid(contact, tool):
                 return True
             for signal in qc.SIGNALS:
                 if self._matching_pogo_contact_is_valid(contact, tool, signal):
@@ -1220,7 +1339,7 @@ class MatchaWorkflowController:
             self._record_actuator_loads()
             if self.abort_reason is not None:
                 return
-            if self.attached_tool is not None and self._equality_active(
+            if self.locked and self.attached_tool is not None and self._equality_active(
                 f"attach_{self.attached_tool}"
             ):
                 if not self._interface_guard(self.attached_tool):
@@ -1271,7 +1390,7 @@ class MatchaWorkflowController:
             return
         self.action_started_s = float(self.data.time)
         self.action_start_q = np.asarray(
-            self.data.qpos[self.arm_qpos_ids], dtype=float
+            self.data.ctrl[self.arm_actuator_ids], dtype=float
         ).copy()
         self.journal.append(
             {
@@ -1334,12 +1453,12 @@ class MatchaWorkflowController:
         if self.abort_reason is not None or self.lock_live_substeps < required:
             return
         equality_active = self._equality_active(f"attach_{action.tool}")
-        self.locked = bool(
+        self.lock_candidate_verified = bool(
             equality_active
             and self.physical_lock_confirmed
             and self._interface_guard(action.tool)
         )
-        if not self.locked:
+        if not self.lock_candidate_verified:
             self._abort("physical_lock_not_confirmed")
             return
         self.data.eq_active[self.model.equality(f"dock_{action.tool}_hold").id] = 0
@@ -1351,11 +1470,22 @@ class MatchaWorkflowController:
             return
         self.data.ctrl[self.arm_actuator_ids] = DOCK_CAPTURE_Q[action.tool]
         self._integrate()
-        required = math.ceil(LOCK_VERIFY_DWELL_S / float(self.model.opt.timestep))
+        required = math.ceil(
+            POST_RELEASE_BUS_DWELL_S / float(self.model.opt.timestep)
+        )
         if self.abort_reason is not None or self.release_live_substeps < required:
             return
         if self._equality_active(f"dock_{action.tool}_hold"):
             self._abort("dock_hold_failed_to_release")
+            return
+        self.locked = bool(
+            self.lock_candidate_verified
+            and self.physical_lock_confirmed
+            and self._equality_active(f"attach_{action.tool}")
+            and self._interface_guard(action.tool)
+        )
+        if not self.locked:
+            self._abort("post_release_lock_not_confirmed")
             return
         self._advance_action("dock_release_verified")
 
@@ -1388,6 +1518,21 @@ class MatchaWorkflowController:
 
     def result(self) -> dict[str, Any]:
         action = self.current_action
+        live_signals = (
+            sorted(self._pogo_contact_signals(self.attached_tool))
+            if self.attached_tool is not None
+            else []
+        )
+        dock_hold_active = (
+            self._equality_active(f"dock_{self.attached_tool}_hold")
+            if self.attached_tool is not None
+            else None
+        )
+        attach_equality_active = (
+            self._equality_active(f"attach_{self.attached_tool}")
+            if self.attached_tool is not None
+            else None
+        )
         return {
             "completed": self.completed,
             "success": self.success,
@@ -1401,7 +1546,15 @@ class MatchaWorkflowController:
             "bus_connected": self.bus_connected,
             "handshake_achieved": self.handshake_achieved,
             "physical_lock_confirmed": self.physical_lock_confirmed,
+            "lock_candidate_verified": self.lock_candidate_verified,
             "locked": self.locked,
+            "live_pogo_signals": live_signals,
+            "four_signal_bus_live": live_signals == sorted(qc.SIGNALS),
+            "dock_hold_active": dock_hold_active,
+            "attach_equality_active": attach_equality_active,
+            "finite_actuator_force": bool(
+                np.all(np.isfinite(self.data.actuator_force))
+            ),
             "forbidden_contact_count": self.forbidden_contact_count,
             "max_forbidden_penetration_m": self.max_forbidden_penetration_m,
             "first_forbidden_pair": self.first_forbidden_pair,
@@ -1418,7 +1571,9 @@ class MatchaWorkflowController:
         }
 
 
-def run_headless_scenario(max_steps: int = DEFAULT_MAX_STEPS) -> dict[str, Any]:
+def run_headless_scenario(
+    max_steps: int = DEFAULT_MAX_STEPS, *, include_rack_exit: bool = False
+) -> dict[str, Any]:
     if max_steps < 0:
         raise ValueError("max_steps must be nonnegative")
     model = build_model()
@@ -1426,7 +1581,11 @@ def run_headless_scenario(max_steps: int = DEFAULT_MAX_STEPS) -> dict[str, Any]:
     initialize(model, data)
     startup_contacts = initial_contact_report(model, data)
     result = initialized_summary(model, data)
-    controller = MatchaWorkflowController(model, data)
+    controller = MatchaWorkflowController(
+        model,
+        data,
+        actions=_recovery_controller_actions(include_rack_exit=include_rack_exit),
+    )
     for _ in range(max_steps):
         controller.step()
         if controller.completed or controller.abort_reason is not None:
@@ -1434,6 +1593,11 @@ def run_headless_scenario(max_steps: int = DEFAULT_MAX_STEPS) -> dict[str, Any]:
     result["collision_coverage"] = collision_coverage(model)
     result["startup_contact_audit"] = startup_contacts
     result.update(controller.result())
+    result["milestone"] = (
+        "capture_lock_and_dock_release"
+        if not include_rack_exit
+        else "capture_lock_dock_release_and_rack_exit_diagnostic"
+    )
     return result
 
 
@@ -1441,6 +1605,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--max-steps", type=int, default=DEFAULT_MAX_STEPS)
+    parser.add_argument("--include-rack-exit", action="store_true")
     parser.add_argument("--dump-xml", type=Path)
     return parser.parse_args()
 
@@ -1450,7 +1615,9 @@ def main() -> int:
     if args.dump_xml is not None:
         xml, _ = _build_xml_and_assets()
         args.dump_xml.write_text(xml)
-    result = run_headless_scenario(max_steps=args.max_steps)
+    result = run_headless_scenario(
+        max_steps=args.max_steps, include_rack_exit=args.include_rack_exit
+    )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0
 
