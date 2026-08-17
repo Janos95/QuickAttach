@@ -1,0 +1,1298 @@
+{
+  "authorities": {
+    "cad_generator": {
+      "bytes": 41594,
+      "path": "QuickChange/SO101_Magnetic/generate_cad.py",
+      "sha256": "67398a17cf6c4729475ffbd453e021a5d743a2dab89defc18e215bde998708fb"
+    },
+    "calibrated_robot_xml": {
+      "bytes": 13921,
+      "path": "Simulation/SO101/so101_new_calib.xml",
+      "sha256": "d75253eb568e8a7214db9c631ab7bed4217f608a26f7276ebe9a7636cac82580"
+    },
+    "core_exports": [
+      {
+        "bytes": 355894,
+        "path": "QuickChange/SO101_Magnetic/exports/so101_robot_plate.step",
+        "sha256": "79c1f2b18edcc4cfb3d8cae0e2d7abadd9866ca1d652acbff246d27704033012"
+      },
+      {
+        "bytes": 249124,
+        "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_tool_plate.step",
+        "sha256": "a8a8af7e374c6cf9ef7761a391a9a03abadf7e374c54fc8b1b27f1206b13effe"
+      },
+      {
+        "bytes": 130486,
+        "path": "QuickChange/SO101_Magnetic/exports/so101_passive_tool_dock.step",
+        "sha256": "35c82982317eb3041e080066364eb88f52cc798be4c5c5a4157c4c52b1de0863"
+      },
+      {
+        "bytes": 3308038,
+        "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_retrofit_assembly.step",
+        "sha256": "f65e750db579aeb88e9fe9c629beaccbad841c58e5f87d9739f853df5a7d7e08"
+      }
+    ],
+    "fixed_gripper_stl_crosscheck": {
+      "bytes": 1439884,
+      "path": "Simulation/SO101/assets/wrist_roll_follower_so101_v1.stl",
+      "sha256": "4b17b410a12d64ec39554abc3e8054d8a97384b2dc4a8d95a5ecb2a93670f5f4"
+    },
+    "moving_jaw_source_mesh": {
+      "bytes": 1413584,
+      "path": "Simulation/SO101/assets/moving_jaw_so101_v1.stl",
+      "sha256": "785a9dded2f474bc1d869e0d3dae398a3dcd9c0c345640040472210d2861fa9d"
+    },
+    "official_fixed_gripper_step": {
+      "bytes": 870092,
+      "path": "STEP/SO101/Follower_Specific/Wrist_Roll_Follower_SO101.step",
+      "sha256": "b7f9d59f7991f425fff784eab07f0bf65471903dd6d6177e7cb109bebcd02b35"
+    },
+    "validator": {
+      "bytes": 48313,
+      "path": "QuickChange/SO101_Magnetic/sim/validate_cad_clearance.py",
+      "sha256": "818393d45b7e1d1300a7c66626f9fcaf2fcd61d762d6891c68c096b2612611e1"
+    }
+  },
+  "blockers": [
+    "rack_sweep:robot_plate:nominal"
+  ],
+  "cam_actuation_diagnostics": [
+    {
+      "distance_mm": 0.05000000000000071,
+      "overlap_volume_mm3": 0.0,
+      "passed": true,
+      "semantic": "intended_cam_actuation_envelope",
+      "slider_state": "unlocked"
+    },
+    {
+      "distance_mm": 0.0,
+      "overlap_volume_mm3": 5.135937500000003,
+      "passed": true,
+      "semantic": "intended_cam_actuation_envelope",
+      "slider_state": "locked"
+    }
+  ],
+  "intended_zero_volume_contact_pairs": [
+    [
+      "robot_plate",
+      "left_lower_rail"
+    ],
+    [
+      "stock_tool_plate",
+      "left_lower_rail"
+    ],
+    [
+      "stock_tool_plate",
+      "left_upper_rail"
+    ],
+    [
+      "stock_tool_plate",
+      "right_lower_rail"
+    ],
+    [
+      "stock_tool_plate",
+      "right_upper_rail"
+    ]
+  ],
+  "inventory": {
+    "canonical_sha256": "b0c198d63fcf7a4536bb515abfd53a895c32a4bb434f702faff1b8f1b7ba3486",
+    "component_count": 23,
+    "component_names": [
+      "moving_jaw_closed_calibrated_stl",
+      "official_fixed_gripper_body",
+      "positive_lock_slider_locked",
+      "positive_lock_slider_unlocked",
+      "robot_magnet_1",
+      "robot_magnet_2",
+      "robot_plate",
+      "shoulder_stud_1",
+      "shoulder_stud_2",
+      "stock_tool_plate",
+      "stud_nut_1",
+      "stud_nut_2",
+      "target_1",
+      "target_2",
+      "target_contact_board",
+      "target_nut_1",
+      "target_nut_2",
+      "target_pad_1",
+      "target_pad_2",
+      "target_pad_3",
+      "target_pad_4",
+      "target_screw_1",
+      "target_screw_2"
+    ]
+  },
+  "mount_composition": {
+    "calibrated_xml_transform_chain": {
+      "fixed_geom_pos_m": [
+        8.32667e-17,
+        -0.000218214,
+        0.000949706
+      ],
+      "fixed_geom_quat_wxyz": [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      "jaw_body_pos_m": [
+        0.0202,
+        0.0188,
+        -0.0234
+      ],
+      "jaw_body_quat_wxyz": [
+        0.707107,
+        0.707107,
+        -1.85362e-08,
+        1.85362e-08
+      ],
+      "jaw_geom_pos_m": [
+        -5.55112e-17,
+        -5.55112e-17,
+        0.0189
+      ],
+      "jaw_geom_quat_wxyz": [
+        1.0,
+        -0.0,
+        3.00524e-16,
+        -2.00834e-17
+      ],
+      "jaw_joint_axis": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "jaw_joint_range_rad": [
+        -0.17453297762778586,
+        1.7453291995659765
+      ]
+    },
+    "fixed_step_bbox": {
+      "x_mm": [
+        -35.20000010000002,
+        29.9999994294477
+      ],
+      "y_mm": [
+        -24.21821457935485,
+        27.781785620646406
+      ],
+      "z_mm": [
+        -0.050293646521412716,
+        105.375000413425
+      ]
+    },
+    "fixed_step_to_stl_bbox_max_error_mm": 1.0690760916531872e-06,
+    "fixed_step_to_stl_bbox_tolerance_mm": 0.001,
+    "fixed_stl_scaled_bbox": {
+      "x_mm": [
+        -35.19999980926514,
+        29.999999329447746
+      ],
+      "y_mm": [
+        -24.21821467578411,
+        27.781786397099495
+      ],
+      "z_mm": [
+        -0.05029354724683799,
+        105.37499934434891
+      ]
+    },
+    "passed": true,
+    "rack_interlock": {
+      "closed_angle_rad": -0.17453297762778586,
+      "reason": "jaw motion is disabled during docking; open-jaw rack clearance is outside this authority",
+      "required_jaw_state": "closed_limit"
+    },
+    "robot_assembly_fixed_step_pos_mm": [
+      0.4875,
+      0.218,
+      19.051
+    ],
+    "robot_assembly_stock_plate_pos_mm": [
+      0.0,
+      0.0,
+      9.5
+    ],
+    "source_fragments": [
+      "cq.Vector(0, 0, PLATE_THICKNESS)",
+      "cq.Vector(0.4875, 0.218, 2 * PLATE_THICKNESS + 0.051)"
+    ],
+    "source_function_sha256": "912991aa79044497e935e0080161c67a4f4af5eb0e998906b9386fc397d688ba",
+    "stock_plate_source_vs_export_volume_delta_mm3": 2.1827872842550278e-10,
+    "stock_plate_volume_tolerance_mm3": 1e-06,
+    "tool_local_fixed_step_pos_mm": [
+      0.4875,
+      0.218,
+      9.551
+    ],
+    "tool_local_fixed_step_quat_wxyz": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "passed": false,
+  "release_ready": false,
+  "schema_version": "1.0",
+  "stop_envelope": {
+    "component_results": [
+      {
+        "component": "stock_tool_plate",
+        "distance_mm": 1.0,
+        "forward_mm": 0.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "stock_tool_plate",
+        "distance_mm": 0.0,
+        "forward_mm": 1.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "intended_plate_stop_tangency"
+      },
+      {
+        "component": "official_fixed_gripper_body",
+        "distance_mm": 3.0007036571183896,
+        "forward_mm": 0.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "official_fixed_gripper_body",
+        "distance_mm": 3.0007036571183896,
+        "forward_mm": 1.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_1",
+        "distance_mm": 36.0,
+        "forward_mm": 0.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_1",
+        "distance_mm": 35.0,
+        "forward_mm": 1.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_screw_1",
+        "distance_mm": 37.0,
+        "forward_mm": 0.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_screw_1",
+        "distance_mm": 36.0,
+        "forward_mm": 1.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_nut_1",
+        "distance_mm": 38.0,
+        "forward_mm": 0.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_nut_1",
+        "distance_mm": 37.0,
+        "forward_mm": 1.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_2",
+        "distance_mm": 4.0,
+        "forward_mm": 0.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_2",
+        "distance_mm": 3.0,
+        "forward_mm": 1.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_screw_2",
+        "distance_mm": 5.0,
+        "forward_mm": 0.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_screw_2",
+        "distance_mm": 4.0,
+        "forward_mm": 1.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_nut_2",
+        "distance_mm": 6.0,
+        "forward_mm": 0.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_nut_2",
+        "distance_mm": 5.0,
+        "forward_mm": 1.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "shoulder_stud_1",
+        "distance_mm": 23.08679276123039,
+        "forward_mm": 0.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "shoulder_stud_1",
+        "distance_mm": 22.090722034374522,
+        "forward_mm": 1.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "stud_nut_1",
+        "distance_mm": 23.250000000049415,
+        "forward_mm": 0.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "stud_nut_1",
+        "distance_mm": 22.250000000049415,
+        "forward_mm": 1.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "shoulder_stud_2",
+        "distance_mm": 23.08679276123039,
+        "forward_mm": 0.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "shoulder_stud_2",
+        "distance_mm": 22.090722034374522,
+        "forward_mm": 1.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "stud_nut_2",
+        "distance_mm": 23.250000000049415,
+        "forward_mm": 0.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "stud_nut_2",
+        "distance_mm": 22.250000000049415,
+        "forward_mm": 1.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_contact_board",
+        "distance_mm": 15.0,
+        "forward_mm": 0.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_contact_board",
+        "distance_mm": 14.0,
+        "forward_mm": 1.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_pad_1",
+        "distance_mm": 31.5,
+        "forward_mm": 0.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_pad_1",
+        "distance_mm": 30.5,
+        "forward_mm": 1.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_pad_2",
+        "distance_mm": 26.5,
+        "forward_mm": 0.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_pad_2",
+        "distance_mm": 25.5,
+        "forward_mm": 1.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_pad_3",
+        "distance_mm": 21.5,
+        "forward_mm": 0.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_pad_3",
+        "distance_mm": 20.5,
+        "forward_mm": 1.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_pad_4",
+        "distance_mm": 16.5,
+        "forward_mm": 0.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "target_pad_4",
+        "distance_mm": 15.5,
+        "forward_mm": 1.0,
+        "overlap_volume_mm3": 0.0,
+        "passed": true,
+        "semantic": "forbidden_stop_clearance"
+      },
+      {
+        "component": "moving_jaw_closed_calibrated_stl",
+        "distance_mm": 11.5621393894185,
+        "forward_mm": 0.0,
+        "overlap_volume_mm3": null,
+        "passed": true,
+        "semantic": "forbidden_stop_continuous_aabb_clearance"
+      },
+      {
+        "component": "moving_jaw_closed_calibrated_stl",
+        "distance_mm": 11.4403951320393,
+        "forward_mm": 1.0,
+        "overlap_volume_mm3": null,
+        "passed": true,
+        "semantic": "forbidden_stop_continuous_aabb_clearance"
+      }
+    ],
+    "forward_envelope_mm": 1.0,
+    "passed": true,
+    "required_gap_range_mm": [
+      0.5,
+      1.5
+    ],
+    "seated_plate_to_stop_y_gap_mm": 1.0,
+    "stock_plate_bbox": {
+      "x_mm": [
+        -36.0,
+        28.0
+      ],
+      "y_mm": [
+        -25.0,
+        25.0
+      ],
+      "z_mm": [
+        -3.3673064336881e-13,
+        9.5
+      ]
+    },
+    "stop_bbox": {
+      "x_mm": [
+        -45.0,
+        37.0
+      ],
+      "y_mm": [
+        26.0,
+        32.0
+      ],
+      "z_mm": [
+        -3.0,
+        12.5
+      ]
+    }
+  },
+  "stud_cam_inequality": {
+    "cam_inner_x_mm": 24.05,
+    "inequalities": {
+      "cam_misses_stud_head": true,
+      "cam_reaches_locked_tab": true,
+      "cam_starts_beyond_unlocked_tab": true
+    },
+    "locked_tab_cam_engagement_mm": 2.9499999999999993,
+    "passed": true,
+    "required_stud_to_cam_x_margin_mm": 1.0,
+    "slider_locked_tab_end_x_mm": 27.0,
+    "slider_unlocked_tab_end_x_mm": 24.0,
+    "stud_center_x_mm": 12.0,
+    "stud_head_radius_mm": 3.0,
+    "stud_head_x_max_mm": 15.0,
+    "stud_to_cam_x_margin_mm": 9.05,
+    "unlocked_tab_to_cam_gap_mm": 0.05000000000000071
+  },
+  "thresholds": {
+    "manufacturing_clearance_mm": 0.2,
+    "minimum_stud_to_cam_x_margin_mm": 1.0,
+    "numeric_distance_tolerance_mm": 0.001,
+    "overlap_volume_tolerance_mm3": 1e-06,
+    "stop_gap_range_mm": [
+      0.5,
+      1.5
+    ]
+  },
+  "units": "mm",
+  "validation": {
+    "all_source_hashes_present": true,
+    "failed_pair_result_count": 1,
+    "machine_json_canonical_sha256_without_this_field": "6ec3e08fe4955aa474c32bc73e1ffaeb893c69d89219ffa97167cb9b23816927",
+    "pair_result_count": 37
+  },
+  "withdrawal_sweep": {
+    "axis": [
+      0.0,
+      -1.0,
+      0.0
+    ],
+    "end_mm": 80.0,
+    "passed": false,
+    "results": [
+      {
+        "component": "stock_tool_plate",
+        "component_role": "printed_tool_structure",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": -0.5,
+        "dock_component": "left_lower_rail",
+        "initial_distance_mm": 0.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 0.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "intended_stock_plate_keeper_tangency",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "stock_tool_plate",
+        "component_role": "printed_tool_structure",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": -0.5,
+        "dock_component": "right_lower_rail",
+        "initial_distance_mm": 0.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 0.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "intended_stock_plate_keeper_tangency",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "stock_tool_plate",
+        "component_role": "printed_tool_structure",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": -0.5,
+        "dock_component": "left_upper_rail",
+        "initial_distance_mm": 0.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 0.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "intended_stock_plate_keeper_tangency",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "stock_tool_plate",
+        "component_role": "printed_tool_structure",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": -0.5,
+        "dock_component": "right_upper_rail",
+        "initial_distance_mm": 0.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 0.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "intended_stock_plate_keeper_tangency",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "stock_tool_plate",
+        "component_role": "printed_tool_structure",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 4.5,
+        "dock_component": "left_wall",
+        "initial_distance_mm": 5.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 5.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "stock_tool_plate",
+        "component_role": "printed_tool_structure",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 4.5,
+        "dock_component": "right_wall",
+        "initial_distance_mm": 5.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 5.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "stock_tool_plate",
+        "component_role": "printed_tool_structure",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 0.5,
+        "dock_component": "seating_stop",
+        "initial_distance_mm": 1.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 1.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "stock_tool_plate",
+        "component_role": "printed_tool_structure",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 1.4500000000000002,
+        "dock_component": "positive_lock_cam",
+        "initial_distance_mm": 1.9500000000000002,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 1.9500000000000002,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "robot_plate",
+        "component_role": "attached_robot_structure",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": -0.5,
+        "dock_component": "left_lower_rail",
+        "initial_distance_mm": 0.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 0.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "intended_stock_plate_keeper_tangency",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "robot_plate",
+        "component_role": "attached_robot_structure",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 3.5,
+        "dock_component": "right_lower_rail",
+        "initial_distance_mm": 4.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 4.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "robot_plate",
+        "component_role": "attached_robot_structure",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 9.0,
+        "dock_component": "left_upper_rail",
+        "initial_distance_mm": 9.5,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 9.5,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "robot_plate",
+        "component_role": "attached_robot_structure",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 6.142476947645359,
+        "dock_component": "right_upper_rail",
+        "initial_distance_mm": 6.642476947645359,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 6.642476947645359,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "robot_plate",
+        "component_role": "attached_robot_structure",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 4.5,
+        "dock_component": "left_wall",
+        "initial_distance_mm": 5.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 5.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "robot_plate",
+        "component_role": "attached_robot_structure",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 8.5,
+        "dock_component": "right_wall",
+        "initial_distance_mm": 9.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 9.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "robot_plate",
+        "component_role": "attached_robot_structure",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 1.5,
+        "dock_component": "seating_stop",
+        "initial_distance_mm": 2.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 2.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "robot_plate",
+        "component_role": "attached_robot_structure",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": -0.4499999999999993,
+        "dock_component": "positive_lock_cam",
+        "initial_distance_mm": 0.05000000000000071,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 0.05000000000000071,
+        "passed": false,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "official_fixed_gripper_body",
+        "component_role": "official_step_payload",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 2.5007036571183896,
+        "dock_component": "full_dock",
+        "initial_distance_mm": 3.0007036571183896,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 3.0007036571183896,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "target_1",
+        "component_role": "interface_hardware",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 19.515886264026268,
+        "dock_component": "full_dock",
+        "initial_distance_mm": 20.015886264026268,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 20.015886264026268,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "target_screw_1",
+        "component_role": "interface_hardware",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 21.64158982548453,
+        "dock_component": "full_dock",
+        "initial_distance_mm": 22.14158982548453,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 22.14158982548453,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "target_nut_1",
+        "component_role": "interface_hardware",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 19.881197846482994,
+        "dock_component": "full_dock",
+        "initial_distance_mm": 20.381197846482994,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 20.381197846482994,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "target_2",
+        "component_role": "interface_hardware",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 3.5,
+        "dock_component": "full_dock",
+        "initial_distance_mm": 4.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 4.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "target_screw_2",
+        "component_role": "interface_hardware",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 4.5,
+        "dock_component": "full_dock",
+        "initial_distance_mm": 5.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 5.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "target_nut_2",
+        "component_role": "interface_hardware",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 5.5,
+        "dock_component": "full_dock",
+        "initial_distance_mm": 6.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 6.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "shoulder_stud_1",
+        "component_role": "positive_lock_hardware",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 19.76079958935481,
+        "dock_component": "full_dock",
+        "initial_distance_mm": 20.26079958935481,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 20.26079958935481,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "stud_nut_1",
+        "component_role": "positive_lock_hardware",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 18.18356018409136,
+        "dock_component": "full_dock",
+        "initial_distance_mm": 18.68356018409136,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 18.68356018409136,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "shoulder_stud_2",
+        "component_role": "positive_lock_hardware",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 8.589829481348922,
+        "dock_component": "full_dock",
+        "initial_distance_mm": 9.089829481348922,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 9.089829481348922,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "stud_nut_2",
+        "component_role": "positive_lock_hardware",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 9.021583647338355,
+        "dock_component": "full_dock",
+        "initial_distance_mm": 9.521583647338355,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 9.521583647338355,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "target_contact_board",
+        "component_role": "interface_electronics",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 0.5,
+        "dock_component": "full_dock",
+        "initial_distance_mm": 1.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 1.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "target_pad_1",
+        "component_role": "interface_electronics",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 2.5,
+        "dock_component": "full_dock",
+        "initial_distance_mm": 3.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 3.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "target_pad_2",
+        "component_role": "interface_electronics",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 2.5,
+        "dock_component": "full_dock",
+        "initial_distance_mm": 3.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 3.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "target_pad_3",
+        "component_role": "interface_electronics",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 2.5,
+        "dock_component": "full_dock",
+        "initial_distance_mm": 3.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 3.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "target_pad_4",
+        "component_role": "interface_electronics",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 2.5,
+        "dock_component": "full_dock",
+        "initial_distance_mm": 3.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 3.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "robot_magnet_1",
+        "component_role": "attached_robot_hardware",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 19.420672753058202,
+        "dock_component": "full_dock",
+        "initial_distance_mm": 19.920672753058202,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 19.920672753058202,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "robot_magnet_2",
+        "component_role": "attached_robot_hardware",
+        "component_state": "nominal",
+        "continuous_certified_clearance_mm": 3.5,
+        "dock_component": "full_dock",
+        "initial_distance_mm": 4.0,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 4.0,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "positive_lock_slider_unlocked",
+        "component_role": "positive_lock_slider",
+        "component_state": "unlocked",
+        "continuous_certified_clearance_mm": 3.5049968789001573,
+        "dock_component": "dock_without_positive_lock_cam",
+        "initial_distance_mm": 4.004996878900157,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 4.004996878900157,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "positive_lock_slider_locked",
+        "component_role": "positive_lock_slider",
+        "component_state": "locked",
+        "continuous_certified_clearance_mm": 0.5198039027185568,
+        "dock_component": "dock_without_positive_lock_cam",
+        "initial_distance_mm": 1.0198039027185568,
+        "maximum_between_sample_motion_bound_mm": 0.5,
+        "maximum_sampled_overlap_volume_mm3": 0.0,
+        "method": "occt_brep_distance_with_near_witness_boolean",
+        "minimum_sampled_distance_mm": 1.0198039027185568,
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      },
+      {
+        "component": "moving_jaw_closed_calibrated_stl",
+        "component_role": "calibrated_source_mesh_payload",
+        "component_state": "jaw_angle_rad=-0.174532977628",
+        "continuous_aabb_clearance_mm": 11.404922485351562,
+        "dock_component": "full_dock",
+        "mesh_screen": {
+          "backend": "fcpw",
+          "backend_version": "1.2.0",
+          "clearance_authority": false,
+          "fixed_tessellation_sha256": "5954c7013c3a64bdb0cde4a53aeee430a4efc29a695da7699fa854e0e6da7eb8",
+          "minimum_directional_witness_mm": 11.838366508483887,
+          "minimum_fixed_vertices_to_moving_mesh_mm": 12.811931610107422,
+          "minimum_moving_vertices_to_fixed_mesh_mm": 11.838366508483887,
+          "moving_source_sha256": "785a9dded2f474bc1d869e0d3dae398a3dcd9c0c345640040472210d2861fa9d",
+          "role": "source_triangle_mesh_screen_only",
+          "tessellation_deflection_mm": 0.03
+        },
+        "method": "continuous_source_mesh_aabb_bound_plus_fcpw_witness",
+        "passed": true,
+        "sample_count": 81,
+        "semantics": "forbidden_component_continuous_clearance",
+        "witness_withdrawal_mm": 0.0
+      }
+    ],
+    "sample_step_mm": 1.0,
+    "sampled_positions_mm": [
+      0.0,
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+      5.0,
+      6.0,
+      7.0,
+      8.0,
+      9.0,
+      10.0,
+      11.0,
+      12.0,
+      13.0,
+      14.0,
+      15.0,
+      16.0,
+      17.0,
+      18.0,
+      19.0,
+      20.0,
+      21.0,
+      22.0,
+      23.0,
+      24.0,
+      25.0,
+      26.0,
+      27.0,
+      28.0,
+      29.0,
+      30.0,
+      31.0,
+      32.0,
+      33.0,
+      34.0,
+      35.0,
+      36.0,
+      37.0,
+      38.0,
+      39.0,
+      40.0,
+      41.0,
+      42.0,
+      43.0,
+      44.0,
+      45.0,
+      46.0,
+      47.0,
+      48.0,
+      49.0,
+      50.0,
+      51.0,
+      52.0,
+      53.0,
+      54.0,
+      55.0,
+      56.0,
+      57.0,
+      58.0,
+      59.0,
+      60.0,
+      61.0,
+      62.0,
+      63.0,
+      64.0,
+      65.0,
+      66.0,
+      67.0,
+      68.0,
+      69.0,
+      70.0,
+      71.0,
+      72.0,
+      73.0,
+      74.0,
+      75.0,
+      76.0,
+      77.0,
+      78.0,
+      79.0,
+      80.0
+    ],
+    "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
+    "start_mm": 0.0
+  }
+}
