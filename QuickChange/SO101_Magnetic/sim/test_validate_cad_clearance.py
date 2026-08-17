@@ -183,14 +183,24 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
         )
         self.assertTrue(result["passed"], result)
         self.assertEqual(result["sample_count"], 151)
-        self.assertEqual(result["guided_open_side_offset_mm"], 0.20)
+        self.assertEqual(result["lateral_offset_start_mm"], 0.20)
+        self.assertEqual(result["lateral_offset_end_mm"], 0.0)
+        self.assertEqual(result["recenter_start_preseat_mm"], 6.4)
+        self.assertEqual(result["recenter_end_preseat_mm"], 3.2)
         self.assertTrue(
             math.isclose(result["minimum_sampled_distance_mm"], 0.30, abs_tol=1.0e-12)
         )
         self.assertTrue(
             math.isclose(
                 result["continuous_certified_clearance_mm"],
-                0.25,
+                0.24990243893162106,
+                abs_tol=1.0e-12,
+            )
+        )
+        self.assertTrue(
+            math.isclose(
+                result["maximum_between_sample_motion_bound_mm"],
+                0.050097561068379634,
                 abs_tol=1.0e-12,
             )
         )
@@ -222,7 +232,7 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
         self.assertTrue(
             math.isclose(
                 clearance._intersection_volume_mm3(locked, cam),
-                5.135937500000003,
+                8.970937500000003,
                 abs_tol=1.0e-9,
             )
         )
@@ -263,6 +273,106 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
                 ],
                 7.15,
                 abs_tol=1.0e-12,
+            )
+        )
+
+    def test_integral_cam_lead_passive_capture_and_release_are_exact(self) -> None:
+        cad = clearance.CAD
+        contract = cad.positive_lock_cam_contract()
+        self.assertEqual(
+            contract["construction"],
+            "union_main_xy_wedge_ruled_axial_lead_hold_finger",
+        )
+        self.assertEqual(
+            contract["axial_lead"]["lower_rectangle_mm"],
+            {"x": [27.25, 29.0], "y": [0.0, 2.0], "z": -9.6},
+        )
+        self.assertEqual(
+            contract["axial_lead"]["upper_rectangle_mm"],
+            {"x": [24.05, 29.0], "y": [0.0, 2.0], "z": -6.4},
+        )
+        self.assertEqual(
+            contract["outer_root_bridge"]["bounds_mm"],
+            {
+                "x": [28.0, 29.0],
+                "y": [-1.0, 1.0],
+                "z": [-4.65, -3.65],
+            },
+        )
+        self.assertTrue(contract["outer_root_bridge"]["outside_locked_tab_swept_x"])
+        self.assertAlmostEqual(contract["expected_geometry"]["total_volume_mm3"], 325.435)
+        self.assertAlmostEqual(contract["manufacturability"]["minimum_feature_mm"], 1.0)
+        self.assertAlmostEqual(
+            contract["quasistatic_load_envelope"]["maximum_spring_force_n"],
+            3.528,
+        )
+        self.assertAlmostEqual(
+            contract["quasistatic_load_envelope"]["maximum_cam_normal_force_n"],
+            4.989345448052276,
+        )
+
+        self.assertAlmostEqual(cad.positive_lock_cam_capture_lateral_offset_mm(6.4), 0.20)
+        self.assertAlmostEqual(cad.positive_lock_cam_capture_lateral_offset_mm(3.2), 0.0)
+        self.assertAlmostEqual(cad.positive_lock_cam_capture_q_max_mm(6.4), 3.0)
+        self.assertAlmostEqual(cad.positive_lock_cam_capture_q_max_mm(3.2), 0.05)
+        self.assertAlmostEqual(cad.positive_lock_cam_capture_q_max_mm(3.1), 0.05)
+        self.assertAlmostEqual(cad.positive_lock_cam_release_q_max_mm(2.0), 0.05)
+        self.assertAlmostEqual(cad.positive_lock_cam_release_q_max_mm(15.0), 3.0)
+        for helper in (
+            cad.positive_lock_cam_capture_lateral_offset_mm,
+            cad.positive_lock_cam_capture_q_max_mm,
+            cad.positive_lock_cam_release_q_max_mm,
+        ):
+            with self.assertRaises(ValueError):
+                helper(-0.01)
+            with self.assertRaises(ValueError):
+                helper(math.nan)
+
+        result = clearance._passive_positive_lock_cam_record()
+        self.assertTrue(result["passed"], result)
+        self.assertTrue(all(result["checks"].values()), result)
+        self.assertTrue(result["geometry"]["cam_is_single_valid_solid"])
+        self.assertTrue(
+            math.isclose(
+                result["geometry"]["cam_volume_mm3"],
+                325.435,
+                abs_tol=1.0e-9,
+            )
+        )
+        head = result["capture"]["head_entry_sample"]
+        self.assertEqual(head["preseat_mm"], 3.1)
+        self.assertEqual(head["lateral_mm"], 0.0)
+        self.assertLessEqual(head["q_mm"], 0.05 + 1.0e-12)
+        self.assertGreaterEqual(head["minimum_slider_stud_distance_mm"], 0.20)
+        self.assertEqual(result["capture"]["maximum_slider_cam_overlap_mm3"], 0.0)
+        self.assertEqual(result["capture"]["maximum_slider_stud_overlap_mm3"], 0.0)
+        self.assertGreaterEqual(
+            result["capture"]["tight_stud_clearance"][
+                "continuous_certified_clearance_mm"
+            ],
+            0.20,
+        )
+        self.assertGreaterEqual(
+            result["capture"]["robot_plate_cam"][
+                "continuous_certified_clearance_mm"
+            ],
+            0.20,
+        )
+        self.assertTrue(
+            all(
+                record["maximum_overlap_volume_mm3"] == 0.0
+                for record in result["capture"]["component_cam_records"]
+            )
+        )
+        exit_sample = result["release"]["nominal_exit_sample"]
+        self.assertEqual(exit_sample["withdrawal_mm"], 15.0)
+        self.assertEqual(exit_sample["q_mm"], 3.0)
+        self.assertEqual(exit_sample["slider_cam_overlap_mm3"], 0.0)
+        self.assertTrue(
+            math.isclose(
+                exit_sample["slider_cam_distance_mm"],
+                0.25181477893752996,
+                abs_tol=1.0e-9,
             )
         )
 

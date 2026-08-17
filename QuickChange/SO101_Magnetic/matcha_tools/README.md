@@ -74,8 +74,12 @@ rear-face clearance around the complete spoon and whisk envelopes.  The left
 lower rail ends 0.30 mm outboard of the FR-4 board, preventing the board edge
 from becoming a support land. Lower
 ledges are tangent to the coupling face; upper ledges act only on the plate's
-outer lands.  The passive lock cam stays below the tool face and acts on the
-robot-side slider.
+outer lands. The passive lock cam stays below the tool face and acts on the
+robot-side slider. Both bays call the core generator's complete
+`positive_lock_cam()` directly, including its axial lead, hold finger, root
+bridge and rack-exit wedge; the matcha generator carries no shifted polygon or
+second cam approximation. The same executable cam contract is stored in the
+matcha manifest.
 
 Each bay publishes its exact stop contract in the canonical manifest. In the
 bay-local frame the stop bounds are `X[-41,33]`, `Y[25,31]`,
@@ -97,7 +101,8 @@ XDG_CACHE_HOME=/tmp/cq-cache .venv/bin/python \
   QuickChange/SO101_Magnetic/matcha_tools/test_matcha_tool_cad.py
 ```
 
-The focused test checks fixed IDs, exact common-plate identity, the complete
+The focused test checks fixed IDs, exact common-plate and complete core-cam
+identity, the complete
 15-solid interface-hardware roster, unique component inventories, balance and
 inertia arithmetic, spoon capacity, and rack source structure.  It is not an
 exact swept-interference release test.

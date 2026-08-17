@@ -3,9 +3,10 @@
 This is a retrofit, passively docked quick changer for an existing SO-101. Two
 permanent magnets perform forgiving capture and face preload; they are **not**
 the safety lock. A spring-return stainless keyhole slider positively captures
-two metal pull studs. The passive rack cams that slider open, so the robot only
-needs straight approach/withdrawal and one rack-exit translation—no wrist
-twist, release servo, solenoid, or electromagnet.
+two metal pull studs. The passive rack cams that slider open. A narrow axial
+lead couples the last 3.2 mm of approach to a 0.20-to-0.00 mm lateral recenter;
+the existing X/Y wedge then controls spring return during rack exit. No release
+servo, solenoid, or electromagnet is required.
 
 The same interface carries power and the existing half-duplex TTL bus. The
 first tool can therefore be the standard SO-101 gripper on a detachable adapter
@@ -35,12 +36,13 @@ are recorded in the repository-root `THIRD_PARTY_NOTICES.md`.
   centre-to-centre rectangle. It provides 0.125 mm radial shoulder clearance
   and 0.875 mm radial head-retention overlap. The printed roof, not the M2 guide
   screw, reacts separation load. Loss of power leaves it locked.
-- **Cam corridor:** the passive cam retains its full `x = 24.05 mm` unlock
-  datum. A narrow local recess in the fixed robot plate provides 0.50 mm exact
-  radial clearance. The same X/Y footprint passes through the complete 9.5 mm
-  printed plate thickness, so the guard applies during axial capture and the
-  complete rack-exit sweep without changing slider travel, keyhole alignment,
-  spring stroke, or the 2.95 mm locked engagement.
+- **Cam corridor:** the passive cam retains its `x = 24.05 mm` unlock datum and
+  rack-exit wedge. Its integral source lead is a 45-degree ruled loft from
+  `x = 27.25` at `z = -9.60` mm to `x = 24.05` at `z = -6.40` mm over the
+  narrow `y = 0..2` mm tab land. A vertical finger joins the main wedge, and a
+  1 mm root bridge at `x = 28..29` mm lies beyond the locked tab's `x = 27` mm
+  maximum. The full-depth robot-plate recess preserves the certified approach
+  clearance without changing slider travel, keyhole alignment, or retention.
 - **Electrical interface:** four Mill-Max pins on 5 mm pitch: GND, +12 V,
   TTL_DATA, and a spare TOOL_ID line. GND protrudes 0.2 mm farther so it mates
   first and breaks last.
@@ -52,17 +54,22 @@ check.
 
 ## Attach and detach sequence
 
-1. Approach the docked tool axially. Tapered locators enter first; magnets then
-   close the final gap and compress the contacts.
-2. Verify contact—for the first gripper, read servo ID 6 with torque still off.
-3. Translate out of the rack. The rack releases the slider tab and the spring
-   closes the positive lock.
-4. Enable the tool and work normally.
-5. To detach, command gripper torque off and stop bus packets, then return the
+1. Approach at the published +0.20 mm open-side offset. From 6.4 to 3.2 mm
+   preseated, recenter linearly to zero while the 45-degree lead opens the
+   slider to `q <= 0.05 mm`. This finishes before the stud heads first reach
+   the slider plane at 3.1 mm preseated.
+2. Continue axially at zero offset. Tapered locators enter first; magnets then
+   close the final gap while the hold finger keeps the keyhole entries open.
+3. Verify contact—for the first gripper, read servo ID 6 with torque still off.
+4. Translate in dock-local -Y. The main wedge permits spring return after the
+   first 2 mm; `q = 3 mm` is reached at 13.9494 mm and has 0.2518 mm exact cam
+   clearance at the nominal 15 mm witness.
+5. Enable the tool and work normally.
+6. To detach, command gripper torque off and stop bus packets, then return the
    still-locked assembly to the rack.
-6. During the final rack travel, the fixed wedge pushes the exposed tab 3 mm,
+7. During the final rack travel, the fixed wedge pushes the exposed tab 3 mm,
    aligning both large keyholes with the stud heads.
-7. The rack retains the tool plate while the arm withdraws axially. Contacts and
+8. The rack retains the tool plate while the arm withdraws axially. Contacts and
    magnets separate; no powered release actuator is involved.
 
 The MuJoCo model uses conditional welds for capture and lock state. It validates
@@ -72,8 +79,8 @@ arcing, printed-part strength, fatigue, or wear.
 ## CAD/simulation geometry contract
 
 `generate_cad.py` publishes the exact core dock-stop bounds, stock-gripper STEP
-mount, full-depth robot-plate cam-relief bounds, and swept keyhole-capsule
-contract in both
+mount, full-depth robot-plate cam-relief bounds, swept keyhole-capsule contract,
+and executable passive-cam `p/x/q` and `-Y/q` laws in both
 `design_parameters.json` and `exports/core_cad_manifest.json`. The relief
 contract also records the 0.20 mm guided approach offset and retained 8.225 mm
 stud-well / 7.150 mm slider-lobe ligaments. The stock dock stop is not interchangeable
@@ -91,9 +98,13 @@ continuous bound. A separate exact OCCT sweep checks both 4 mm shoulders every
 0.05 mm from unlocked through the full 3.0 mm stroke, verifies the analytic
 0.125 mm continuous capsule clearance, confirms that both 6.5 mm entries pass
 the heads when unlocked, and confirms projected head retention when locked.
-The 15→0 mm axial-capture sweep separately uses the published 0.20 mm
-open-side offset and certifies 0.25 mm continuous clearance against the
-0.20 mm manufacturing floor.
+The 15→0 mm capture sweep follows the coupled recenter rather than assuming a
+fixed lateral offset. Its 0.3000 mm sampled robot-plate/cam gap minus the full
+two-axis half-step motion certifies 0.249902 mm continuous clearance. A tighter
+0.01 mm slider/stud sweep certifies 0.205264 mm continuous clearance before the
+3.1 mm head-entry event. OCCT also requires zero cam/stud overlap throughout
+capture, full component closure, passive -Y return, and at least 0.20 mm q=3
+cam clearance at the 15 mm exit witness.
 
 Core exports are timestamp-canonicalized and hash-closed. To verify byte
 reproducibility in two temporary directories, run `generate_cad.py` twice with
@@ -108,7 +119,7 @@ XDG_CACHE_HOME=/tmp/cq-cache .venv/bin/python \
 
 `core_cad_manifest.json` excludes itself to avoid circular hashing, but records
 the generator, deterministic inventory digest, every contained artifact's
-repo-relative path/byte count/SHA-256, and all three geometry contracts. The
+repo-relative path/byte count/SHA-256, and every published geometry contract. The
 clearance report separately pins the manifest file record and independently
 recomputes its contents.
 
