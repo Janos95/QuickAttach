@@ -115,6 +115,15 @@ class MatchaToolCadTests(unittest.TestCase):
             self.assertEqual(len(names), 8)
         self.assertEqual(cad.RACK_WALL_CLEARANCE, 0.50)
         self.assertEqual(cad.RACK_REAR_CLEARANCE, 0.30)
+        board = cad.tool_interface_hardware_shapes()["tool_contact_board_FR4"].val().BoundingBox()
+        left_rail = rack["dock_spoon_left_lower_ledge"].val().BoundingBox()
+        # Convert the spoon bay rail back into tool-local X before comparing.
+        spoon_bay_x = (
+            cad.RACK_BAY_NAMES.index("spoon") - 1
+        ) * cad.RACK_BAY_PITCH
+        clearance = board.xmin - (left_rail.xmax - spoon_bay_x)
+        self.assertAlmostEqual(clearance, cad.RACK_PCB_LOWER_RAIL_CLEARANCE, places=8)
+        self.assertGreaterEqual(clearance + 1.0e-9, 0.30)
 
 
 if __name__ == "__main__":

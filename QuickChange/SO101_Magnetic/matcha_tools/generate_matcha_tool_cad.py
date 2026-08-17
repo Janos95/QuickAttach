@@ -21,6 +21,7 @@ import importlib.util
 import json
 import math
 from pathlib import Path
+import re
 from typing import Iterable
 
 import cadquery as cq
@@ -69,10 +70,11 @@ WHISK_BELLOWS_Z_MM = (49.5, 91.0)
 
 # The rack is deliberately wider than the complete rigid tool envelope.  The
 # plate is retained at its two outer edge lands; payloads remain inside them.
-RACK_INSERTION_START_Y = -72.0
+RACK_INSERTION_START_Y = -80.0
 RACK_SEATED_Y = 0.0
 RACK_WALL_CLEARANCE = 0.50
 RACK_REAR_CLEARANCE = 0.30
+RACK_PCB_LOWER_RAIL_CLEARANCE = 0.30
 RACK_BAY_PITCH = 96.0
 RACK_BAY_NAMES = ("gripper", "spoon", "whisk")
 
@@ -665,10 +667,19 @@ def _dock_parts() -> dict[str, cq.Workplane]:
     )
     # Two-millimetre edge engagement; lower ledges are tangent at Z=0 and
     # upper ledges retain the plate with 0.30 mm rear clearance.
+    # The target PCB begins at X=-35 mm.  Its FR-4 edge must not share the
+    # plate's support contact, so the left lower ledge stops 0.30 mm outboard
+    # of the PCB and bears only on the printed electrical wing.
+    left_lower_x_min = x_min - RACK_WALL_CLEARANCE - 5.0
+    left_lower_x_max = (
+        INTERFACE.CONTACT_CENTER_X
+        - INTERFACE.CONTACT_BOARD_WIDTH / 2.0
+        - RACK_PCB_LOWER_RAIL_CLEARANCE
+    )
     parts["left_lower_ledge"] = (
         cq.Workplane("XY")
-        .box(7.5, rail_length, 3.0, centered=True)
-        .translate((x_min - 1.75, rail_y, -1.5))
+        .box(left_lower_x_max - left_lower_x_min, rail_length, 3.0, centered=True)
+        .translate(((left_lower_x_min + left_lower_x_max) / 2.0, rail_y, -1.5))
     )
     parts["right_lower_ledge"] = (
         cq.Workplane("XY")
@@ -743,17 +754,33 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _canonicalize_step_header(path: Path) -> None:
+    """Remove OCCT's wall-clock timestamp so equivalent STEP bytes reproduce."""
+
+    text = path.read_text()
+    canonical, replacements = re.subn(
+        r"(FILE_NAME\('[^']*',)'[^']+'",
+        r"\1'1970-01-01T00:00:00'",
+        text,
+        count=1,
+    )
+    if replacements != 1:
+        raise RuntimeError(f"could not canonicalize STEP header timestamp: {path}")
+    path.write_text(canonical)
+
+
 def _export_workplane(shape: cq.Workplane, path: Path) -> None:
     if path.suffix == ".step":
         cq.exporters.export(shape, str(path))
+        _canonicalize_step_header(path)
     elif path.suffix == ".stl":
         cq.exporters.export(shape, str(path), tolerance=0.05, angularTolerance=0.10)
     else:
         raise ValueError(path)
 
 
-def generate_exports() -> dict[str, object]:
-    EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+def generate_exports(output_dir: Path = EXPORT_DIR) -> dict[str, object]:
+    output_dir.mkdir(parents=True, exist_ok=True)
     emitted: list[Path] = []
     ledgers: dict[str, object] = {}
     for tool in ("spoon", "whisk"):
@@ -762,21 +789,22 @@ def generate_exports() -> dict[str, object]:
         plate = next(component for component in components if component.name == "common_tool_plate")
         printed_body = plate.shape.union(printable.shape).clean()
         for suffix in ("step", "stl"):
-            path = EXPORT_DIR / f"so101_matcha_{tool}_printed_body.{suffix}"
+            path = output_dir / f"so101_matcha_{tool}_printed_body.{suffix}"
             _export_workplane(printed_body, path)
             emitted.append(path)
-        assembly_path = EXPORT_DIR / f"so101_matcha_{tool}_tool_assembly.step"
+        assembly_path = output_dir / f"so101_matcha_{tool}_tool_assembly.step"
         _assembly(f"so101_matcha_{tool}_tool", components).save(str(assembly_path))
+        _canonicalize_step_header(assembly_path)
         emitted.append(assembly_path)
         ledgers[tool] = mass_ledger(tool)
-        ledger_path = EXPORT_DIR / f"so101_matcha_{tool}_mass_ledger.json"
+        ledger_path = output_dir / f"so101_matcha_{tool}_mass_ledger.json"
         ledger_path.write_text(json.dumps(ledgers[tool], indent=2, sort_keys=True) + "\n")
         emitted.append(ledger_path)
 
     rack_parts = build_rack()
     rack_compound = _wp(cq.Compound.makeCompound([shape.val() for shape in rack_parts.values()]))
     for suffix in ("step", "stl"):
-        path = EXPORT_DIR / f"so101_matcha_three_bay_rack.{suffix}"
+        path = output_dir / f"so101_matcha_three_bay_rack.{suffix}"
         _export_workplane(rack_compound, path)
         emitted.append(path)
 
@@ -834,18 +862,19 @@ def generate_exports() -> dict[str, object]:
             "bay_pitch_mm": RACK_BAY_PITCH,
             "wall_clearance_mm": RACK_WALL_CLEARANCE,
             "rear_clearance_mm": RACK_REAR_CLEARANCE,
+            "pcb_lower_rail_clearance_mm": RACK_PCB_LOWER_RAIL_CLEARANCE,
             "insertion_y_mm": [RACK_INSERTION_START_Y, RACK_SEATED_Y],
         },
         "files": [],
     }
     for path in sorted(emitted):
         manifest["files"].append({
-            "path": str(path.relative_to(PACKAGE_DIR)),
+            "path": f"exports/{path.name}",
             "role": artifact_role(path),
             "bytes": path.stat().st_size,
             "sha256": _sha256(path),
         })
-    manifest_path = EXPORT_DIR / "matcha_tool_manifest.json"
+    manifest_path = output_dir / "matcha_tool_manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     return manifest
 
@@ -858,6 +887,12 @@ def _argument_parser() -> argparse.ArgumentParser:
         "--check-only",
         action="store_true",
         help="build both tools and print mass/identity summaries without writing exports",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=EXPORT_DIR,
+        help="artifact directory (default: matcha_tools/exports)",
     )
     return parser
 
@@ -881,7 +916,7 @@ def main(argv: list[str] | None = None) -> None:
             )
         )
         return
-    manifest = generate_exports()
+    manifest = generate_exports(args.output_dir)
     print(
         json.dumps(
             {
@@ -889,7 +924,7 @@ def main(argv: list[str] | None = None) -> None:
                 "spoon_tool_id": SPOON_TOOL_ID,
                 "whisk_tool_id": WHISK_TOOL_ID,
                 "whisk_bus_address": WHISK_BUS_ADDRESS,
-                "manifest": str(EXPORT_DIR / "matcha_tool_manifest.json"),
+                "manifest": str(args.output_dir / "matcha_tool_manifest.json"),
             },
             indent=2,
         )

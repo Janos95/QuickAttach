@@ -67,7 +67,9 @@ certificates.
 ## Rack status
 
 The source includes a three-bay rack with 0.50 mm wall clearance and 0.30 mm
-rear-face clearance around the complete spoon and whisk envelopes.  Lower
+rear-face clearance around the complete spoon and whisk envelopes.  The left
+lower rail ends 0.30 mm outboard of the FR-4 board, preventing the board edge
+from becoming a support land. Lower
 ledges are tangent to the coupling face; upper ledges act only on the plate's
 outer lands.  The passive lock cam stays below the tool face and acts on the
 robot-side slider.
@@ -91,6 +93,42 @@ The focused test checks fixed IDs, exact common-plate identity, the complete
 15-solid interface-hardware roster, unique component inventories, balance and
 inertia arithmetic, spoon capacity, and rack source structure.  It is not an
 exact swept-interference release test.
+
+The rack preflight is also seconds-scale:
+
+```bash
+XDG_CACHE_HOME=/tmp/cq-cache .venv/bin/python \
+  QuickChange/SO101_Magnetic/matcha_tools/validate_matcha_rack.py --preflight
+XDG_CACHE_HOME=/tmp/cq-cache .venv/bin/python \
+  QuickChange/SO101_Magnetic/matcha_tools/test_matcha_rack_validation.py
+```
+
+It closes every named spoon/whisk component against every rack component,
+including adjacent bays and all seven whisk mechanism extrema.  The fast path
+uses a rigorous continuous swept-AABB lower bound.  Only the six exact named
+plate/ledge and plate/stop tangencies use an FCPW mesh screen followed by OCCT
+B-rep distance and overlap-volume diagnostics.  FCPW is screening evidence,
+not STEP clearance authority.  The generated report remains
+`release_ready=false` until the official stock-gripper body and a compatible
+keeper are closed over the same path.
+
+## Reproducible exports
+
+`generate_matcha_tool_cad.py` canonicalizes OCCT's wall-clock STEP header and
+accepts `--output-dir`, so byte reproducibility can be checked in two temporary
+directories without modifying the checked-in package.  The canonical run is:
+
+```bash
+XDG_CACHE_HOME=/tmp/cq-cache .venv/bin/python \
+  QuickChange/SO101_Magnetic/matcha_tools/generate_matcha_tool_cad.py
+XDG_CACHE_HOME=/tmp/cq-cache .venv/bin/python \
+  QuickChange/SO101_Magnetic/matcha_tools/validate_matcha_rack.py --release-report
+```
+
+The single `exports/matcha_tool_manifest.json` records repo-relative paths,
+roles, byte counts, and SHA-256 digests for all ten CAD/ledger artifacts.  The
+rack report pins that manifest and independently recomputes the full collision
+inventory.  It does not hash itself or create a circular manifest dependency.
 
 Generated STEP/STL assemblies, JSON ledgers, the single canonical hash-pinned
 `exports/matcha_tool_manifest.json`, and the
