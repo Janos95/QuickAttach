@@ -83,73 +83,525 @@
       "pogo_target_pad_relief": {
         "depth_mm": 0.35,
         "diameter_mm": 4.6,
-        "fixed_shell_authority": "illustrative_reference_only_not_conservative",
-        "fixed_shell_reference_nominal_body_diameter_mm": 2.11,
-        "ground_first_mate_tolerance_stack": {
-          "guaranteed_worst_case_lead_mm": -0.09999999999999992,
-          "independent_pin_length_error_bound_mm": 0.3,
-          "nominal_offset_mm": 0.20000000000000007,
-          "passed": false
-        },
-        "legacy_ground_shell_to_face_relief_offset_mm": 0.15000000000000036,
-        "legacy_reference_pilot_land_mm": 7.300000000000001,
-        "legacy_reference_straight_pilot_diameter_mm": 1.575,
-        "manufacturer_dimension_drawing": {
-          "sha256": "c97327d953663a0aa04ea389ee2d2be19372ffa21503f46e5cbbfb0fd2e890e8",
-          "url": "https://www.mill-max.com/sites/default/files/external/products/fullsize/2020-09/7983.svg"
-        },
-        "manufacturer_press_fit_application_note": "https://www.mill-max.com/sites/default/files/external/assets/2020-10/spring-loaded_solder-cup_pin_2.pdf",
-        "manufacturer_press_fit_application_note_sha256": "bbf4c414a11bd3355cde2bb25624c6736b61942964b2cbb3fc42c67c09e87adf",
-        "manufacturer_source": "https://www.mill-max.com/products/discrete-spring-loaded-pins/spring-loaded-pin-with-solder-cup-termination/7983/7983-1-15-20-75-14-11-0",
         "minimum_adjacent_surface_web_mm": 0.40000000000000036,
         "minimum_outer_y_surface_web_mm": 2.2,
-        "mounting_authority": "unresolved_choose_barb_or_knurl_and_rebuild_sectional_bore",
         "nominal_axial_clearance_mm": 0.3,
         "nominal_radial_clearance_mm": 0.2999999999999998,
-        "official_barb_mounting_hole_mm": 1.92,
-        "official_diameter_tolerance_mm": 0.051,
-        "official_full_stroke_tolerance_mm": 0.13,
-        "official_guaranteed_minimum_full_stroke_mm": 1.27,
-        "official_knurl_feature_diameter_mm": 1.65,
-        "official_knurl_mounting_hole_mm": 1.58,
-        "official_minimum_body_counterbore_diameter_mm": 2.21,
-        "official_nominal_full_stroke_mm": 1.4,
-        "official_plunger_diameter_mm": 1.07,
-        "official_profile_nominal_diameters_mm": {
-          "barb": 1.94,
-          "body": 2.11,
-          "knurl": 1.65,
-          "plunger": 1.07,
-          "shoulder": 1.85,
-          "solder_cup_bore": 0.97,
-          "solder_cup_shaft": 1.52,
-          "upper": 1.73
+        "pogo_interface_authority": {
+          "dimensioned_profile": {
+            "barb_axial_reference_mm": 0.635,
+            "cup_bore_length_mm": 2.54,
+            "cup_reference_length_mm": 3.6829999999999994,
+            "fixed_shell_collision_envelope_segments": [
+              {
+                "name": "solder_cup",
+                "outer_diameter_mm": 1.5239999999999998,
+                "semantics": "drawing_nominal_outer_envelope",
+                "z_bounds_mm": [
+                  0.0,
+                  3.6829999999999994
+                ]
+              },
+              {
+                "name": "cup_to_knurl_transition_bound",
+                "outer_diameter_mm": 1.651,
+                "semantics": "conservative_largest_adjacent_dimensioned_diameter",
+                "z_bounds_mm": [
+                  3.6829999999999994,
+                  3.809999999999999
+                ]
+              },
+              {
+                "name": "knurl",
+                "outer_diameter_mm": 1.651,
+                "semantics": "dimensioned_press_fit_feature",
+                "z_bounds_mm": [
+                  3.809999999999999,
+                  4.571999999999999
+                ]
+              },
+              {
+                "name": "shoulder",
+                "outer_diameter_mm": 2.1082,
+                "semantics": "dimensioned_hard_stop_feature",
+                "z_bounds_mm": [
+                  4.571999999999999,
+                  5.283199999999999
+                ]
+              },
+              {
+                "name": "plunger_side_fixed_features",
+                "outer_diameter_mm": 1.9430999999999998,
+                "semantics": "conservative_full_span_envelope_of_dimensioned_upper_guide_upper_shell_and_barb_diameters",
+                "z_bounds_mm": [
+                  5.283199999999999,
+                  7.924799999999999
+                ]
+              }
+            ],
+            "fixed_shell_length_mm": 7.924799999999999,
+            "knurl_length_mm": 0.7619999999999999,
+            "maximum_exposed_plunger_mm": 1.5748,
+            "moving_plunger": {
+              "collision_shape_semantics": "official-drawing-derived conservative cylindrical envelope of round tip; not manufacturer 3D CAD",
+              "compression_range_mm": [
+                0.0,
+                1.524
+              ],
+              "maximum_exposed_length_mm": 1.5748,
+              "motion_axis": [
+                0.0,
+                0.0,
+                -1.0
+              ],
+              "motion_kind": "prismatic",
+              "outer_diameter_mm": 1.0668
+            },
+            "nominal_diameters_mm": {
+              "barb": 1.9430999999999998,
+              "knurl": 1.651,
+              "moving_plunger": 1.0668,
+              "shoulder": 2.1082,
+              "solder_cup_bore": 0.9652,
+              "solder_cup_outer": 1.5239999999999998,
+              "upper_guide": 1.7272,
+              "upper_shell": 1.8541999999999998
+            },
+            "overall_reference_length_mm": 9.4996,
+            "overall_reference_semantics": "parenthesized drawing reference; independently checked against the dimensioned .180+.132+.062 chain",
+            "shell_top_to_shoulder_bottom_mm": 3.3528,
+            "shoulder_bottom_from_base_mm": 4.571999999999999,
+            "shoulder_thickness_mm": 0.7111999999999999
+          },
+          "drawing_tolerances": {
+            "standard_angle_deg": 2.0,
+            "standard_diameter_mm": 0.0508,
+            "standard_length_mm": 0.1524
+          },
+          "first_mate_tolerance_stack": {
+            "guaranteed_worst_case_ground_lead_mm": -0.40959999999999996,
+            "independent_pin_pair_error_bound_mm": 0.6096,
+            "independent_standard_length_tolerance_term_count": 4,
+            "nominal_ground_lead_mm": 0.20000000000000007,
+            "passed": false,
+            "shoulder_to_tip_dimension_terms_per_pin": [
+              ".132_in_fixed_span",
+              ".062_in_maximum_exposed_plunger"
+            ]
+          },
+          "fixed_shell_envelope_authority": {
+            "kind": "official-drawing-derived_conservative_nominal_exterior",
+            "manufacturer_3d_cad": false,
+            "manufacturing_diameter_tolerance_included": false,
+            "mass_or_internal_material_authority": false,
+            "transition_spans_enlarged_to_adjacent_maximum_diameter": true
+          },
+          "official_sources": {
+            "derived_authority_ledger": {
+              "bytes": 2031,
+              "path": "QuickChange/SO101_Magnetic/source_authority/millmax_7983/authority_ledger.json",
+              "sha256": "120fda06cb2e889800e5d18ce556b320ed8ba8c1de97b6a48e556d0433353c05"
+            },
+            "dimension_drawing_svg": {
+              "bytes": 175611,
+              "media_type": "image/svg+xml",
+              "sha256": "c97327d953663a0aa04ea389ee2d2be19372ffa21503f46e5cbbfb0fd2e890e8",
+              "url": "https://www.mill-max.com/sites/default/files/external/products/fullsize/2020-09/7983.svg"
+            },
+            "hash_pin_semantics": "records the recovered manufacturer byte digests; cached manufacturer artwork is not redistributed",
+            "offline_manufacturer_byte_revalidation_available": false,
+            "press_fit_application_note_pdf": {
+              "bytes": 509252,
+              "media_type": "application/pdf",
+              "sha256": "bbf4c414a11bd3355cde2bb25624c6736b61942964b2cbb3fc42c67c09e87adf",
+              "url": "https://www.mill-max.com/sites/default/files/external/assets/2020-10/spring-loaded_solder-cup_pin_2.pdf"
+            },
+            "product_page": "https://www.mill-max.com/products/discrete-spring-loaded-pins/spring-loaded-pin-with-solder-cup-termination/7983/7983-1-15-20-75-14-11-0",
+            "redistribution": {
+              "manufacturer_file_license_confirmed": false,
+              "manufacturer_files_vendored": false,
+              "semantics": "URLs, byte counts, SHA-256 digests, and dimension facts are retained; cached manufacturer artwork is not redistributed because redistribution terms were not established."
+            }
+          },
+          "part_number": "7983-1-15-20-75-14-11-0",
+          "pin_source_frame": "solder_cup_end_z0_axis_positive_toward_plunger",
+          "release_authority": {
+            "blockers": [
+              "ground_first_mate_tolerance_stack_unqualified",
+              "knurl_press_fit_process_and_pullout_unqualified",
+              "installed_electrical_cycle_reliability_unqualified"
+            ],
+            "fixed_shell_drawing_envelope_reconstructed": true,
+            "ground_first_mate_shoulder_datum_resolved": true,
+            "ground_first_mate_tolerance_stack_qualified": false,
+            "installed_electrical_cycle_reliability_qualified": false,
+            "knurl_mounting_mode_selected": true,
+            "knurl_press_fit_process_and_pullout_qualified": false,
+            "moving_plunger_split_from_fixed_shell": true,
+            "official_sources_hash_pinned": true,
+            "release_ready": false,
+            "sectional_bore_and_shoulder_stop_resolved": true
+          },
+          "schema_version": "1.0",
+          "selected_mounting_design": {
+            "application_note_hole_exact_inch_conversion_mm": 1.5748,
+            "application_note_hole_rounded_label_mm": 1.58,
+            "application_note_knurl_feature_label_mm": 1.65,
+            "barb_alternative_recommended_hole_diameter_mm": 1.9176999999999997,
+            "body_counterbore_design_diameter_mm": 2.31,
+            "body_counterbore_minimum_diameter_mm": 2.2097999999999995,
+            "drawing_knurl_nominal_diameter_mm": 1.651,
+            "installed_datums": [
+              {
+                "base_z_mm": 0.9004000000000012,
+                "body_counterbore_z_bounds_mm": [
+                  5.4724,
+                  9.5
+                ],
+                "centre_xy_mm": [
+                  -31.0,
+                  -7.5
+                ],
+                "fixed_shell_top_z_mm": 8.8252,
+                "full_extension_tip_z_mm": 10.4,
+                "insertion_direction": "mating_face_toward_rear_negative_z",
+                "installation_mode": "knurl_solder_cup_first",
+                "knurl_z_bounds_mm": [
+                  4.710400000000001,
+                  5.4724
+                ],
+                "mated_compression_mm": 0.9500000000000011,
+                "mated_tip_z_mm": 9.45,
+                "nominal_design_remaining_against_catalog_minimum_stroke_mm": 0.31999999999999895,
+                "nominal_face_protrusion_mm": 0.9,
+                "remaining_stroke_semantics": "nominal installation arithmetic only; part, bore, target, and fabrication tolerances are not included",
+                "retention_land_z_bounds_mm": [
+                  1.8499999999999999,
+                  5.4724
+                ],
+                "shoulder_stop_plane_z_mm": 5.4724,
+                "shoulder_z_bounds_mm": [
+                  5.4724,
+                  6.1836
+                ],
+                "signal": "GND",
+                "target_pad_exposed_contact_plane_z_mm": 9.45
+              },
+              {
+                "base_z_mm": 0.7004000000000001,
+                "body_counterbore_z_bounds_mm": [
+                  5.272399999999999,
+                  9.5
+                ],
+                "centre_xy_mm": [
+                  -31.0,
+                  -2.5
+                ],
+                "fixed_shell_top_z_mm": 8.6252,
+                "full_extension_tip_z_mm": 10.2,
+                "insertion_direction": "mating_face_toward_rear_negative_z",
+                "installation_mode": "knurl_solder_cup_first",
+                "knurl_z_bounds_mm": [
+                  4.5104,
+                  5.272399999999999
+                ],
+                "mated_compression_mm": 0.75,
+                "mated_tip_z_mm": 9.45,
+                "nominal_design_remaining_against_catalog_minimum_stroke_mm": 0.52,
+                "nominal_face_protrusion_mm": 0.7,
+                "remaining_stroke_semantics": "nominal installation arithmetic only; part, bore, target, and fabrication tolerances are not included",
+                "retention_land_z_bounds_mm": [
+                  1.8499999999999999,
+                  5.272399999999999
+                ],
+                "shoulder_stop_plane_z_mm": 5.272399999999999,
+                "shoulder_z_bounds_mm": [
+                  5.272399999999999,
+                  5.983599999999999
+                ],
+                "signal": "+12V",
+                "target_pad_exposed_contact_plane_z_mm": 9.45
+              },
+              {
+                "base_z_mm": 0.7004000000000001,
+                "body_counterbore_z_bounds_mm": [
+                  5.272399999999999,
+                  9.5
+                ],
+                "centre_xy_mm": [
+                  -31.0,
+                  2.5
+                ],
+                "fixed_shell_top_z_mm": 8.6252,
+                "full_extension_tip_z_mm": 10.2,
+                "insertion_direction": "mating_face_toward_rear_negative_z",
+                "installation_mode": "knurl_solder_cup_first",
+                "knurl_z_bounds_mm": [
+                  4.5104,
+                  5.272399999999999
+                ],
+                "mated_compression_mm": 0.75,
+                "mated_tip_z_mm": 9.45,
+                "nominal_design_remaining_against_catalog_minimum_stroke_mm": 0.52,
+                "nominal_face_protrusion_mm": 0.7,
+                "remaining_stroke_semantics": "nominal installation arithmetic only; part, bore, target, and fabrication tolerances are not included",
+                "retention_land_z_bounds_mm": [
+                  1.8499999999999999,
+                  5.272399999999999
+                ],
+                "shoulder_stop_plane_z_mm": 5.272399999999999,
+                "shoulder_z_bounds_mm": [
+                  5.272399999999999,
+                  5.983599999999999
+                ],
+                "signal": "TTL_DATA",
+                "target_pad_exposed_contact_plane_z_mm": 9.45
+              },
+              {
+                "base_z_mm": 0.7004000000000001,
+                "body_counterbore_z_bounds_mm": [
+                  5.272399999999999,
+                  9.5
+                ],
+                "centre_xy_mm": [
+                  -31.0,
+                  7.5
+                ],
+                "fixed_shell_top_z_mm": 8.6252,
+                "full_extension_tip_z_mm": 10.2,
+                "insertion_direction": "mating_face_toward_rear_negative_z",
+                "installation_mode": "knurl_solder_cup_first",
+                "knurl_z_bounds_mm": [
+                  4.5104,
+                  5.272399999999999
+                ],
+                "mated_compression_mm": 0.75,
+                "mated_tip_z_mm": 9.45,
+                "nominal_design_remaining_against_catalog_minimum_stroke_mm": 0.52,
+                "nominal_face_protrusion_mm": 0.7,
+                "remaining_stroke_semantics": "nominal installation arithmetic only; part, bore, target, and fabrication tolerances are not included",
+                "retention_land_z_bounds_mm": [
+                  1.8499999999999999,
+                  5.272399999999999
+                ],
+                "shoulder_stop_plane_z_mm": 5.272399999999999,
+                "shoulder_z_bounds_mm": [
+                  5.272399999999999,
+                  5.983599999999999
+                ],
+                "signal": "TOOL_ID_SPARE",
+                "target_pad_exposed_contact_plane_z_mm": 9.45
+              }
+            ],
+            "mode": "knurl_solder_cup_first",
+            "nominal_and_part_tolerance_only_fit": {
+              "body_counterbore_minimum_radial_clearance_mm": 0.0754999999999999,
+              "fabrication_hole_tolerance_included": false,
+              "knurl_diameter_range_mm": [
+                1.6002,
+                1.7018
+              ],
+              "knurl_diametral_interference_range_mm": [
+                0.020199999999999996,
+                0.12179999999999991
+              ],
+              "minimum_shoulder_bearing_radial_overlap_mm": 0.2386999999999999,
+              "pullout_force_bound_included": false,
+              "shoulder_diameter_range_mm": [
+                2.0574,
+                2.1590000000000003
+              ],
+              "solder_cup_max_diameter_mm": 1.5747999999999998,
+              "solder_cup_minimum_diametral_passage_mm": 0.0052000000000003155
+            },
+            "retention_land_diameter_mm": 1.58
+          },
+          "stroke": {
+            "full_stroke_nominal_mm": 1.397,
+            "full_stroke_tolerance_mm": 0.127,
+            "guaranteed_minimum_full_stroke_mm": 1.27,
+            "maximum_full_stroke_mm": 1.524,
+            "mid_stroke_nominal_mm": 0.6985
+          },
+          "units": "mm"
         },
-        "official_standard_length_tolerance_mm": 0.15,
-        "reference_render_retraction_range_mm": [
-          0.0,
-          0.9
-        ],
+        "selected_sectional_mount": {
+          "body_counterbore_diameter_mm": 2.31,
+          "fabrication_hole_tolerance_included": false,
+          "ground_shell_top_to_face_relief_floor_mm": 0.32479999999999976,
+          "installed_datums": [
+            {
+              "base_z_mm": 0.9004000000000012,
+              "body_counterbore_z_bounds_mm": [
+                5.4724,
+                9.5
+              ],
+              "centre_xy_mm": [
+                -31.0,
+                -7.5
+              ],
+              "fixed_shell_top_z_mm": 8.8252,
+              "full_extension_tip_z_mm": 10.4,
+              "insertion_direction": "mating_face_toward_rear_negative_z",
+              "installation_mode": "knurl_solder_cup_first",
+              "knurl_z_bounds_mm": [
+                4.710400000000001,
+                5.4724
+              ],
+              "mated_compression_mm": 0.9500000000000011,
+              "mated_tip_z_mm": 9.45,
+              "nominal_design_remaining_against_catalog_minimum_stroke_mm": 0.31999999999999895,
+              "nominal_face_protrusion_mm": 0.9,
+              "remaining_stroke_semantics": "nominal installation arithmetic only; part, bore, target, and fabrication tolerances are not included",
+              "retention_land_z_bounds_mm": [
+                1.8499999999999999,
+                5.4724
+              ],
+              "shoulder_stop_plane_z_mm": 5.4724,
+              "shoulder_z_bounds_mm": [
+                5.4724,
+                6.1836
+              ],
+              "signal": "GND",
+              "target_pad_exposed_contact_plane_z_mm": 9.45
+            },
+            {
+              "base_z_mm": 0.7004000000000001,
+              "body_counterbore_z_bounds_mm": [
+                5.272399999999999,
+                9.5
+              ],
+              "centre_xy_mm": [
+                -31.0,
+                -2.5
+              ],
+              "fixed_shell_top_z_mm": 8.6252,
+              "full_extension_tip_z_mm": 10.2,
+              "insertion_direction": "mating_face_toward_rear_negative_z",
+              "installation_mode": "knurl_solder_cup_first",
+              "knurl_z_bounds_mm": [
+                4.5104,
+                5.272399999999999
+              ],
+              "mated_compression_mm": 0.75,
+              "mated_tip_z_mm": 9.45,
+              "nominal_design_remaining_against_catalog_minimum_stroke_mm": 0.52,
+              "nominal_face_protrusion_mm": 0.7,
+              "remaining_stroke_semantics": "nominal installation arithmetic only; part, bore, target, and fabrication tolerances are not included",
+              "retention_land_z_bounds_mm": [
+                1.8499999999999999,
+                5.272399999999999
+              ],
+              "shoulder_stop_plane_z_mm": 5.272399999999999,
+              "shoulder_z_bounds_mm": [
+                5.272399999999999,
+                5.983599999999999
+              ],
+              "signal": "+12V",
+              "target_pad_exposed_contact_plane_z_mm": 9.45
+            },
+            {
+              "base_z_mm": 0.7004000000000001,
+              "body_counterbore_z_bounds_mm": [
+                5.272399999999999,
+                9.5
+              ],
+              "centre_xy_mm": [
+                -31.0,
+                2.5
+              ],
+              "fixed_shell_top_z_mm": 8.6252,
+              "full_extension_tip_z_mm": 10.2,
+              "insertion_direction": "mating_face_toward_rear_negative_z",
+              "installation_mode": "knurl_solder_cup_first",
+              "knurl_z_bounds_mm": [
+                4.5104,
+                5.272399999999999
+              ],
+              "mated_compression_mm": 0.75,
+              "mated_tip_z_mm": 9.45,
+              "nominal_design_remaining_against_catalog_minimum_stroke_mm": 0.52,
+              "nominal_face_protrusion_mm": 0.7,
+              "remaining_stroke_semantics": "nominal installation arithmetic only; part, bore, target, and fabrication tolerances are not included",
+              "retention_land_z_bounds_mm": [
+                1.8499999999999999,
+                5.272399999999999
+              ],
+              "shoulder_stop_plane_z_mm": 5.272399999999999,
+              "shoulder_z_bounds_mm": [
+                5.272399999999999,
+                5.983599999999999
+              ],
+              "signal": "TTL_DATA",
+              "target_pad_exposed_contact_plane_z_mm": 9.45
+            },
+            {
+              "base_z_mm": 0.7004000000000001,
+              "body_counterbore_z_bounds_mm": [
+                5.272399999999999,
+                9.5
+              ],
+              "centre_xy_mm": [
+                -31.0,
+                7.5
+              ],
+              "fixed_shell_top_z_mm": 8.6252,
+              "full_extension_tip_z_mm": 10.2,
+              "insertion_direction": "mating_face_toward_rear_negative_z",
+              "installation_mode": "knurl_solder_cup_first",
+              "knurl_z_bounds_mm": [
+                4.5104,
+                5.272399999999999
+              ],
+              "mated_compression_mm": 0.75,
+              "mated_tip_z_mm": 9.45,
+              "nominal_design_remaining_against_catalog_minimum_stroke_mm": 0.52,
+              "nominal_face_protrusion_mm": 0.7,
+              "remaining_stroke_semantics": "nominal installation arithmetic only; part, bore, target, and fabrication tolerances are not included",
+              "retention_land_z_bounds_mm": [
+                1.8499999999999999,
+                5.272399999999999
+              ],
+              "shoulder_stop_plane_z_mm": 5.272399999999999,
+              "shoulder_z_bounds_mm": [
+                5.272399999999999,
+                5.983599999999999
+              ],
+              "signal": "TOOL_ID_SPARE",
+              "target_pad_exposed_contact_plane_z_mm": 9.45
+            }
+          ],
+          "minimum_adjacent_counterbore_web_mm": 2.69,
+          "minimum_body_counterbore_depth_mm": 4.0276,
+          "minimum_outer_y_counterbore_web_mm": 3.3449999999999998,
+          "minimum_retention_land_height_mm": 3.4223999999999997,
+          "mode": "knurl_solder_cup_first",
+          "pullout_force_bound_included": false,
+          "rear_wiring_pocket_top_z_mm": 1.8499999999999999,
+          "retention_land_diameter_mm": 1.58
+        },
         "target_pad_diameter_mm": 4.0
       },
       "release_authority": {
         "blockers": [
           "fabrication_process_tolerance_unqualified",
-          "fixed_pogo_shell_is_illustrative_reference_only",
-          "pogo_mounting_sectional_bore_unresolved",
-          "ground_first_mate_shoulder_datum_unresolved",
           "ground_first_mate_tolerance_stack_unqualified",
+          "knurl_press_fit_process_and_pullout_unqualified",
+          "installed_electrical_cycle_reliability_unqualified",
           "magnetic_fastener_seating_and_preload_unproven",
           "moving_interface_pair_route_not_recomputed",
           "printed_interface_feature_strength_unqualified"
         ],
         "fabrication_process_tolerance_qualified": false,
-        "fixed_pogo_shell_exact_drawing_bound": false,
-        "ground_first_mate_shoulder_datum_resolved": false,
+        "fixed_pogo_shell_bound_semantics": "official-drawing-derived conservative nominal exterior; not manufacturer 3D CAD or manufacturing-tolerance authority",
+        "fixed_pogo_shell_exact_drawing_bound": true,
+        "ground_first_mate_shoulder_datum_resolved": true,
         "ground_first_mate_tolerance_stack_qualified": false,
+        "installed_electrical_cycle_reliability_qualified": false,
+        "knurl_press_fit_process_and_pullout_qualified": false,
         "magnetic_fastener_seating_and_preload_bound": false,
         "moving_interface_pair_route_recomputed": false,
-        "pogo_mounting_sectional_bore_resolved": false,
+        "pogo_mounting_sectional_bore_resolved": true,
         "printed_interface_feature_strength_qualified": false,
         "qualified_combined_error_limit_mm": null,
         "release_ready": false
@@ -418,22 +870,22 @@
   "file_count": 27,
   "files": [
     {
-      "bytes": 2465,
+      "bytes": 2496,
       "path": "QuickChange/SO101_Magnetic/exports/bill_of_materials.csv",
       "role": "bill_of_materials",
-      "sha256": "f8ba66e1c682990916e060a4ffcf09e97d5fa74174f0bce1feacb728c780b329"
+      "sha256": "cef52f22f9af03a79d138a43839cf854aab4d65bb5dcb17062179d5f7892d575"
     },
     {
-      "bytes": 17065,
+      "bytes": 36256,
       "path": "QuickChange/SO101_Magnetic/exports/design_parameters.json",
       "role": "design_parameters",
-      "sha256": "27bb675364ea03879350bb2b2ca5bcf77b6a7a52fad5d26ad495e64b18cc86c5"
+      "sha256": "e9481966d8b5c2c187bb3670cac502865eb99d8a37a89bf3533b9a9a2a1eeb88"
     },
     {
-      "bytes": 347,
+      "bytes": 395,
       "path": "QuickChange/SO101_Magnetic/exports/electrical_pinout.csv",
       "role": "electrical_pinout",
-      "sha256": "1f6f98ad47119e0d3a473fe3a50e43f877312bdab87e2f1a6524847aa00bc3e1"
+      "sha256": "0d8afe99656525fe47bf339dd6edc22bfe3102701405f3f78b2363decf97935a"
     },
     {
       "bytes": 515,
@@ -472,10 +924,10 @@
       "sha256": "1a302d3674952d881df75e25e47b64a60b23a72b66fde48c35a0924ca1df6990"
     },
     {
-      "bytes": 13654,
+      "bytes": 21732,
       "path": "QuickChange/SO101_Magnetic/exports/hardware_Mill-Max_7983-1-15-20-75-14-11-0_reference.step",
       "role": "exact_cad_step",
-      "sha256": "50920cc94c44d6a82f71be67b4022f8c8c31a3b4b99144ac5f786cad6778ba29"
+      "sha256": "23daeff444f7d46cdf251b7a97601c9062e37e2eb7cb904c83193014a37495e1"
     },
     {
       "bytes": 174898,
@@ -508,28 +960,28 @@
       "sha256": "94f07e6278ef395413ad8ecf2b55711b549b3b4a74ecbeea5b992e9d0ce4cbcd"
     },
     {
-      "bytes": 1022128,
+      "bytes": 1048097,
       "path": "QuickChange/SO101_Magnetic/exports/so101_quick_change_assembly.step",
       "role": "complete_assembly_step",
-      "sha256": "4de2911d8b3085874dcf9cad688f86d42513e2b1487b5fb4fa0e1591d64d8e45"
+      "sha256": "84442e2f491023e598324dd290616cfa17f09cb2dd43a8e7b1c745895a813a78"
     },
     {
-      "bytes": 379225,
+      "bytes": 395527,
       "path": "QuickChange/SO101_Magnetic/exports/so101_robot_plate.step",
       "role": "exact_cad_step",
-      "sha256": "77e0994038f760b4d27d6b1b61cec5b8a0c721c2f23c198090d22b5d52ceb171"
+      "sha256": "7786f55a5a4ed1e73396cce3a028926be6e60ea9006ef8ac8476fc18b26b6354"
     },
     {
-      "bytes": 723084,
+      "bytes": 807084,
       "path": "QuickChange/SO101_Magnetic/exports/so101_robot_plate.stl",
       "role": "tessellated_mesh_export",
-      "sha256": "675ce05b6ed0d35b773ec73246eb1427a7e2f906867337895cb0be9052000021"
+      "sha256": "58af74b7a4a0c95d74e98c45419dcf5e65924f50617f3d0fbedf8a8b5ae2a7ba"
     },
     {
-      "bytes": 3320413,
+      "bytes": 3346361,
       "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_retrofit_assembly.step",
       "role": "complete_assembly_step",
-      "sha256": "3487e09b193b483c7db6c9d4652b6beb4897c75a3acf9c48f8d387a9fbe91cfa"
+      "sha256": "ddd625bfd7944cfecc00a0273575d236b2530fea46396580441365df5f2fe499"
     },
     {
       "bytes": 248872,
@@ -581,11 +1033,11 @@
     }
   ],
   "generator": {
-    "bytes": 87799,
+    "bytes": 109574,
     "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-    "sha256": "0b6776e6223b30d583010fbe2dd2f83886b2d2c8edd5af044ce5ed816b833263"
+    "sha256": "9edbf4fa918dba20eeee869bc6788de0b63bb5a43983999576c515808f27bbbc"
   },
-  "inventory_sha256": "1b30ae70ee059b283195b35658066f8e3ac2e5683e74282f5f15173f47847d72",
+  "inventory_sha256": "824bcafdddcf45fec5c325310dbf0904ac51d88d47b0e8d747bf28a2bd354d43",
   "schema_version": "1.0",
   "units": "mm"
 }

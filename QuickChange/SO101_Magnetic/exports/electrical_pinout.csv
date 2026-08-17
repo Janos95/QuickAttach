@@ -1,5 +1,5 @@
 pin,target_x_mm,wire_x_mm,y_mm,signal,stock_gripper_use,notes
-1,-1.0,3.5,-7.5,GND,yes,first-mate/last-break; official Feetech pin 1
+1,-1.0,3.5,-7.5,GND,yes,nominal first-mate/last-break datum only; tolerance stack unqualified; official Feetech pin 1
 2,-1.0,3.5,-2.5,+12V,yes,official Feetech pin 2
 3,-1.0,3.5,2.5,TTL_DATA,yes,"official Feetech pin 3, half-duplex TTL"
 4,-1.0,3.5,7.5,TOOL_ID_SPARE,no,optional tool ID/detect; unused by stock three-wire gripper
