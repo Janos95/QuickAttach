@@ -39,8 +39,8 @@ PAYLOAD_MASS_LEDGER_PATHS = {
     "whisk": MATCHA_CAD_EXPORTS / "so101_matcha_whisk_mass_ledger.json",
 }
 PAYLOAD_MASS_LEDGER_SHA256 = {
-    "spoon": "576bec2226d22644feb0d2a196c795804f5f0e6dd947562dccfd0ff9cb4cc2a4",
-    "whisk": "9403fd9a3ec6474fe152b636526c378695e5c8e044eafa1ff963a8b287369fc0",
+    "spoon": "8871e3225cd0ce2b94df96c211d490fd581f83aba555d1cd62f46ad41dd81e37",
+    "whisk": "4a66b75393e42f7004db99badc13d9a94898d28c2c1383c33fc0c8e00fc535fd",
 }
 WHISK_ROTOR_LEDGER_COMPONENT_IDS = (
     "whisk_motor_shaft",
@@ -1560,7 +1560,7 @@ def _add_pogo_contact_pairs(root: ET.Element) -> None:
                 "pair",
                 {
                     "name": f"{tool}_{signal}_pogo_pad_pair",
-                    "geom1": f"qc_col_pogo_{signal}",
+                    "geom1": f"qc_col_pogo_{signal}_plunger",
                     "geom2": f"{tool}_pad_{signal}_collision",
                     "condim": "1",
                     "margin": "0",
@@ -2006,7 +2006,7 @@ class MatchaWorkflowController:
         self.pogo_pair_contract = MappingProxyType({
             frozenset(
                 {
-                    f"qc_col_pogo_{signal}",
+                    f"qc_col_pogo_{signal}_plunger",
                     f"{tool}_pad_{signal}_collision",
                 }
             ): (tool, signal)
@@ -2401,7 +2401,10 @@ class MatchaWorkflowController:
     ) -> bool:
         geom_a = self.geom_names[int(contact.geom[0])]
         geom_b = self.geom_names[int(contact.geom[1])]
-        expected = {f"qc_col_pogo_{signal}", f"{tool}_pad_{signal}_collision"}
+        expected = {
+            f"qc_col_pogo_{signal}_plunger",
+            f"{tool}_pad_{signal}_collision",
+        }
         if {geom_a, geom_b} != expected:
             return False
         if float(contact.dist) > CONTACT_NUMERICAL_EPSILON_M:
@@ -2420,20 +2423,45 @@ class MatchaWorkflowController:
         pad_rotation = np.asarray(self.data.geom_xmat[pad_id], dtype=float).reshape(3, 3)
         pad_axis = pad_rotation[:, 2]
         offset = np.asarray(contact.pos, dtype=float) - pad_center
-        axial = abs(float(offset @ pad_axis))
-        radial = float(np.linalg.norm(offset - (offset @ pad_axis) * pad_axis))
+        signed_pad_axial_m = float(offset @ pad_axis)
+        expected_signed_pad_axial_m = (
+            -float(self.model.geom_size[pad_id, 1]) - float(contact.dist) / 2.0
+        )
         contact_normal = np.asarray(contact.frame[:3], dtype=float)
+        plunger_id = int(self.model.geom(f"qc_col_pogo_{signal}_plunger").id)
+        if int(contact.geom[0]) == plunger_id:
+            normal_from_plunger_to_pad = contact_normal
+        elif int(contact.geom[1]) == plunger_id:
+            normal_from_plunger_to_pad = -contact_normal
+        else:
+            return False
+        plunger_rotation = np.asarray(
+            self.data.geom_xmat[plunger_id], dtype=float
+        ).reshape(3, 3)
+        plunger_positive_z = plunger_rotation[:, 2]
+        plunger_center = np.asarray(self.data.geom_xpos[plunger_id], dtype=float)
+        plunger_offset = np.asarray(contact.pos, dtype=float) - plunger_center
+        plunger_axial = float(plunger_offset @ plunger_positive_z)
+        plunger_radial_m = float(
+            np.linalg.norm(
+                plunger_offset - plunger_axial * plunger_positive_z
+            )
+        )
         return (
-            axial <= 1.0e-3
-            and radial <= 2.01e-3
-            # Pose, point-on-disk, exact signal identity, phase/equality and
-            # penetration are the physical acceptance authority.  MuJoCo may
-            # report a transient edge normal while an aligned round pin first
-            # enters its larger matching disk; treating that same-signal edge
-            # witness as a foreign collision produced thousands of false
-            # observations even though its material/phase identity was exact.
-            and np.all(np.isfinite(contact_normal))
-            and float(np.linalg.norm(contact_normal)) >= 0.999
+            # The physical bus witness is the exposed underside of the pad,
+            # not its centre plane or copper back face.  MuJoCo locates a
+            # penetrating contact halfway between the two original surfaces.
+            abs(signed_pad_axial_m - expected_signed_pad_axial_m)
+            <= CONTACT_NUMERICAL_EPSILON_M
+            and plunger_radial_m
+            <= qc.POGO_PLUNGER_DIAMETER_M / 2.0 + CONTACT_NUMERICAL_EPSILON_M
+            # This explicit pair is directed from the source plunger toward
+            # the target pad.  Edge or reversed normals cannot establish an
+            # axial bus contact even when identity and point are otherwise
+            # correct.
+            and np.all(np.isfinite(normal_from_plunger_to_pad))
+            and float(np.linalg.norm(normal_from_plunger_to_pad)) >= 0.999
+            and float(normal_from_plunger_to_pad @ plunger_positive_z) >= 0.999
         )
 
     def _pogo_contact_signals(self, tool: str) -> set[str]:

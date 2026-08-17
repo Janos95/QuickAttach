@@ -28,6 +28,143 @@ SIGNAL_Y_M = {
 }
 SIGNAL_TO_BORE = {"ground": 1, "power": 2, "data": 3, "id": 4}
 
+# Hash-pinned Mill-Max 7983 runtime envelope.  Geometry and installed datums
+# are authoritative for nominal collision placement; mass, spring force, and
+# damping are deliberately only a simulation model because the recovered
+# manufacturer authority does not contain those properties.
+POGO_SOURCE_SIGNAL_BY_RUNTIME = {
+    "ground": "GND",
+    "power": "+12V",
+    "data": "TTL_DATA",
+    "id": "TOOL_ID_SPARE",
+}
+POGO_CAD_SOURCE_PATH = Path(__file__).resolve().parent.parent / "generate_cad.py"
+POGO_CAD_SOURCE_SHA256 = (
+    "9edbf4fa918dba20eeee869bc6788de0b63bb5a43983999576c515808f27bbbc"
+)
+POGO_CAD_SOURCE_BYTES = 109_574
+POGO_AUTHORITY_LEDGER_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "source_authority"
+    / "millmax_7983"
+    / "authority_ledger.json"
+)
+POGO_AUTHORITY_LEDGER_SHA256 = (
+    "120fda06cb2e889800e5d18ce556b320ed8ba8c1de97b6a48e556d0433353c05"
+)
+POGO_AUTHORITY_LEDGER_BYTES = 2_031
+POGO_SOURCE_CONTRACT_CANONICAL_SHA256 = (
+    "71f6b8a2aaeac8f6ebbe140534a0ee3926dca4c078c18b60d5de0abcda6ccc69"
+)
+POGO_FIXED_SHELL_LENGTH_M = 0.0079248
+POGO_PLUNGER_DIAMETER_M = 0.0010668
+POGO_PLUNGER_MAX_EXPOSED_LENGTH_M = 0.0015748
+POGO_PLUNGER_COMPRESSION_RANGE_M = (0.0, 0.001524)
+POGO_FIXED_SHELL_SEGMENTS_M = (
+    (
+        "solder_cup",
+        (0.0, 0.003683),
+        0.001524,
+        "fixed_shell_solder_cup",
+    ),
+    (
+        "cup_to_knurl_transition_bound",
+        (0.003683, 0.00381),
+        0.001651,
+        "fixed_shell_cup_to_knurl_transition_bound",
+    ),
+    (
+        "knurl",
+        (0.00381, 0.004572),
+        0.001651,
+        "fixed_shell_knurl",
+    ),
+    (
+        "shoulder",
+        (0.004572, 0.0052832),
+        0.0021082,
+        "shoulder_stop",
+    ),
+    (
+        "plunger_side_fixed_features",
+        (0.0052832, POGO_FIXED_SHELL_LENGTH_M),
+        0.0019431,
+        "fixed_shell_plunger_side_fixed_features",
+    ),
+)
+_POGO_REMAINING_STROKE_SEMANTICS = (
+    "nominal installation arithmetic only; part, bore, target, and "
+    "fabrication tolerances are not included"
+)
+POGO_INSTALLED_DATUMS_MM = {
+    signal: {
+        "signal": POGO_SOURCE_SIGNAL_BY_RUNTIME[signal],
+        "centre_xy_mm": [-31.0, SIGNAL_Y_M[signal] * 1000.0],
+        "installation_mode": "knurl_solder_cup_first",
+        "insertion_direction": "mating_face_toward_rear_negative_z",
+        "base_z_mm": 0.9004000000000012 if signal == "ground" else 0.7004,
+        "fixed_shell_top_z_mm": 8.8252 if signal == "ground" else 8.6252,
+        "shoulder_stop_plane_z_mm": (
+            5.4724 if signal == "ground" else 5.2724
+        ),
+        "shoulder_z_bounds_mm": (
+            [5.4724, 6.1836]
+            if signal == "ground"
+            else [5.2724, 5.9836]
+        ),
+        "knurl_z_bounds_mm": (
+            [4.710400000000001, 5.4724]
+            if signal == "ground"
+            else [4.5104, 5.2724]
+        ),
+        "retention_land_z_bounds_mm": (
+            [1.8499999999999999, 5.4724]
+            if signal == "ground"
+            else [1.8499999999999999, 5.2724]
+        ),
+        "body_counterbore_z_bounds_mm": (
+            [5.4724, 9.5] if signal == "ground" else [5.2724, 9.5]
+        ),
+        "full_extension_tip_z_mm": 10.4 if signal == "ground" else 10.2,
+        "nominal_face_protrusion_mm": 0.9 if signal == "ground" else 0.7,
+        "target_pad_exposed_contact_plane_z_mm": 9.45,
+        "mated_compression_mm": (
+            0.9500000000000011 if signal == "ground" else 0.75
+        ),
+        "mated_tip_z_mm": 9.45,
+        "nominal_design_remaining_against_catalog_minimum_stroke_mm": (
+            0.31999999999999895 if signal == "ground" else 0.52
+        ),
+        "remaining_stroke_semantics": _POGO_REMAINING_STROKE_SEMANTICS,
+    }
+    for signal in SIGNALS
+}
+POGO_INSTALLED_DATUMS_M = {
+    signal: {
+        "source_signal": datum["signal"],
+        "centre_xy_m": tuple(value / 1000.0 for value in datum["centre_xy_mm"]),
+        "base_z_m": datum["base_z_mm"] / 1000.0,
+    }
+    for signal, datum in POGO_INSTALLED_DATUMS_MM.items()
+}
+
+# These values are explicitly not manufacturer authority.  They retain a
+# bounded, deterministic nominal MuJoCo response until mass and force curves
+# are independently sourced.  Critical damping is derived from this declared
+# simulation-only cylinder-density model, not inherited from an arm joint.
+POGO_SIMULATION_ONLY_ENVELOPE_DENSITY_KG_M3 = 1000.0
+POGO_SIMULATION_ONLY_STIFFNESS_N_M = 300.0
+POGO_SIMULATION_ONLY_PLUNGER_MASS_KG = (
+    POGO_SIMULATION_ONLY_ENVELOPE_DENSITY_KG_M3
+    * math.pi
+    * (POGO_PLUNGER_DIAMETER_M / 2.0) ** 2
+    * POGO_PLUNGER_MAX_EXPOSED_LENGTH_M
+)
+POGO_SIMULATION_ONLY_DAMPING_N_S_M = 2.0 * math.sqrt(
+    POGO_SIMULATION_ONLY_STIFFNESS_N_M
+    * POGO_SIMULATION_ONLY_PLUNGER_MASS_KG
+)
+
 # Frozen source contracts.  The stock-gripper dock is the released core
 # quick-change design; spoon and whisk use the separate two-bay matcha rack.
 # Keeping these datums distinct prevents the convenient recovered rack box
@@ -878,6 +1015,235 @@ def activate_upstream_robot_collisions(robot_root: ET.Element) -> list[str]:
     return active
 
 
+def pogo_runtime_geometry_contract() -> dict[str, object]:
+    """Return exact nominal geometry plus explicitly unqualified dynamics."""
+
+    signals: dict[str, object] = {}
+    for signal in SIGNALS:
+        datum = POGO_INSTALLED_DATUMS_M[signal]
+        fixed_body_name = f"qc_pogo_{signal}_fixed_shell_body"
+        fixed_segments = []
+        for source_name, z_bounds, diameter, runtime_suffix in (
+            POGO_FIXED_SHELL_SEGMENTS_M
+        ):
+            z_min, z_max = z_bounds
+            fixed_segments.append(
+                {
+                    "source_segment": source_name,
+                    "name": f"qc_col_pogo_{signal}_{runtime_suffix}",
+                    "geom_type": "cylinder",
+                    "local_pos_m": [0.0, 0.0, (z_min + z_max) / 2.0],
+                    "size_m": [diameter / 2.0, (z_max - z_min) / 2.0],
+                    "bus_contact_eligible": False,
+                }
+            )
+        signals[signal] = {
+            "source_signal": datum["source_signal"],
+            "fixed_body": {
+                "name": fixed_body_name,
+                "parent": "robot_plate_frame",
+                "pos_m": [*datum["centre_xy_m"], datum["base_z_m"]],
+                "quat_wxyz": [1.0, 0.0, 0.0, 0.0],
+            },
+            "fixed_segments": fixed_segments,
+            "plunger": {
+                "body_name": f"qc_pogo_{signal}_plunger_body",
+                "parent": fixed_body_name,
+                "local_pos_m": [0.0, 0.0, POGO_FIXED_SHELL_LENGTH_M],
+                "quat_wxyz": [1.0, 0.0, 0.0, 0.0],
+                "joint_name": f"qc_pogo_{signal}_plunger",
+                "joint_type": "slide",
+                "axis": [0.0, 0.0, -1.0],
+                "range_m": list(POGO_PLUNGER_COMPRESSION_RANGE_M),
+                "geom_name": f"qc_col_pogo_{signal}_plunger",
+                "geom_type": "cylinder",
+                "geom_local_pos_m": [
+                    0.0,
+                    0.0,
+                    POGO_PLUNGER_MAX_EXPOSED_LENGTH_M / 2.0,
+                ],
+                "geom_size_m": [
+                    POGO_PLUNGER_DIAMETER_M / 2.0,
+                    POGO_PLUNGER_MAX_EXPOSED_LENGTH_M / 2.0,
+                ],
+                "bus_contact_eligible": True,
+            },
+            "installed_datum": copy.deepcopy(POGO_INSTALLED_DATUMS_MM[signal]),
+        }
+    blockers = [
+        "ground_first_mate_tolerance_stack_unqualified",
+        "knurl_press_fit_process_and_pullout_unqualified",
+        "installed_electrical_cycle_reliability_unqualified",
+        "pogo_mass_properties_unqualified",
+        "pogo_spring_force_curve_unqualified",
+        "pogo_damping_unqualified",
+    ]
+    repository_root = Path(__file__).resolve().parents[3]
+    return {
+        "schema_version": "1.0",
+        "source_binding": {
+            "ledger_file": {
+                "path": str(POGO_AUTHORITY_LEDGER_PATH.relative_to(repository_root)),
+                "bytes": POGO_AUTHORITY_LEDGER_BYTES,
+                "sha256": POGO_AUTHORITY_LEDGER_SHA256,
+            },
+            "generator_file": {
+                "path": str(POGO_CAD_SOURCE_PATH.relative_to(repository_root)),
+                "bytes": POGO_CAD_SOURCE_BYTES,
+                "sha256": POGO_CAD_SOURCE_SHA256,
+            },
+            "canonical_contract_sha256": POGO_SOURCE_CONTRACT_CANONICAL_SHA256,
+        },
+        "runtime_to_source_signal": dict(POGO_SOURCE_SIGNAL_BY_RUNTIME),
+        "signals": signals,
+        "dynamics_authority": {
+            "geometry_and_datum_authority": True,
+            "mass_properties_authority": False,
+            "spring_force_curve_authority": False,
+            "damping_authority": False,
+            "ground_first_mate_tolerance_stack_qualified": False,
+            "blockers": blockers,
+            "release_ready": False,
+        },
+        "passed": True,
+        "release_ready": False,
+    }
+
+
+@cache
+def _require_pogo_runtime_sources() -> None:
+    """Fail closed if either source pinned by the runtime geometry drifts."""
+
+    for path, expected_bytes, expected_sha256 in (
+        (POGO_CAD_SOURCE_PATH, POGO_CAD_SOURCE_BYTES, POGO_CAD_SOURCE_SHA256),
+        (
+            POGO_AUTHORITY_LEDGER_PATH,
+            POGO_AUTHORITY_LEDGER_BYTES,
+            POGO_AUTHORITY_LEDGER_SHA256,
+        ),
+    ):
+        observed_bytes = path.stat().st_size
+        if observed_bytes != expected_bytes:
+            raise RuntimeError(
+                f"pogo runtime source byte-count mismatch for {path.name}: "
+                f"expected {expected_bytes}, got {observed_bytes}"
+            )
+        observed_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+        if observed_sha256 != expected_sha256:
+            raise RuntimeError(
+                f"pogo runtime source hash mismatch for {path.name}: "
+                f"expected {expected_sha256}, got {observed_sha256}"
+            )
+
+
+def _add_runtime_pogo_assemblies(frame: ET.Element) -> list[str]:
+    """Add four source-derived fixed shells and prismatic plungers."""
+
+    _require_pogo_runtime_sources()
+    radius = POGO_PLUNGER_DIAMETER_M / 2.0
+    length = POGO_PLUNGER_MAX_EXPOSED_LENGTH_M
+    mass = POGO_SIMULATION_ONLY_PLUNGER_MASS_KG
+    transverse_inertia = mass * (3.0 * radius**2 + length**2) / 12.0
+    axial_inertia = mass * radius**2 / 2.0
+    names: list[str] = []
+    for signal in SIGNALS:
+        datum = POGO_INSTALLED_DATUMS_M[signal]
+        fixed_body = ET.SubElement(
+            frame,
+            "body",
+            {
+                "name": f"qc_pogo_{signal}_fixed_shell_body",
+                "pos": " ".join(
+                    f"{value:.12g}"
+                    for value in (*datum["centre_xy_m"], datum["base_z_m"])
+                ),
+            },
+        )
+        for _, z_bounds, diameter, runtime_suffix in POGO_FIXED_SHELL_SEGMENTS_M:
+            z_min, z_max = z_bounds
+            name = f"qc_col_pogo_{signal}_{runtime_suffix}"
+            _geom(
+                fixed_body,
+                name=name,
+                geom_type="cylinder",
+                pos=(0.0, 0.0, (z_min + z_max) / 2.0),
+                size=(diameter / 2.0, (z_max - z_min) / 2.0),
+                rgba="0.78 0.58 0.16 0.62",
+                contype="64",
+                conaffinity="31",
+                mass="0",
+                solref="0.0005 1",
+                solimp="0.99 0.9999 0.00001",
+            )
+            names.append(name)
+
+        plunger_body = ET.SubElement(
+            fixed_body,
+            "body",
+            {
+                "name": f"qc_pogo_{signal}_plunger_body",
+                "pos": f"0 0 {POGO_FIXED_SHELL_LENGTH_M:.12g}",
+            },
+        )
+        ET.SubElement(
+            plunger_body,
+            "inertial",
+            {
+                "pos": f"0 0 {length / 2.0:.12g}",
+                "mass": f"{mass:.15g}",
+                "fullinertia": " ".join(
+                    f"{value:.15g}"
+                    for value in (
+                        transverse_inertia,
+                        transverse_inertia,
+                        axial_inertia,
+                        0.0,
+                        0.0,
+                        0.0,
+                    )
+                ),
+            },
+        )
+        ET.SubElement(
+            plunger_body,
+            "joint",
+            {
+                "name": f"qc_pogo_{signal}_plunger",
+                "type": "slide",
+                "axis": "0 0 -1",
+                "range": " ".join(
+                    f"{value:.12g}"
+                    for value in POGO_PLUNGER_COMPRESSION_RANGE_M
+                ),
+                "limited": "true",
+                "ref": "0",
+                "springref": "0",
+                "stiffness": f"{POGO_SIMULATION_ONLY_STIFFNESS_N_M:.12g}",
+                "damping": f"{POGO_SIMULATION_ONLY_DAMPING_N_S_M:.15g}",
+                "frictionloss": "0",
+                "armature": "0",
+                "solreflimit": "0.0005 1",
+                "solimplimit": "0.99 0.9999 0.00001 0.5 2",
+            },
+        )
+        plunger_name = f"qc_col_pogo_{signal}_plunger"
+        _geom(
+            plunger_body,
+            name=plunger_name,
+            geom_type="cylinder",
+            pos=(0.0, 0.0, length / 2.0),
+            size=(radius, length / 2.0),
+            rgba="1 0.62 0.05 1",
+            contype="64",
+            conaffinity="31",
+            mass="0",
+            solref="0.0005 1",
+            solimp="0.99 0.9999 0.00001",
+        )
+        names.append(plunger_name)
+    return names
+
+
 def add_robot_quick_change_interface(
     wrist_output: ET.Element, asset: ET.Element
 ) -> ET.Element:
@@ -967,55 +1333,10 @@ def add_robot_quick_change_interface(
     # robot-side collision geoms.  The only moving lock material is the
     # hash-pinned, hole-preserving slider partition below.
     add_positive_lock_slider(frame, asset)
-    for signal in SIGNALS:
-        body = ET.SubElement(
-            frame,
-            "body",
-            {
-                "name": f"qc_pogo_{signal}_body",
-                "pos": (
-                    f"-0.031 {SIGNAL_Y_M[signal]:.7f} "
-                    # The recovered spring-pin stack has a 0.875 mm ground
-                    # reach and 0.675 mm P/D/ID reach beyond the mating plane.
-                    # Continuous dynamics then settles near 0.858/0.662 mm,
-                    # leaving a real preload instead of numerical tangency.
-                    # The shorter signal pins use the same rounded crown but
-                    # a 0.1 mm lower body datum, preserving their calibrated
-                    # 0.675 mm reach.
-                    f"{0.009575 if signal == 'ground' else 0.009375:.7f}"
-                ),
-            },
-        )
-        ET.SubElement(
-            body,
-            "joint",
-            {
-                "name": f"qc_pogo_{signal}",
-                "type": "slide",
-                "axis": "0 0 -1",
-                "range": "0 0.0012",
-                "limited": "true",
-                "damping": "0.12",
-                "stiffness": "300",
-                "springref": "0",
-            },
-        )
-        # A rounded pogo crown provides a stable axial contact witness.  The
-        # former flat-ended cylinder met the larger pad exactly edge-on, so
-        # MuJoCo could report only transient radial edge contacts while the
-        # rigid interface remained aligned.
-        _geom(
-            body,
-            name=f"qc_col_pogo_{signal}",
-            geom_type="sphere",
-            pos=(0.0, 0.0, 0.0),
-            size=(0.0008,),
-            rgba="1 0.62 0.05 1",
-            solref="0.0005 1",
-            solimp="0.99 0.9999 0.00001",
-            contype="64",
-            conaffinity="31",
-        )
+    # The four catalog pins are not generic rounded contacts.  Each one has a
+    # distinct installed shoulder datum, a five-segment fixed shell and an
+    # independently moving official-diameter plunger.
+    _add_runtime_pogo_assemblies(frame)
     ET.SubElement(
         frame,
         "site",
@@ -1424,7 +1745,9 @@ def add_tool_quick_change_interface(
             body,
             name=pad_name,
             geom_type="cylinder",
-            pos=(-0.031, SIGNAL_Y_M[signal], 0.000025),
+            # The copper disk spans tool-local z=[-0.05, 0] mm.  Its exposed
+            # face therefore lands at robot-source z=9.45 mm when attached.
+            pos=(-0.031, SIGNAL_Y_M[signal], -0.000025),
             size=(0.0020, 0.000025),
             rgba="0.95 0.55 0.05 1",
             solref="0.0005 1",
