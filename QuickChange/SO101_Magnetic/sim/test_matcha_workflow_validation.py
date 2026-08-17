@@ -121,6 +121,11 @@ POGO_RUNTIME_RELEASE_BLOCKERS = [
     "pogo_spring_force_curve_unqualified",
     "pogo_damping_unqualified",
 ]
+POSITIVE_LOCK_CAM_RUNTIME_BLOCKERS = [
+    "positive_lock_cam_friction_coefficient_unqualified",
+    "positive_lock_cam_load_capacity_unqualified",
+    "positive_lock_cam_dynamics_unqualified",
+]
 POGO_LEDGER_PATH = (
     MAGNETIC_ROOT
     / "source_authority"
@@ -890,6 +895,241 @@ def pogo_runtime_geometry_contract_errors(
                 record, expected_pogo_runtime_geometry_contract(cad)
             )
         ],
+    ]
+
+
+def expected_positive_lock_cam_runtime_contract(
+    cad: ModuleType,
+) -> dict[str, Any]:
+    """Reconstruct the runtime cam contract from the released CAD source."""
+
+    source = cad.positive_lock_cam_contract()
+    main = source["main_xy_wedge"]
+    lead = source["axial_lead"]
+    hold = source["hold_finger"]
+    root = source["outer_root_bridge"]
+
+    def mm_to_m(value: float) -> float:
+        # The public runtime schema serializes exact decimal millimetre facts
+        # in metres; normalize binary division noise before canonical hashing.
+        return round(float(value) / 1000.0, 12)
+
+    def bounds_to_m(bounds: dict[str, list[float]]) -> list[list[float]]:
+        return [
+            [mm_to_m(value) for value in bounds[axis]]
+            for axis in ("x", "y", "z")
+        ]
+
+    polygon_mm = [
+        [float(value) for value in point] for point in main["polygon_xy_mm"]
+    ]
+    polygon_twice_area_mm2 = abs(
+        math.fsum(
+            polygon_mm[index][0] * polygon_mm[(index + 1) % len(polygon_mm)][1]
+            - polygon_mm[(index + 1) % len(polygon_mm)][0]
+            * polygon_mm[index][1]
+            for index in range(len(polygon_mm))
+        )
+    )
+    main_z_mm = [float(value) for value in main["z_bounds_mm"]]
+    main_volume_mm3 = (
+        polygon_twice_area_mm2
+        * (main_z_mm[1] - main_z_mm[0])
+        / 2.0
+    )
+    main_geometry = {
+        "polygon_xy": [
+            [mm_to_m(value) for value in point] for point in polygon_mm
+        ],
+        "z_bounds": [mm_to_m(value) for value in main_z_mm],
+    }
+    lead_geometry = {
+        rectangle_name: {
+            "x_bounds": [
+                mm_to_m(value) for value in lead[rectangle_name]["x"]
+            ],
+            "y_bounds": [
+                mm_to_m(value) for value in lead[rectangle_name]["y"]
+            ],
+            "z": mm_to_m(lead[rectangle_name]["z"]),
+        }
+        for rectangle_name in ("lower_rectangle_mm", "upper_rectangle_mm")
+    }
+    lead_geometry = {
+        "lower_rectangle": lead_geometry["lower_rectangle_mm"],
+        "upper_rectangle": lead_geometry["upper_rectangle_mm"],
+    }
+    hold_geometry = {"bounds": bounds_to_m(hold["bounds_mm"])}
+    authored_root_bounds = bounds_to_m(root["bounds_mm"])
+    main_z_min_m = main_geometry["z_bounds"][0]
+    root_x, root_y, root_z = authored_root_bounds
+    root_remainders = [
+        [root_x, [root_y[0], 0.0], [root_z[0], main_z_min_m]],
+        [root_x, [0.0, root_y[1]], [main_z_min_m, root_z[1]]],
+    ]
+    root_geometry = {
+        "authored_bounds": authored_root_bounds,
+        "runtime_remainder_bounds": root_remainders,
+    }
+
+    def component(
+        source_component: str,
+        representation: str,
+        source_geometry_m: dict[str, Any],
+        runtime_geom_names: list[str],
+        source_volume_mm3: float,
+        runtime_volume_mm3: float,
+    ) -> dict[str, Any]:
+        digest_preimage = {
+            "source_component": source_component,
+            "representation": representation,
+            "source_geometry_m": source_geometry_m,
+        }
+        return {
+            **digest_preimage,
+            "runtime_geom_names": runtime_geom_names,
+            "source_volume_mm3": source_volume_mm3,
+            "runtime_volume_mm3": runtime_volume_mm3,
+            "canonical_geometry_sha256": canonical_json_sha256(
+                digest_preimage
+            ),
+        }
+
+    def names(tool: str) -> list[str]:
+        return [
+            f"dock_{tool}_cam_collision",
+            f"dock_{tool}_cam_axial_lead_collision",
+            f"dock_{tool}_cam_hold_finger_collision",
+            f"dock_{tool}_cam_outer_root_lower_collision",
+            f"dock_{tool}_cam_outer_root_upper_collision",
+        ]
+
+    source_root_volume_mm3 = float(root["gross_volume_mm3"])
+    authored_overlap_total_mm3 = math.fsum(
+        (
+            float(root["overlap_with_main_wedge_mm3"]),
+            float(root["overlap_with_hold_mm3"]),
+        )
+    )
+    runtime_root_volume_mm3 = (
+        source_root_volume_mm3 - authored_overlap_total_mm3
+    )
+    components = [
+        component(
+            "main_xy_wedge",
+            "single_convex_prism_mesh",
+            main_geometry,
+            [names("gripper")[0]],
+            main_volume_mm3,
+            main_volume_mm3,
+        ),
+        component(
+            "axial_lead",
+            "single_convex_ruled_loft_mesh",
+            lead_geometry,
+            [names("gripper")[1]],
+            float(lead["volume_mm3"]),
+            float(lead["volume_mm3"]),
+        ),
+        component(
+            "hold_finger",
+            "analytic_axis_aligned_box",
+            hold_geometry,
+            [names("gripper")[2]],
+            float(hold["volume_mm3"]),
+            float(hold["volume_mm3"]),
+        ),
+        component(
+            "outer_root_bridge",
+            "two_nonoverlapping_analytic_boxes_exact_union_remainder",
+            root_geometry,
+            names("gripper")[3:5],
+            source_root_volume_mm3,
+            runtime_root_volume_mm3,
+        ),
+    ]
+    component_volume_sum_mm3 = math.fsum(
+        float(record["source_volume_mm3"]) for record in components
+    )
+    runtime_component_volume_sum_mm3 = math.fsum(
+        float(record["runtime_volume_mm3"]) for record in components
+    )
+    return {
+        "schema_version": "1.0",
+        "source_binding": {
+            "generator_file": _authority_file_record(MAGNETIC_ROOT / "generate_cad.py"),
+            "positive_lock_cam_contract_sha256": canonical_json_sha256(source),
+        },
+        "authority_scope": {
+            "geometry_and_placement_authority": True,
+            "friction_coefficient_authority": False,
+            "load_capacity_authority": False,
+            "dynamics_authority": False,
+            "overlapping_component_contact_force_authority": False,
+            "blockers": list(POSITIVE_LOCK_CAM_RUNTIME_BLOCKERS),
+            "release_ready": False,
+        },
+        "core_gripper": {
+            "frame": "dock_gripper",
+            "source_function": "positive_lock_cam",
+            "runtime_geom_names": names("gripper"),
+            "components": components,
+            "expected_union": {
+                "bounds_m": [
+                    [mm_to_m(value) for value in source["expected_geometry"]["bounds_mm"][axis]]
+                    for axis in ("x", "y", "z")
+                ],
+                "component_volume_sum_mm3": component_volume_sum_mm3,
+                "runtime_component_volume_sum_mm3": (
+                    runtime_component_volume_sum_mm3
+                ),
+                "authored_pair_overlaps": [
+                    {
+                        "components": ["main_xy_wedge", "outer_root_bridge"],
+                        "volume_mm3": float(
+                            root["overlap_with_main_wedge_mm3"]
+                        ),
+                    },
+                    {
+                        "components": ["hold_finger", "outer_root_bridge"],
+                        "volume_mm3": float(root["overlap_with_hold_mm3"]),
+                    },
+                ],
+                "authored_pair_overlap_total_mm3": (
+                    authored_overlap_total_mm3
+                ),
+                "runtime_pairwise_overlap_total_mm3": 0.0,
+                "source_volume_mm3": float(
+                    source["expected_geometry"]["total_volume_mm3"]
+                ),
+            },
+        },
+        "matcha_bays": {
+            tool: {
+                "frame": f"dock_{tool}",
+                "source_function": "INTERFACE.positive_lock_cam",
+                "runtime_geom_names": names(tool),
+                "uses_core_canonical_geometry": True,
+                "geometry_and_placement_authority": True,
+            }
+            for tool in ("spoon", "whisk")
+        },
+        "passed": True,
+        "release_ready": False,
+    }
+
+
+def positive_lock_cam_runtime_contract_errors(
+    record: Any,
+    cad: ModuleType,
+) -> list[str]:
+    if not isinstance(record, dict):
+        return ["runtime_cam_contract_missing"]
+    return [
+        f"runtime_cam:{path}"
+        for path in _evidence_mismatches(
+            record, expected_positive_lock_cam_runtime_contract(cad)
+        )
     ]
 
 
@@ -2407,6 +2647,453 @@ class PogoRuntimeAuthorityTests(unittest.TestCase):
                     ),
                     "penetrating witnesses must include MuJoCo's dist/2 shift",
                 )
+
+
+class PositiveLockCamRuntimeAuthorityTests(unittest.TestCase):
+    """Bind every dock's runtime cam to the exact five-piece source union."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.cad = import_file(
+            MAGNETIC_ROOT / "generate_cad.py",
+            "core_cad_runtime_cam_validation",
+            "core CAD runtime cam authority",
+        )
+        cls.expected = expected_positive_lock_cam_runtime_contract(cls.cad)
+
+    @staticmethod
+    def _reseal_component(component: dict[str, Any]) -> None:
+        component["canonical_geometry_sha256"] = canonical_json_sha256(
+            {
+                key: component[key]
+                for key in (
+                    "source_component",
+                    "representation",
+                    "source_geometry_m",
+                )
+            }
+        )
+
+    def test_runtime_cam_contract_rejects_missing_shifted_or_laundered_geometry(
+        self,
+    ) -> None:
+        baseline = self.expected
+        self.assertEqual(
+            positive_lock_cam_runtime_contract_errors(baseline, self.cad), []
+        )
+
+        mutations: dict[str, dict[str, Any]] = {}
+        mutations["drop_axial_lead"] = copy.deepcopy(baseline)
+        mutations["drop_axial_lead"]["core_gripper"]["components"].pop(1)
+        mutations["drop_axial_lead"]["core_gripper"][
+            "runtime_geom_names"
+        ].pop(1)
+
+        mutations["shift_axial_lead"] = copy.deepcopy(baseline)
+        shifted_lead = mutations["shift_axial_lead"]["core_gripper"][
+            "components"
+        ][1]
+        shifted_lead["source_geometry_m"]["lower_rectangle"]["x_bounds"][0] += (
+            0.001
+        )
+        self._reseal_component(shifted_lead)
+
+        mutations["flatten_axial_lead"] = copy.deepcopy(baseline)
+        flat_lead = mutations["flatten_axial_lead"]["core_gripper"][
+            "components"
+        ][1]
+        flat_lead["source_geometry_m"]["upper_rectangle"]["x_bounds"] = list(
+            flat_lead["source_geometry_m"]["lower_rectangle"]["x_bounds"]
+        )
+        self._reseal_component(flat_lead)
+
+        mutations["alter_hold"] = copy.deepcopy(baseline)
+        altered_hold = mutations["alter_hold"]["core_gripper"]["components"][2]
+        altered_hold["source_geometry_m"]["bounds"][2][0] += 0.0005
+        self._reseal_component(altered_hold)
+
+        mutations["alter_root"] = copy.deepcopy(baseline)
+        altered_root = mutations["alter_root"]["core_gripper"]["components"][3]
+        altered_root["source_geometry_m"]["runtime_remainder_bounds"][0][1][1] = (
+            0.0005
+        )
+        self._reseal_component(altered_root)
+
+        mutations["old_main_only_proxy"] = copy.deepcopy(baseline)
+        mutations["old_main_only_proxy"]["core_gripper"]["components"] = [
+            mutations["old_main_only_proxy"]["core_gripper"]["components"][0]
+        ]
+        mutations["old_main_only_proxy"]["core_gripper"][
+            "runtime_geom_names"
+        ] = ["dock_gripper_cam_collision"]
+
+        mutations["core_body_alias_for_matcha"] = copy.deepcopy(baseline)
+        mutations["core_body_alias_for_matcha"]["matcha_bays"]["spoon"].update(
+            {
+                "frame": "dock_gripper",
+                "runtime_geom_names": list(
+                    baseline["core_gripper"]["runtime_geom_names"]
+                ),
+            }
+        )
+
+        mutations["legacy_matcha_shifted_prism"] = copy.deepcopy(baseline)
+        mutations["legacy_matcha_shifted_prism"]["matcha_bays"]["whisk"].update(
+            {
+                "runtime_geom_names": ["dock_whisk_cam_collision"],
+                "uses_core_canonical_geometry": False,
+                "geometry_and_placement_authority": False,
+            }
+        )
+
+        mutations["alter_source_hash"] = copy.deepcopy(baseline)
+        mutations["alter_source_hash"]["source_binding"]["generator_file"][
+            "sha256"
+        ] = "0" * 64
+
+        mutations["friction_load_laundering"] = copy.deepcopy(baseline)
+        laundering = mutations["friction_load_laundering"]["authority_scope"]
+        laundering["friction_coefficient_authority"] = True
+        laundering["load_capacity_authority"] = True
+        laundering["blockers"] = [
+            blocker
+            for blocker in laundering["blockers"]
+            if "friction" not in blocker and "load_capacity" not in blocker
+        ]
+
+        mutations["release_promotion"] = copy.deepcopy(baseline)
+        mutations["release_promotion"]["release_ready"] = True
+        mutations["release_promotion"]["authority_scope"]["release_ready"] = True
+
+        for name, mutated in mutations.items():
+            with self.subTest(name=name):
+                self.assertNotEqual(
+                    positive_lock_cam_runtime_contract_errors(
+                        mutated, self.cad
+                    ),
+                    [],
+                    name,
+                )
+
+    def test_compiled_cam_union_matches_source_on_all_three_docks(self) -> None:
+        demo = import_file(
+            MATCHA_DEMO,
+            "matcha_workflow_runtime_cam_validation",
+            "matcha workflow runtime cam geometry",
+        )
+        runtime_contract = demo.qc.positive_lock_cam_runtime_contract()
+        self.assertEqual(
+            positive_lock_cam_runtime_contract_errors(
+                runtime_contract, self.cad
+            ),
+            [],
+        )
+        self.assertIs(runtime_contract["passed"], True)
+        self.assertIs(runtime_contract["release_ready"], False)
+        self.assertEqual(
+            runtime_contract["authority_scope"]["blockers"],
+            POSITIVE_LOCK_CAM_RUNTIME_BLOCKERS,
+        )
+
+        model = demo.build_model()
+        mujoco = demo.mujoco
+        xml_text, _ = demo._build_xml_and_assets()
+        xml_root = ET.fromstring(xml_text)
+        xml_geoms = {
+            str(geom.get("name")): geom
+            for geom in xml_root.findall(".//geom")
+            if geom.get("name")
+        }
+
+        component_records = {
+            record["source_component"]: record
+            for record in runtime_contract["core_gripper"]["components"]
+        }
+        main_geometry = component_records["main_xy_wedge"]["source_geometry_m"]
+        lead_geometry = component_records["axial_lead"]["source_geometry_m"]
+        hold_bounds = component_records["hold_finger"]["source_geometry_m"][
+            "bounds"
+        ]
+        root_bounds = component_records["outer_root_bridge"][
+            "source_geometry_m"
+        ]["runtime_remainder_bounds"]
+
+        def rectangle_vertices(record: dict[str, Any]) -> np.ndarray:
+            return np.asarray(
+                [
+                    [x_value, y_value, float(record["z"])]
+                    for x_value in record["x_bounds"]
+                    for y_value in record["y_bounds"]
+                ],
+                dtype=np.float64,
+            )
+
+        def box_vertices(bounds: list[list[float]]) -> np.ndarray:
+            return np.asarray(
+                [
+                    [x_value, y_value, z_value]
+                    for x_value in bounds[0]
+                    for y_value in bounds[1]
+                    for z_value in bounds[2]
+                ],
+                dtype=np.float64,
+            )
+
+        expected_vertices_by_suffix = {
+            "cam_collision": np.asarray(
+                [
+                    [x_value, y_value, z_value]
+                    for x_value, y_value in main_geometry["polygon_xy"]
+                    for z_value in main_geometry["z_bounds"]
+                ],
+                dtype=np.float64,
+            ),
+            "cam_axial_lead_collision": np.vstack(
+                [
+                    rectangle_vertices(lead_geometry["lower_rectangle"]),
+                    rectangle_vertices(lead_geometry["upper_rectangle"]),
+                ]
+            ),
+            "cam_hold_finger_collision": box_vertices(hold_bounds),
+            "cam_outer_root_lower_collision": box_vertices(root_bounds[0]),
+            "cam_outer_root_upper_collision": box_vertices(root_bounds[1]),
+        }
+
+        def quaternion_matrix(quaternion: Any) -> np.ndarray:
+            values = np.array(quaternion, dtype=np.float64, copy=True)
+            values /= np.linalg.norm(values)
+            w_value, x_value, y_value, z_value = values
+            return np.asarray(
+                [
+                    [
+                        1.0 - 2.0 * (y_value**2 + z_value**2),
+                        2.0 * (x_value * y_value - w_value * z_value),
+                        2.0 * (x_value * z_value + w_value * y_value),
+                    ],
+                    [
+                        2.0 * (x_value * y_value + w_value * z_value),
+                        1.0 - 2.0 * (x_value**2 + z_value**2),
+                        2.0 * (y_value * z_value - w_value * x_value),
+                    ],
+                    [
+                        2.0 * (x_value * z_value - w_value * y_value),
+                        2.0 * (y_value * z_value + w_value * x_value),
+                        1.0 - 2.0 * (x_value**2 + y_value**2),
+                    ],
+                ],
+                dtype=np.float64,
+            )
+
+        def owner_vertices(geom_id: int) -> np.ndarray:
+            geom_type = int(model.geom_type[geom_id])
+            if geom_type == int(mujoco.mjtGeom.mjGEOM_MESH):
+                mesh_id = int(model.geom_dataid[geom_id])
+                start = int(model.mesh_vertadr[mesh_id])
+                count = int(model.mesh_vertnum[mesh_id])
+                vertices = np.asarray(
+                    model.mesh_vert[start : start + count], dtype=np.float64
+                )
+            elif geom_type == int(mujoco.mjtGeom.mjGEOM_BOX):
+                vertices = box_vertices(
+                    [
+                        [-float(size), float(size)]
+                        for size in model.geom_size[geom_id]
+                    ]
+                )
+            else:
+                raise AssertionError(model.geom(geom_id).name)
+            rotation = quaternion_matrix(model.geom_quat[geom_id])
+            return np.asarray(model.geom_pos[geom_id], dtype=np.float64) + (
+                vertices @ rotation.T
+            )
+
+        def sorted_unique(vertices: np.ndarray) -> np.ndarray:
+            rounded = np.unique(np.round(vertices, decimals=10), axis=0)
+            order = np.lexsort((rounded[:, 2], rounded[:, 1], rounded[:, 0]))
+            return rounded[order]
+
+        all_expected_names: set[str] = set()
+        for tool in ("gripper", "spoon", "whisk"):
+            expected_names = [
+                f"dock_{tool}_{suffix}"
+                for suffix in expected_vertices_by_suffix
+            ]
+            all_expected_names.update(expected_names)
+            if tool == "gripper":
+                self.assertEqual(
+                    runtime_contract["core_gripper"]["runtime_geom_names"],
+                    expected_names,
+                )
+            else:
+                bay = runtime_contract["matcha_bays"][tool]
+                self.assertEqual(bay["runtime_geom_names"], expected_names)
+                self.assertIs(bay["uses_core_canonical_geometry"], True)
+                self.assertIs(bay["geometry_and_placement_authority"], True)
+            dock_body_id = int(model.body(f"dock_{tool}").id)
+            for name in expected_names:
+                geom_id = int(model.geom(name).id)
+                self.assertEqual(int(model.geom_bodyid[geom_id]), dock_body_id)
+                self.assertEqual(int(model.geom_group[geom_id]), 3)
+                self.assertEqual(int(model.geom_contype[geom_id]), 1)
+                self.assertEqual(int(model.geom_conaffinity[geom_id]), 1)
+                self.assertEqual(xml_geoms[name].get("mass"), "0")
+                suffix = name.removeprefix(f"dock_{tool}_")
+                np.testing.assert_allclose(
+                    sorted_unique(owner_vertices(geom_id)),
+                    sorted_unique(expected_vertices_by_suffix[suffix]),
+                    rtol=0.0,
+                    atol=2.0e-9,
+                    err_msg=name,
+                )
+
+        observed_cam_names = {
+            str(model.geom(geom_id).name)
+            for geom_id in range(model.ngeom)
+            if any(
+                str(model.geom(geom_id).name).startswith(f"dock_{tool}_cam")
+                for tool in ("gripper", "spoon", "whisk")
+            )
+            and str(model.geom(geom_id).name).endswith("collision")
+        }
+        self.assertEqual(observed_cam_names, all_expected_names)
+
+        data = mujoco.MjData(model)
+        demo.initialize(model, data)
+        controller = demo.MatchaWorkflowController(model, data)
+        expected_gripper_ids = tuple(
+            int(model.geom(name).id)
+            for name in runtime_contract["core_gripper"]["runtime_geom_names"]
+        )
+        self.assertIsInstance(controller.dock_gripper_cam_geom_ids, tuple)
+        self.assertEqual(controller.dock_gripper_cam_geom_ids, expected_gripper_ids)
+        self.assertEqual(controller.dock_gripper_cam_geom_id, expected_gripper_ids[0])
+
+        # Independently rebuild the exact runtime partition and prove that its
+        # set union equals the complete source B-rep without internal overlaps.
+        cq = self.cad.cq
+
+        def perimeter_wire(record: dict[str, Any]) -> Any:
+            x_min, x_max = [1000.0 * value for value in record["x_bounds"]]
+            y_min, y_max = [1000.0 * value for value in record["y_bounds"]]
+            z_value = 1000.0 * float(record["z"])
+            return cq.Wire.makePolygon(
+                [
+                    cq.Vector(x_min, y_min, z_value),
+                    cq.Vector(x_max, y_min, z_value),
+                    cq.Vector(x_max, y_max, z_value),
+                    cq.Vector(x_min, y_max, z_value),
+                ],
+                close=True,
+            )
+
+        def box_shape(bounds: list[list[float]]) -> Any:
+            sizes_mm = [1000.0 * (axis[1] - axis[0]) for axis in bounds]
+            center_mm = [500.0 * (axis[0] + axis[1]) for axis in bounds]
+            return (
+                cq.Workplane("XY")
+                .box(*sizes_mm, centered=True)
+                .translate(tuple(center_mm))
+                .val()
+            )
+
+        main_polygon_mm = [
+            (1000.0 * x_value, 1000.0 * y_value)
+            for x_value, y_value in main_geometry["polygon_xy"]
+        ]
+        z_min_mm, z_max_mm = [
+            1000.0 * value for value in main_geometry["z_bounds"]
+        ]
+        runtime_pieces = [
+            (
+                cq.Workplane("XY")
+                .polyline(main_polygon_mm)
+                .close()
+                .extrude(z_max_mm - z_min_mm)
+                .translate((0.0, 0.0, z_min_mm))
+                .val()
+            ),
+            cq.Solid.makeLoft(
+                [
+                    perimeter_wire(lead_geometry["lower_rectangle"]),
+                    perimeter_wire(lead_geometry["upper_rectangle"]),
+                ],
+                ruled=True,
+            ),
+            box_shape(hold_bounds),
+            box_shape(root_bounds[0]),
+            box_shape(root_bounds[1]),
+        ]
+
+        def volume_mm3(shape: Any) -> float:
+            return math.fsum(float(solid.Volume()) for solid in shape.Solids())
+
+        for first_index, first in enumerate(runtime_pieces):
+            for second in runtime_pieces[first_index + 1 :]:
+                self.assertLessEqual(
+                    volume_mm3(first.intersect(second)), 1.0e-6
+                )
+        runtime_union = cq.Workplane(obj=runtime_pieces[0])
+        for piece in runtime_pieces[1:]:
+            runtime_union = runtime_union.union(cq.Workplane(obj=piece))
+        runtime_union_shape = runtime_union.clean().val()
+        source_shape = self.cad.positive_lock_cam().val()
+        self.assertTrue(runtime_union_shape.isValid())
+        self.assertEqual(len(runtime_union_shape.Solids()), 1)
+        self.assertAlmostEqual(volume_mm3(runtime_union_shape), 325.435, places=9)
+        self.assertLessEqual(
+            volume_mm3(source_shape.cut(runtime_union_shape)), 1.0e-6
+        )
+        self.assertLessEqual(
+            volume_mm3(runtime_union_shape.cut(source_shape)), 1.0e-6
+        )
+
+        # A small exact source route sample prevents an exact-looking static
+        # union from being detached from its functional capture clearances.
+        studs = [
+            self.cad.shoulder_lock_stud()
+            .translate((x_value, 0.0, 0.0))
+            .val()
+            for x_value in (-float(self.cad.LOCK_STUD_X), float(self.cad.LOCK_STUD_X))
+        ]
+        slider_native = self.cad.locking_slider()
+        plate_native = self.cad.robot_plate()
+
+        def overlap_mm3(first: Any, second: Any) -> float:
+            if float(first.distance(second)) > 1.0e-7:
+                return 0.0
+            return volume_mm3(first.intersect(second))
+
+        route_samples: list[tuple[float, float, float]] = []
+        for preseat_mm in (9.6, 6.4, 3.2, 3.1, 0.0):
+            lateral_mm = float(
+                self.cad.positive_lock_cam_capture_lateral_offset_mm(preseat_mm)
+            )
+            q_mm = float(self.cad.positive_lock_cam_capture_q_max_mm(preseat_mm))
+            slider = slider_native.translate(
+                (
+                    q_mm + lateral_mm,
+                    0.0,
+                    self.cad.SLIDER_Z - self.cad.PLATE_THICKNESS - preseat_mm,
+                )
+            ).val()
+            plate = plate_native.translate(
+                (lateral_mm, 0.0, -self.cad.PLATE_THICKNESS - preseat_mm)
+            ).val()
+            self.assertLessEqual(overlap_mm3(slider, source_shape), 1.0e-6)
+            self.assertLessEqual(overlap_mm3(plate, source_shape), 1.0e-6)
+            for stud in studs:
+                self.assertLessEqual(overlap_mm3(slider, stud), 1.0e-6)
+            route_samples.append((preseat_mm, lateral_mm, q_mm))
+        passive_open_q_mm = float(
+            self.cad.DOCK_CAM_X_INNER - self.cad.SLIDER_TAB_END_X
+        )
+        for observed, expected_preseat_mm in (
+            (route_samples[-2], 3.1),
+            (route_samples[-1], 0.0),
+        ):
+            self.assertEqual(observed[0], expected_preseat_mm)
+            self.assertAlmostEqual(observed[1], 0.0, places=12)
+            self.assertAlmostEqual(observed[2], passive_open_q_mm, places=12)
 
 
 FORBIDDEN_STATE_FIELDS = {"qpos", "qvel", "time", "eq_data"}

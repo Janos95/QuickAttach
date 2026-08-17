@@ -68,6 +68,14 @@ DEVELOPMENT_TESTS = (
         "test_compiled_runtime_geometry_fk_and_bus_are_exact",
     ),
     qualified(
+        "PositiveLockCamRuntimeAuthorityTests",
+        "test_runtime_cam_contract_rejects_missing_shifted_or_laundered_geometry",
+    ),
+    qualified(
+        "PositiveLockCamRuntimeAuthorityTests",
+        "test_compiled_cam_union_matches_source_on_all_three_docks",
+    ),
+    qualified(
         "ControllerSourceSafetyTests",
         "test_controller_call_graph_never_teleports_physical_state",
     ),
