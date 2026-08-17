@@ -84,6 +84,18 @@ DEVELOPMENT_TESTS = (
         "test_compiled_route_replays_dense_fk_actions_and_per_step_guard",
     ),
     qualified(
+        "CoreCamTabContactCheckpointATests",
+        "test_contract_and_honest_red_result_mutations_fail_closed",
+    ),
+    qualified(
+        "CoreCamTabContactCheckpointATests",
+        "test_actual_model_binding_replay_and_contact_audit_are_independent",
+    ),
+    qualified(
+        "CoreCamTabContactCheckpointATests",
+        "test_retired_negative_z_suffix_and_complete_cam_overlap_stay_red",
+    ),
+    qualified(
         "ControllerSourceSafetyTests",
         "test_controller_call_graph_never_teleports_physical_state",
     ),
@@ -201,14 +213,6 @@ DEVELOPMENT_TESTS = (
     qualified(
         "SimCadPlacementContractTests",
         "test_positive_lock_slider_is_source_bound_physical_mechanism",
-    ),
-    qualified(
-        "SimCadPlacementContractTests",
-        "test_axial_lock_release_stroke_clears_full_source_assembly",
-    ),
-    qualified(
-        "BoundedDynamicSmokeTests",
-        "test_real_substep_capture_lock_and_release_is_collision_safe",
     ),
     qualified(
         "FcpwFastGateContractTests",

@@ -200,6 +200,38 @@ CORE_CAPTURE_ROUTE_BLOCKERS = [
     "positive_lock_cam_load_capacity_unqualified",
     "positive_lock_cam_dynamics_unqualified",
 ]
+CORE_CAM_TAB_LEADING_GEOM = "qc_col_lock_slider_tab_part_001"
+CORE_CAM_TAB_NONCONTACT_GEOM = "qc_col_lock_slider_tab_part_000"
+CORE_CAM_GEOMS = [
+    "dock_gripper_cam_collision",
+    "dock_gripper_cam_axial_lead_collision",
+    "dock_gripper_cam_hold_finger_collision",
+    "dock_gripper_cam_outer_root_lower_collision",
+    "dock_gripper_cam_outer_root_upper_collision",
+]
+CORE_CAM_CONTACT_ACTIONS = [
+    "gripper_capture_lateral_align",
+    "gripper_capture_axial_open_side",
+    "gripper_capture_coupled_recenter",
+    "gripper_capture_centered_final",
+]
+CORE_CAM_FUNCTIONAL_ROLES = [
+    "functional_axial_lead_ramp",
+    "functional_hold_finger_face",
+]
+CORE_CAM_TAB_CONTACT_BLOCKERS = [
+    "provisional_20um_contact_guard_not_physical_contact_authority",
+    "positive_lock_cam_friction_coefficient_unqualified",
+    "positive_lock_cam_load_capacity_unqualified",
+    "positive_lock_cam_dynamics_unqualified",
+    "free_space_servo_tracking_not_yet_closed",
+    "post_capture_negative_z_slider_return_authority_stale_after_hold_finger_addition",
+    "continuous_between_mj_steps_tunnel_authority_absent",
+    "functional_interval_motion_bound_not_certified",
+]
+CORE_CAM_COMPILED_MODEL_XML_EQUIVALENT_SHA256 = (
+    "fe3014b0aa0decad9f807f6a96a81a05b5622bed7071bb254d4045658224f94f"
+)
 POGO_LEDGER_PATH = (
     MAGNETIC_ROOT
     / "source_authority"
@@ -1283,6 +1315,53 @@ def _independent_initialized_active_geometry_sha256(
     return canonical_json_sha256(records)
 
 
+def _independent_compiled_model_xml_equivalent_sha256(model: Any) -> str:
+    """Hash the passed compiled model without using the production helper."""
+
+    records: list[dict[str, Any]] = []
+    for owner_name, owner in (("model", model), ("option", model.opt)):
+        for attribute in sorted(
+            name for name in dir(owner) if not name.startswith("_")
+        ):
+            try:
+                value = getattr(owner, attribute)
+            except (AttributeError, RuntimeError, TypeError):
+                continue
+            record: dict[str, Any] = {
+                "owner": owner_name,
+                "attribute": attribute,
+            }
+            if isinstance(value, np.ndarray):
+                array = np.ascontiguousarray(value)
+                record.update(
+                    {
+                        "kind": "ndarray",
+                        "dtype": array.dtype.str,
+                        "shape": list(array.shape),
+                        "bytes_sha256": hashlib.sha256(
+                            array.tobytes()
+                        ).hexdigest(),
+                    }
+                )
+            elif isinstance(value, (bytes, bytearray)):
+                record.update(
+                    {
+                        "kind": "bytes",
+                        "length": len(value),
+                        "bytes_sha256": hashlib.sha256(bytes(value)).hexdigest(),
+                    }
+                )
+            elif isinstance(value, (bool, int, float, str, np.generic)):
+                scalar = value.item() if isinstance(value, np.generic) else value
+                if isinstance(scalar, float):
+                    scalar = float(scalar).hex()
+                record.update({"kind": "scalar", "value": scalar})
+            else:
+                continue
+            records.append(record)
+    return canonical_json_sha256(records)
+
+
 def core_capture_route_contract_errors(
     record: Any,
     cad: ModuleType,
@@ -1798,6 +1877,2124 @@ def core_capture_route_result_errors(
         errors.append("route_alignment:passed")
     if result.get("release_ready") is not False:
         errors.append("release_ready")
+    return errors
+
+
+def expected_core_cam_tab_contact_contract(
+    cad: ModuleType,
+    runtime_cam_contract: dict[str, Any],
+    route_contract: dict[str, Any],
+) -> dict[str, Any]:
+    """Rebuild checkpoint-A's capture-only contact contract from sources."""
+
+    generator = _authority_file_record(MAGNETIC_ROOT / "generate_cad.py")
+    slider_step = _authority_file_record(
+        MAGNETIC_ROOT / "exports" / "so101_positive_lock_slider.step"
+    )
+    cam_contract_sha = canonical_json_sha256(cad.positive_lock_cam_contract())
+    route_identity = route_contract["contract_identity_sha256"]
+    inv_sqrt_two = 1.0 / math.sqrt(2.0)
+    source_surfaces = [
+        {
+            "surface_role": "functional_axial_lead_ramp",
+            "action": "gripper_capture_coupled_recenter",
+            "runtime_pair": [
+                CORE_CAM_TAB_LEADING_GEOM,
+                "dock_gripper_cam_axial_lead_collision",
+            ],
+            "preseat_bounds_mm": [3.2, 6.346666666666667],
+            "locus": {
+                "plane": "x+z=17.65mm",
+                "y_bounds_mm": [0.0, 2.0],
+                "z_bounds_mm": [-9.6, -6.4],
+            },
+            "normal_cam_to_tab_dock_local": [-inv_sqrt_two, 0.0, -inv_sqrt_two],
+            "functional_coverage_required": True,
+        },
+        {
+            "surface_role": "functional_hold_finger_face",
+            "action": "gripper_capture_centered_final",
+            "runtime_pair": [
+                CORE_CAM_TAB_LEADING_GEOM,
+                "dock_gripper_cam_hold_finger_collision",
+            ],
+            "preseat_bounds_mm": [0.0, 3.2],
+            "locus": {
+                "plane": "x=24.05mm",
+                "y_bounds_mm": [0.0, 2.0],
+                "z_bounds_mm": [-6.4, -4.15],
+                "tab_z_bounds_formula_mm": ["-4.8-p", "-3.2-p"],
+                "accepted_z_is_interval_intersection": True,
+            },
+            "normal_cam_to_tab_dock_local": [-1.0, 0.0, 0.0],
+            "functional_coverage_required": True,
+        },
+        {
+            "surface_role": "lead_hold_partition_seam_nonfunctional",
+            "action": "gripper_capture_centered_final",
+            "runtime_pair": [
+                CORE_CAM_TAB_LEADING_GEOM,
+                "dock_gripper_cam_axial_lead_collision",
+            ],
+            "preseat_bounds_mm": [1.6, 3.2],
+            "locus": {
+                "line": "x=24.05mm,z=-6.4mm",
+                "y_bounds_mm": [0.0, 2.0],
+            },
+            "normal_cone_cam_to_tab": [
+                [-inv_sqrt_two, 0.0, -inv_sqrt_two],
+                [-1.0, 0.0, 0.0],
+            ],
+            "closed_top_cap_positive_z_is_forbidden": True,
+            "functional_coverage_required": False,
+        },
+        {
+            "surface_role": "main_hold_edge_tangency_nonfunctional",
+            "action": "gripper_capture_centered_final",
+            "runtime_pair": [
+                CORE_CAM_TAB_LEADING_GEOM,
+                "dock_gripper_cam_collision",
+            ],
+            "preseat_bounds_mm": [0.0, 0.95],
+            "locus": {
+                "line": "x=24.05mm,y=0mm",
+                "z_lower_mm": -4.15,
+                "z_upper_formula_mm": "-3.2-p",
+            },
+            "normal_cone_cam_to_tab": [
+                [-0.970852159759157, -0.239679126940542, 0.0],
+                [0.0, 1.0, 0.0],
+            ],
+            "functional_coverage_required": False,
+        },
+    ]
+    classifier_surfaces = [
+        {
+            "surface_role": "functional_axial_lead_ramp",
+            "action": "gripper_capture_coupled_recenter",
+            "runtime_pair": [CORE_CAM_TAB_LEADING_GEOM, CORE_CAM_GEOMS[1]],
+            "preseat_bounds_mm": [3.2, 6.346666666666667],
+            "locus": {
+                "plane_sum_x_plus_z_mm": 17.65,
+                "y_bounds_mm": [0.0, 2.0],
+                "z_bounds_mm": [-9.6, -6.4],
+            },
+            "normal_cam_to_tab_dock_local": [-inv_sqrt_two, 0.0, -inv_sqrt_two],
+            "minimum_normal_alignment": 0.999,
+            "q_excess_bounds_mm": [-0.020, math.sqrt(2.0) * 0.020],
+            "functional_coverage_required": True,
+        },
+        {
+            "surface_role": "functional_hold_finger_face",
+            "action": "gripper_capture_centered_final",
+            "runtime_pair": [CORE_CAM_TAB_LEADING_GEOM, CORE_CAM_GEOMS[2]],
+            "preseat_bounds_mm": [0.0, 3.2],
+            "locus": {
+                "plane_x_mm": 24.05,
+                "y_bounds_mm": [0.0, 2.0],
+                "hold_z_bounds_mm": [-6.4, -4.15],
+                "tab_z_bounds_formula_mm": ["-4.8-p", "-3.2-p"],
+                "accepted_z_is_interval_intersection": True,
+            },
+            "normal_cam_to_tab_dock_local": [-1.0, 0.0, 0.0],
+            "minimum_normal_alignment": 0.999,
+            "slider_q_bounds_mm": [-0.020, 0.05000000000000071 + 0.020],
+            "functional_coverage_required": True,
+        },
+        {
+            "surface_role": "lead_hold_partition_seam_nonfunctional",
+            "action": "gripper_capture_centered_final",
+            "runtime_pair": [CORE_CAM_TAB_LEADING_GEOM, CORE_CAM_GEOMS[1]],
+            "preseat_bounds_mm": [1.6, 3.2],
+            "locus": {
+                "line_x_mm": 24.05,
+                "line_z_mm": -6.4,
+                "y_bounds_mm": [0.0, 2.0],
+            },
+            "normal_cone_cam_to_tab": [
+                [-inv_sqrt_two, 0.0, -inv_sqrt_two], [-1.0, 0.0, 0.0]
+            ],
+            "closed_top_cap_positive_z_is_forbidden": True,
+            "functional_coverage_required": False,
+        },
+        {
+            "surface_role": "main_hold_edge_tangency_nonfunctional",
+            "action": "gripper_capture_centered_final",
+            "runtime_pair": [CORE_CAM_TAB_LEADING_GEOM, CORE_CAM_GEOMS[0]],
+            "preseat_bounds_mm": [0.0, 0.95],
+            "locus": {
+                "line_x_mm": 24.05,
+                "line_y_mm": 0.0,
+                "z_lower_mm": -4.15,
+                "z_upper_formula_mm": "-3.2-p",
+            },
+            "normal_cone_cam_to_tab": [
+                [-0.970852159759157, -0.239679126940542, 0.0],
+                [0.0, 1.0, 0.0],
+            ],
+            "functional_coverage_required": False,
+        },
+    ]
+    classifier_semantics = {
+        "schema_version": "2.0",
+        "frame_conventions": {
+            "source_frame": "dock_gripper",
+            "dock_pose_source": "dock_gripper_body_xpos_xmat",
+            "robot_mating_pose_source": "robot_mating_face_site_xpos_xmat",
+            "published_quaternion": "finite_sign_canonical_wxyz",
+            "contact_normal_direction": "cam_geom_to_slider_tab_geom",
+            "source_preseat_mm": "-dock_local_robot_mating_z_mm",
+            "source_lateral_x_mm": "dock_local_robot_mating_x_mm",
+            "source_transverse_y_mm": "dock_local_robot_mating_y_mm",
+        },
+        "runtime_inventory": {
+            "contact_eligible_leading_tab_geom": CORE_CAM_TAB_LEADING_GEOM,
+            "always_forbidden_noncontact_tab_geom": CORE_CAM_TAB_NONCONTACT_GEOM,
+            "main_geom": CORE_CAM_GEOMS[0],
+            "axial_lead_geom": CORE_CAM_GEOMS[1],
+            "hold_finger_geom": CORE_CAM_GEOMS[2],
+            "always_forbidden_root_geoms": CORE_CAM_GEOMS[3:],
+            "complete_cam_geom_roster": list(CORE_CAM_GEOMS),
+        },
+        "phase_and_equality_policy": {
+            "capture_actions": CORE_CAM_CONTACT_ACTIONS,
+            "free_space_no_contact_actions": CORE_CAM_CONTACT_ACTIONS[:2],
+            "functional_actions": CORE_CAM_CONTACT_ACTIONS[2:],
+            "dock_hold_equality": "dock_gripper_hold",
+            "dock_hold_must_be_active": True,
+            "attach_equality": "attach_gripper",
+            "attach_equality_must_be_active": False,
+            "audit_frequency": "after_every_mj_step_before_generic_contact_audit",
+        },
+        "capture_law": {
+            "source_x_formula": (
+                "0.2_for_p_ge_6.4;0.0625*(p-3.2)_for_3.2_lt_p_lt_6.4;"
+                "0_for_p_le_3.2"
+            ),
+            "passive_q_max_formula_mm": "clamp(p-x-3.15,0.05,3.0)",
+            "ramp_contact_start_preseat_mm": 6.346666666666667,
+            "ramp_end_preseat_mm": 3.2,
+            "passive_open_q_mm": 0.05000000000000071,
+            "maximum_source_x_error_mm": 0.040,
+            "maximum_transverse_y_mm": 0.010,
+            "maximum_orientation_error_rad": math.radians(0.1),
+        },
+        "surface_classifiers": classifier_surfaces,
+        "provisional_development_guard": {
+            "point_and_locus_tolerance_mm": 0.020,
+            "maximum_penetration_mm": 0.020,
+            "numerical_epsilon_mm": 1.0e-6,
+            "minimum_normal_alignment": 0.999,
+            "finite_compressive_contact_force_required_but_unbounded": True,
+            "contact_force_authority": False,
+        },
+        "functional_envelope_sampling": {
+            "state_index": "physics_substep_count_after_mj_step",
+            "actions": CORE_CAM_CONTACT_ACTIONS[2:],
+            "complete_cam_distance": {
+                "method": (
+                    "minimum_live_contact_dist_else_mj_geomDistance_for_each_of_"
+                    "two_slider_tabs_by_five_exact_cam_geoms"
+                ),
+                "maximum_distance_m": 0.1,
+                "signed_distance_units": "mm",
+                "closest_points_world_order": ["slider_tab", "cam_component"],
+                "minimum_recomputed_over_exact_two_by_five_pair_roster": True,
+                "pair_class_clearance_rules": {
+                    "noncontact_tab_part_000_all_cam_components_minimum_mm": -1.0e-6,
+                    "either_tab_to_outer_root_minimum_mm": -1.0e-6,
+                    "leading_tab_part_001_to_main_lead_hold_minimum_mm": -0.020,
+                    "negative_without_live_contact": "unresolved_and_failed",
+                    "distance_cutoff_or_nonfinite": "unresolved_and_failed",
+                },
+            },
+            "per_state_count_partition": (
+                "eligible_plus_rejected_equals_all_observed_cam_tab_contacts;"
+                "functional_plus_nonfunctional_equals_eligible"
+            ),
+            "functional_surface_state_rule": (
+                "lead_for_recenter_when_p_le_6.346666666666667_and_hold_for_"
+                "centered_final;each_state_requires_either_exact_valid_contact_"
+                "or_resolved_nonnegative_signed_gap"
+            ),
+            "discrete_no_skipped_state_check": True,
+            "discrete_no_rebound_check": (
+                "every_functional_surface_state_retains_contact_or_nonnegative_"
+                "gap_and_q_envelope"
+            ),
+            "continuous_tunnel_authority": False,
+            "continuous_motion_lipschitz_bound_published": False,
+            "lossless_replay_state_fields": [
+                "qpos", "qvel", "mocap_pos", "mocap_quat_wxyz",
+                "all_named_equality_active_states",
+            ],
+            "replay_world_pose_fields_sign_canonical_wxyz": [
+                "dock_gripper_body", "robot_mating_face_site",
+                "robot_plate_frame_body", "qc_positive_lock_slider_body",
+                "both_slider_tab_geoms",
+            ],
+            "state_continuity": {
+                "state_index_formula": "physics_substep_count_after_mj_step",
+                "adjacent_state_index_delta": 1,
+                "adjacent_sim_time_delta": "model.opt.timestep",
+                "sim_time_absolute_tolerance_s": 1.0e-12,
+                "allowed_action_progression": [
+                    "same_functional_action",
+                    "gripper_capture_coupled_recenter_to_gripper_capture_centered_final",
+                ],
+            },
+            "sampled_coordinate_jump_rules": {
+                "gripper_capture_coupled_recenter_formula_mm": (
+                    "(abs(delta_p)+abs(delta_x)+abs(delta_q))/sqrt(2)"
+                ),
+                "gripper_capture_centered_final_formula_mm": (
+                    "abs(delta_x)+abs(delta_q)"
+                ),
+                "maximum_mm": 0.010,
+            },
+            "nonaccumulating_running_minimum_rules": {
+                "preseat_mm": "p<=running_min_prior_p+0.020",
+                "post_first_functional_lead_slider_q_mm": (
+                    "q<=running_min_prior_post_lead_q+0.020"
+                ),
+                "tolerance_mm": 0.020,
+            },
+            "joint_and_phase_envelopes": {
+                "compiled_slider_joint_range_mm": [0.0, 3.0],
+                "joint_range_numeric_tolerance_mm": 1.0e-6,
+                "recenter_preseat_bounds_mm": [3.2, 6.4],
+                "centered_final_preseat_bounds_mm": [0.0, 3.2],
+                "preseat_bounds_tolerance_mm": 0.020,
+                "recenter_q_upper_formula_mm": (
+                    "min(3.0+numeric_epsilon,qmax+sqrt(2)*0.020)"
+                ),
+                "centered_final_q_upper_mm": 0.07000000000000071,
+                "source_x_error_maximum_mm": 0.040,
+                "absolute_transverse_y_maximum_mm": 0.010,
+                "orientation_error_maximum_rad": math.radians(0.1),
+                "dock_hold_active": True,
+                "attach_equality_active": False,
+            },
+        },
+        "evidence_pass_formula": {
+            "actual_model_binding": {
+                "controller_init_snapshot_required": True,
+                "evidence_time_recompute_required": True,
+                "compiled_model_xml_equivalent_digest_must_match_expected": True,
+                "initialized_active_geometry_digest_must_match_expected": True,
+                "controller_init_and_evidence_digests_must_be_identical": True,
+                "active_geometry_state_construction": (
+                    "fresh_MjData_then_initialize_and_mj_forward"
+                ),
+            },
+            "requires_all_four_capture_phases_sampled": True,
+            "requires_both_functional_phases_sampled": True,
+            "requires_all_four_route_endpoints_completed": True,
+            "requires_finite_raw_values_and_contiguous_state_indices": True,
+            "requires_functional_lead_and_hold_coverage": True,
+            "requires_zero_rejected_or_unclassified_contacts": True,
+            "requires_all_provisional_depth_locus_normal_q_guards": True,
+            "requires_discrete_no_skipped_state_and_no_rebound": True,
+            "requires_current_abort_absent": True,
+            "zero_contact_cannot_pass": True,
+            "top_level_success_remains_false_without_physical_authority": True,
+        },
+    }
+    model_binding = {
+        "model_xml_sha256": route_contract["model_binding"]["model_xml_sha256"],
+        "compiled_model_xml_equivalent_sha256": (
+            CORE_CAM_COMPILED_MODEL_XML_EQUIVALENT_SHA256
+        ),
+        "initialized_active_collision_geometry_sha256": route_contract[
+            "model_binding"
+        ]["initialized_active_collision_geometry_sha256"],
+    }
+    identity_preimage = {
+        "source_generator_sha256": generator["sha256"],
+        "positive_lock_cam_contract_sha256": cam_contract_sha,
+        "positive_lock_slider_step_sha256": slider_step["sha256"],
+        "capture_route_contract_identity_sha256": route_identity,
+        "classifier_semantics": classifier_semantics,
+        "model_binding": model_binding,
+    }
+    return {
+        "schema_version": "1.0",
+        "contract_kind": "capture_only_exact_cam_tab_source_envelope",
+        "frame": "dock_gripper",
+        "contract_identity_digest_preimage": identity_preimage,
+        "contract_identity_sha256": canonical_json_sha256(identity_preimage),
+        "classifier_semantics": classifier_semantics,
+        "source_binding": {
+            "generator_file": generator,
+            "positive_lock_cam_contract_sha256": cam_contract_sha,
+            "runtime_cam_geometry_contract_sha256": canonical_json_sha256(
+                runtime_cam_contract
+            ),
+            "positive_lock_slider_step": slider_step,
+            "capture_route_contract_identity_sha256": route_identity,
+        },
+        "model_binding": {
+            **model_binding,
+            "compiled_model_xml_equivalent_digest_api": (
+                "compiled_model_xml_equivalent_sha256"
+            ),
+            "initialized_active_collision_geometry_digest_api": (
+                "initialized_active_collision_geometry_sha256"
+            ),
+        },
+        "runtime_inventory": {
+            "contact_eligible_leading_tab_geom": CORE_CAM_TAB_LEADING_GEOM,
+            "non_contact_tab_geom": CORE_CAM_TAB_NONCONTACT_GEOM,
+            "main_geom": CORE_CAM_GEOMS[0],
+            "axial_lead_geom": CORE_CAM_GEOMS[1],
+            "hold_finger_geom": CORE_CAM_GEOMS[2],
+            "always_forbidden_root_geoms": CORE_CAM_GEOMS[3:],
+            "all_cam_geoms": list(CORE_CAM_GEOMS),
+        },
+        "capture_law": {
+            "preseat_formula": "-dock_local_robot_mating_z_mm",
+            "lateral_formula": "dock_local_robot_mating_x_mm",
+            "passive_q_max_formula_mm": "clamp(p-x-3.15,0.05,3.0)",
+            "ramp_contact_start_preseat_mm": 6.346666666666667,
+            "ramp_end_preseat_mm": 3.2,
+            "passive_open_q_mm": 0.05000000000000071,
+            "maximum_live_source_x_error_mm": 0.040,
+        },
+        "phase_policy": {
+            "no_cam_contact_actions": CORE_CAM_CONTACT_ACTIONS[:2],
+            "functional_contact_actions": CORE_CAM_CONTACT_ACTIONS[2:],
+            "dock_hold_must_be_active": True,
+            "attach_equality_must_be_inactive": True,
+            "slider_return_is_excluded": True,
+        },
+        "source_surfaces": source_surfaces,
+        "provisional_guard": {
+            "point_tolerance_mm": 0.020,
+            "maximum_penetration_mm": 0.020,
+            "minimum_normal_alignment": 0.999,
+            "lead_maximum_q_excess_mm": math.sqrt(2.0) * 0.020,
+            "hold_and_main_maximum_q_mm": 0.05000000000000071 + 0.020,
+            "authority": "provisional_simulation_guard_only",
+        },
+        "free_space_endpoint_clearance": {
+            "axial_action_endpoint_preseat_mm": 6.4,
+            "x_axis_gap_mm": 0.050,
+            "lead_normal_gap_mm": 0.050 * inv_sqrt_two,
+            "retained_x_gap_at_40um_corridor_mm": 0.010,
+            "retained_lead_normal_gap_at_40um_corridor_mm": 0.010 * inv_sqrt_two,
+        },
+        "post_capture_exclusion": {
+            "excluded_actions": [
+                "gripper_lock_cam_disengagement",
+                "gripper_slider_return_verify",
+                "gripper_physical_lock_confirm",
+            ],
+            "reason": (
+                "negative_z_slider_return_clearance_witness_is_stale_after_"
+                "hold_finger_addition"
+            ),
+            "q3_negative_z_1p2mm_complete_cam_overlap_mm3": 9.440000000000005,
+            "legacy_main_wedge_only_clearance_mm": 0.25,
+            "must_be_reaudited_before_authorization": True,
+            "retired_default_action_kinds": [
+                "axial_disengage",
+                "slider_return",
+                "physical_lock_confirm",
+            ],
+            "custom_injection_abort_reason": "retired_negative_z_lock_sequence",
+            "default_action_sequence_ends_at": "gripper_dock_release_verify",
+        },
+        "evidence_requirements": {
+            "audit_frequency": "after_every_mj_step_before_generic_contact_audit",
+            "raw_contact_force_torque_width": 6,
+            "zero_contact_cannot_pass_functional_coverage": True,
+            "functional_roles_required": CORE_CAM_FUNCTIONAL_ROLES,
+            "all_candidate_contacts_remain_counted": True,
+            "functional_state_sampling": (
+                "one_lossless_state_after_every_functional_phase_mj_step"
+            ),
+            "exact_pair_gap_roster": (
+                "two_slider_tab_geoms_by_five_complete_cam_geoms"
+            ),
+            "lossless_replay_state": [
+                "qpos", "qvel", "mocap_pos", "mocap_quat_wxyz",
+                "all_equality_active_states",
+            ],
+            "replay_transforms": [
+                "dock_gripper_body", "robot_mating_face_site",
+                "robot_plate_frame_body", "qc_positive_lock_slider_body",
+                "both_slider_tab_geoms",
+            ],
+            "continuous_between_mj_steps_authority": False,
+            "interval_motion_bound_certified": False,
+        },
+        "authority_scope": {
+            "static_geometry_phase_and_locus_authority": True,
+            "provisional_contact_classification_authority": False,
+            "friction_coefficient_authority": False,
+            "load_capacity_authority": False,
+            "contact_force_authority": False,
+            "dynamics_authority": False,
+            "post_capture_release_authority": False,
+            "continuous_between_mj_steps_authority": False,
+            "blockers": CORE_CAM_TAB_CONTACT_BLOCKERS,
+            "release_ready": False,
+        },
+        "passed": True,
+        "release_ready": False,
+    }
+
+
+def core_cam_tab_contact_contract_errors(
+    record: Any,
+    cad: ModuleType,
+    runtime_cam_contract: dict[str, Any],
+    route_contract: dict[str, Any],
+) -> list[str]:
+    if not isinstance(record, dict):
+        return ["cam_tab_contract_missing"]
+    expected = expected_core_cam_tab_contact_contract(
+        cad, runtime_cam_contract, route_contract
+    )
+    return [
+        f"cam_tab_contract:{path}"
+        for path in _evidence_mismatches(record, expected)
+    ]
+
+
+def _interval_error(value: float, lower: float, upper: float) -> float:
+    return max(lower - value, value - upper, 0.0)
+
+
+def _quaternion_wxyz_matrix(value: Any) -> np.ndarray | None:
+    if not isinstance(value, list) or len(value) != 4:
+        return None
+    quaternion = np.asarray(value, dtype=np.float64)
+    norm = float(np.linalg.norm(quaternion))
+    if not np.all(np.isfinite(quaternion)) or abs(norm - 1.0) > 1.0e-9:
+        return None
+    if float(quaternion[0]) < -1.0e-15:
+        return None
+    w, x, y, z = quaternion
+    return np.asarray(
+        [
+            [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+            [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+            [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
+        ],
+        dtype=np.float64,
+    )
+
+
+def _replay_pose_map_errors(value: Any) -> tuple[list[str], dict[str, Any]]:
+    errors: list[str] = []
+    if not isinstance(value, dict) or set(value) != {
+        "dock_body", "robot_mating_site", "robot_plate_body",
+        "positive_lock_slider_body", "slider_tab_geoms",
+    }:
+        return ["replay_poses:keys"], {}
+    expected_names = {
+        "dock_body": "dock_gripper",
+        "robot_mating_site": "robot_mating_face",
+        "robot_plate_body": "robot_plate_frame",
+        "positive_lock_slider_body": "qc_positive_lock_slider",
+    }
+    parsed: dict[str, Any] = {}
+    for key, expected_name in expected_names.items():
+        pose = value.get(key)
+        if not isinstance(pose, dict) or set(pose) != {
+            "name", "position_world_m", "quat_wxyz"
+        }:
+            errors.append(f"replay_poses:{key}:keys")
+            continue
+        position = np.asarray(pose.get("position_world_m"), dtype=np.float64)
+        rotation = _quaternion_wxyz_matrix(pose.get("quat_wxyz"))
+        if pose.get("name") != expected_name:
+            errors.append(f"replay_poses:{key}:name")
+        if position.shape != (3,) or not np.all(np.isfinite(position)):
+            errors.append(f"replay_poses:{key}:position")
+        if rotation is None:
+            errors.append(f"replay_poses:{key}:quaternion")
+        if position.shape == (3,) and rotation is not None:
+            parsed[key] = (position, rotation)
+    tab_poses = value.get("slider_tab_geoms")
+    if not isinstance(tab_poses, list) or len(tab_poses) != 2:
+        errors.append("replay_poses:tabs:count")
+    else:
+        observed_names: list[str] = []
+        parsed_tabs: dict[str, Any] = {}
+        for index, pose in enumerate(tab_poses):
+            if not isinstance(pose, dict) or set(pose) != {
+                "name", "position_world_m", "quat_wxyz"
+            }:
+                errors.append(f"replay_poses:tab:{index}:keys")
+                continue
+            name = pose.get("name")
+            position = np.asarray(pose.get("position_world_m"), dtype=np.float64)
+            rotation = _quaternion_wxyz_matrix(pose.get("quat_wxyz"))
+            if not isinstance(name, str):
+                errors.append(f"replay_poses:tab:{index}:name")
+            else:
+                observed_names.append(name)
+            if position.shape != (3,) or not np.all(np.isfinite(position)):
+                errors.append(f"replay_poses:tab:{index}:position")
+            if rotation is None:
+                errors.append(f"replay_poses:tab:{index}:quaternion")
+            if isinstance(name, str) and position.shape == (3,) and rotation is not None:
+                parsed_tabs[name] = (position, rotation)
+        if observed_names != [CORE_CAM_TAB_NONCONTACT_GEOM, CORE_CAM_TAB_LEADING_GEOM]:
+            errors.append("replay_poses:tabs:roster")
+        parsed["slider_tab_geoms"] = parsed_tabs
+    return errors, parsed
+
+
+def _independent_cam_tab_record_classification(
+    record: Any,
+) -> tuple[list[str], bool, str | None]:
+    """Recompute one raw MuJoCo contact classification from its measurements."""
+
+    errors: list[str] = []
+    if not isinstance(record, dict):
+        return ["record:missing"], False, None
+    expected_keys = {
+        "state_index", "physics_substep_count", "sim_time_s", "action", "runtime_pair",
+        "canonical_pair", "cam_geom", "tab_or_other_geom", "surface_role",
+        "preseat_mm", "source_x_mm", "transverse_y_mm",
+        "orientation_error_rad", "slider_q_mm", "source_q_max_mm",
+        "source_x_error_mm", "dock_hold_active", "attach_equality_active",
+        "replay_world_poses",
+        "contact_dist_mm", "penetration_mm", "contact_position_world_m",
+        "contact_position_dock_local_mm", "contact_normal_raw_world",
+        "contact_normal_cam_to_tab_dock_local", "contact_frame_3x3",
+        "contact_friction", "contact_solref", "contact_solimp",
+        "contact_force_torque_6d", "locus_error_mm", "normal_alignment",
+        "q_excess_mm", "is_slider_tab_contact", "pair_eligible", "phase_state_valid", "locus_valid",
+        "normal_valid", "q_valid", "force_finite",
+        "provisional_classification_passed", "functional_coverage_role",
+    }
+    if set(record) != expected_keys:
+        errors.append("record:keys")
+    if record.get("state_index") != record.get("physics_substep_count"):
+        errors.append("record:state_index")
+
+    numeric_names = (
+        "sim_time_s", "preseat_mm", "source_x_mm", "transverse_y_mm",
+        "orientation_error_rad", "slider_q_mm", "source_q_max_mm",
+        "source_x_error_mm", "contact_dist_mm", "penetration_mm",
+        "q_excess_mm",
+    )
+    values = {name: _finite_real(record.get(name)) for name in numeric_names}
+    if any(value is None for value in values.values()):
+        errors.append("record:finite_scalars")
+        return errors, False, None
+    p = float(values["preseat_mm"])
+    x = float(values["source_x_mm"])
+    q = float(values["slider_q_mm"])
+    expected_x = _independent_core_capture_x_mm(max(0.0, p))
+    expected_qmax = max(0.05, min(3.0, max(0.0, p) - x - 3.15))
+    if not _number_matches(record.get("source_q_max_mm"), expected_qmax):
+        errors.append("record:source_q_max")
+    if not _number_matches(record.get("source_x_error_mm"), x - expected_x):
+        errors.append("record:source_x_error")
+    if not _number_matches(record.get("q_excess_mm"), q - expected_qmax):
+        errors.append("record:q_excess")
+    distance = float(values["contact_dist_mm"])
+    penetration = max(0.0, -distance)
+    if not _number_matches(record.get("penetration_mm"), penetration):
+        errors.append("record:penetration")
+
+    vector_widths = {
+        "contact_position_world_m": 3,
+        "contact_position_dock_local_mm": 3,
+        "contact_normal_raw_world": 3,
+        "contact_normal_cam_to_tab_dock_local": 3,
+        "contact_frame_3x3": 9,
+        "contact_friction": 5,
+        "contact_solref": 2,
+        "contact_solimp": 5,
+        "contact_force_torque_6d": 6,
+    }
+    vectors: dict[str, np.ndarray] = {}
+    for name, width in vector_widths.items():
+        value = record.get(name)
+        if not isinstance(value, list) or len(value) != width:
+            errors.append(f"record:{name}:width")
+            continue
+        try:
+            array = np.asarray(value, dtype=np.float64)
+        except (TypeError, ValueError):
+            errors.append(f"record:{name}:finite")
+            continue
+        if not np.all(np.isfinite(array)):
+            errors.append(f"record:{name}:finite")
+            continue
+        vectors[name] = array
+    point = vectors.get("contact_position_dock_local_mm")
+    normal = vectors.get("contact_normal_cam_to_tab_dock_local")
+    force = vectors.get("contact_force_torque_6d")
+    pose_errors, poses = _replay_pose_map_errors(record.get("replay_world_poses"))
+    errors.extend(f"record:{error}" for error in pose_errors)
+    dock_pose = poses.get("dock_body")
+    mating_pose = poses.get("robot_mating_site")
+    if dock_pose is not None and mating_pose is not None:
+        dock_position, dock_rotation = dock_pose
+        mating_position, mating_rotation = mating_pose
+        local_mating_mm = dock_rotation.T @ (mating_position - dock_position) * 1000.0
+        relative_rotation = dock_rotation.T @ mating_rotation
+        cosine = float(np.clip((np.trace(relative_rotation) - 1.0) / 2.0, -1.0, 1.0))
+        replay_orientation = math.acos(cosine)
+        for name, expected in (
+            ("preseat_mm", -float(local_mating_mm[2])),
+            ("source_x_mm", float(local_mating_mm[0])),
+            ("transverse_y_mm", float(local_mating_mm[1])),
+            ("orientation_error_rad", replay_orientation),
+        ):
+            tolerance = 5.0e-8 if name == "orientation_error_rad" else 2.0e-9
+            if not _number_matches(record.get(name), expected, tolerance=tolerance):
+                errors.append(f"record:replay:{name}")
+        world_point = vectors.get("contact_position_world_m")
+        if world_point is not None and point is not None:
+            replay_local_point = dock_rotation.T @ (world_point - dock_position) * 1000.0
+            if not np.allclose(point, replay_local_point, rtol=0.0, atol=2.0e-9):
+                errors.append("record:replay:contact_point")
+        raw_normal = vectors.get("contact_normal_raw_world")
+        if raw_normal is not None and normal is not None:
+            runtime_pair_for_normal = record.get("runtime_pair")
+            cam_for_normal = record.get("cam_geom")
+            canonical_world = raw_normal.copy()
+            if (
+                isinstance(runtime_pair_for_normal, list)
+                and runtime_pair_for_normal
+                and runtime_pair_for_normal[0] != cam_for_normal
+            ):
+                canonical_world *= -1.0
+            length = float(np.linalg.norm(canonical_world))
+            if length > 0.0:
+                replay_normal = dock_rotation.T @ (canonical_world / length)
+                if not np.allclose(normal, replay_normal, rtol=0.0, atol=2.0e-9):
+                    errors.append("record:replay:contact_normal")
+    if normal is not None and not _number_matches(
+        float(np.linalg.norm(normal)), 1.0, tolerance=1.0e-9
+    ):
+        errors.append("record:normal_unit")
+
+    action = record.get("action")
+    cam = record.get("cam_geom")
+    other = record.get("tab_or_other_geom")
+    runtime_pair = record.get("runtime_pair")
+    pair_eligible = bool(
+        other == CORE_CAM_TAB_LEADING_GEOM
+        and cam in CORE_CAM_GEOMS[:3]
+        and isinstance(runtime_pair, list)
+        and len(runtime_pair) == 2
+        and sorted(runtime_pair) == sorted([other, cam])
+        and record.get("canonical_pair") == [other, cam]
+    )
+    if record.get("pair_eligible") is not pair_eligible:
+        errors.append("record:pair_eligible")
+    is_slider_tab = other in {CORE_CAM_TAB_NONCONTACT_GEOM, CORE_CAM_TAB_LEADING_GEOM}
+    if record.get("is_slider_tab_contact") is not is_slider_tab:
+        errors.append("record:is_slider_tab_contact")
+
+    role = "unclassified_or_forbidden_core_cam_contact"
+    locus_error = math.inf
+    alignment = -math.inf
+    locus_valid = False
+    normal_valid = False
+    q_valid = False
+    functional_role: str | None = None
+    tolerance = 0.020
+    if point is not None and normal is not None:
+        px, py, pz = [float(value) for value in point]
+        if (
+            pair_eligible
+            and cam == CORE_CAM_GEOMS[1]
+            and action == CORE_CAM_CONTACT_ACTIONS[2]
+            and 3.2 - tolerance <= p <= 6.346666666666667 + tolerance
+        ):
+            role = CORE_CAM_FUNCTIONAL_ROLES[0]
+            locus_error = max(
+                abs(px + pz - 17.65),
+                _interval_error(py, 0.0, 2.0),
+                _interval_error(pz, -9.6, -6.4),
+            )
+            alignment = float(normal @ np.asarray([-1.0, 0.0, -1.0])) / math.sqrt(2.0)
+            locus_valid = locus_error <= tolerance
+            normal_valid = alignment >= 0.999
+            q_valid = -tolerance <= q - expected_qmax <= math.sqrt(2.0) * 0.020
+            functional_role = role
+        elif (
+            pair_eligible
+            and cam == CORE_CAM_GEOMS[2]
+            and action == CORE_CAM_CONTACT_ACTIONS[3]
+            and -tolerance <= p <= 3.2 + tolerance
+        ):
+            role = CORE_CAM_FUNCTIONAL_ROLES[1]
+            tab_lower = -4.8 - max(0.0, p)
+            tab_upper = -3.2 - max(0.0, p)
+            locus_error = max(
+                abs(px - 24.05),
+                _interval_error(py, 0.0, 2.0),
+                _interval_error(pz, max(-6.4, tab_lower), min(-4.15, tab_upper)),
+            )
+            alignment = -float(normal[0])
+            locus_valid = locus_error <= tolerance
+            normal_valid = alignment >= 0.999
+            q_valid = -tolerance <= q <= 0.05000000000000071 + tolerance
+            functional_role = role
+        elif (
+            pair_eligible
+            and cam == CORE_CAM_GEOMS[1]
+            and action == CORE_CAM_CONTACT_ACTIONS[3]
+            and 1.6 - tolerance <= p < 3.2
+        ):
+            role = "lead_hold_partition_seam_nonfunctional"
+            locus_error = max(
+                abs(px - 24.05), abs(pz + 6.4), _interval_error(py, 0.0, 2.0)
+            )
+            alignment = float(np.linalg.norm(normal[[0, 2]]))
+            locus_valid = locus_error <= tolerance
+            normal_valid = bool(
+                alignment >= 0.999
+                and float(normal[0]) <= 1.0e-12
+                and float(normal[2]) <= 1.0e-12
+                and -float(normal[2]) <= -float(normal[0]) + 1.0e-12
+            )
+            q_valid = -tolerance <= q <= 0.05000000000000071 + tolerance
+        elif (
+            pair_eligible
+            and cam == CORE_CAM_GEOMS[0]
+            and action == CORE_CAM_CONTACT_ACTIONS[3]
+            and -tolerance <= p <= 0.95 + tolerance
+        ):
+            role = "main_hold_edge_tangency_nonfunctional"
+            locus_error = max(
+                abs(px - 24.05), abs(py),
+                _interval_error(pz, -4.15, -3.2 - max(0.0, p)),
+            )
+            alignment = float(np.linalg.norm(normal[:2]))
+            locus_valid = locus_error <= tolerance
+            normal_valid = bool(
+                alignment >= 0.999
+                and float(normal[0]) <= 1.0e-12
+                and float(normal[1]) >= 0.246875 * float(normal[0]) - 1.0e-12
+            )
+            q_valid = -tolerance <= q <= 0.05000000000000071 + tolerance
+
+    phase_valid = bool(
+        action in CORE_CAM_CONTACT_ACTIONS
+        and record.get("dock_hold_active") is True
+        and record.get("attach_equality_active") is False
+        and abs(x - expected_x) <= 0.040
+        and abs(float(values["transverse_y_mm"])) <= 0.010
+        and float(values["orientation_error_rad"]) <= math.radians(0.1)
+    )
+    force_finite = force is not None
+    passed = bool(
+        pair_eligible
+        and role != "unclassified_or_forbidden_core_cam_contact"
+        and phase_valid and locus_valid and normal_valid and q_valid
+        and force_finite and float(force[0]) >= -1.0e-12
+        and penetration <= 0.020
+    )
+    expected_flags = {
+        "surface_role": role,
+        "phase_state_valid": phase_valid,
+        "locus_valid": locus_valid,
+        "normal_valid": normal_valid,
+        "q_valid": q_valid,
+        "force_finite": force_finite,
+        "provisional_classification_passed": passed,
+        "functional_coverage_role": functional_role,
+    }
+    for name, expected in expected_flags.items():
+        if record.get(name) != expected:
+            errors.append(f"record:{name}")
+    expected_locus = locus_error if math.isfinite(locus_error) else None
+    expected_alignment = alignment if math.isfinite(alignment) else None
+    if not (
+        (expected_locus is None and record.get("locus_error_mm") is None)
+        or (expected_locus is not None and _number_matches(record.get("locus_error_mm"), expected_locus))
+    ):
+        errors.append("record:locus_error")
+    if not (
+        (expected_alignment is None and record.get("normal_alignment") is None)
+        or (expected_alignment is not None and _number_matches(record.get("normal_alignment"), expected_alignment))
+    ):
+        errors.append("record:normal_alignment")
+    return errors, passed, functional_role
+
+
+def _core_cam_functional_envelope_errors(
+    envelope: Any,
+) -> tuple[list[str], bool]:
+    errors: list[str] = []
+    if not isinstance(envelope, dict):
+        return ["envelope:missing"], False
+    expected_keys = {
+        "schema_version", "state_index_semantics", "raw_states",
+        "raw_states_sha256", "raw_state_count", "audited_functional_substeps",
+        "state_counts_by_phase", "producer_phase_counts", "phase_counts_consistent",
+        "both_functional_phases_observed", "first_functional_lead_state",
+        "first_functional_hold_state", "functional_role_onsets_observed",
+        "full_state_continuity_verified",
+        "exact_two_tab_by_five_cam_gap_closure_verified",
+        "per_state_contact_count_partitions_verified",
+        "source_pose_and_equality_states_verified",
+        "discrete_no_skipped_state_verified", "discrete_no_rebound_verified",
+        "all_functional_surface_states_contact_or_nonnegative_gap",
+        "all_raw_states_finite", "maximum_sampled_coordinate_jump_mm",
+        "minimum_complete_cam_signed_distance_mm", "contactless_negative_pair_count",
+        "unresolved_pair_count", "cutoff_pair_count", "maximum_q_excess_mm",
+        "continuous_between_mj_steps_authority", "interval_motion_bound_certified",
+        "continuous_tunnel_authority", "passed", "release_ready",
+    }
+    if set(envelope) != expected_keys:
+        errors.append("envelope:keys")
+    for key, expected in {
+        "schema_version": "1.0",
+        "state_index_semantics": "physics_substep_count_immediately_after_mj_step",
+        "continuous_between_mj_steps_authority": False,
+        "interval_motion_bound_certified": False,
+        "continuous_tunnel_authority": False,
+        "release_ready": False,
+    }.items():
+        if envelope.get(key) != expected:
+            errors.append(f"envelope:{key}")
+    states = envelope.get("raw_states")
+    if not isinstance(states, list):
+        errors.append("envelope:raw_states")
+        states = []
+    if envelope.get("raw_states_sha256") != canonical_json_sha256(states):
+        errors.append("envelope:raw_states_sha256")
+    if envelope.get("raw_state_count") != len(states):
+        errors.append("envelope:raw_state_count")
+    functional_actions = CORE_CAM_CONTACT_ACTIONS[2:]
+    state_counts = {action: 0 for action in functional_actions}
+    expected_state_keys = {
+        "state_index", "physics_substep_count", "sim_time_s", "action",
+        "preseat_mm", "source_x_mm", "expected_source_x_mm", "source_x_error_mm",
+        "transverse_y_mm", "orientation_error_rad", "slider_q_mm",
+        "source_q_max_mm", "q_excess_mm", "dock_hold_active",
+        "attach_equality_active", "replay_state", "replay_world_poses",
+        "pair_gap_records", "complete_cam_min_signed_distance_mm",
+        "complete_cam_minimum_pair", "observed_cam_tab_contact_count",
+        "eligible_cam_tab_contact_count", "functional_contact_count",
+        "functional_lead_contact_count", "functional_hold_contact_count",
+        "nonfunctional_candidate_contact_count", "rejected_cam_tab_contact_count",
+        "other_core_cam_contact_count", "count_partition_valid",
+        "expected_functional_role", "functional_contact_required",
+        "expected_functional_contact_count", "contact_continuity_state_passed",
+        "pair_gap_closure_passed", "contactless_negative_pair_count",
+        "precontact_state_passed", "source_pose_state_passed",
+        "q_envelope_state_passed", "state_index_contiguous",
+        "sim_time_contiguous", "action_transition_valid",
+        "sampled_coordinate_jump_mm", "sampled_coordinate_jump_limit_mm",
+        "running_min_preseat_before_mm", "preseat_no_rebound",
+        "first_lead_contact_previously_observed",
+        "running_min_post_lead_q_before_mm", "post_first_lead_q_no_rebound",
+        "discrete_no_skipped_state_passed", "discrete_no_rebound_state_passed",
+        "continuous_between_mj_steps_authority", "interval_motion_bound_certified",
+        "finite",
+    }
+    pair_roster = [
+        [tab, cam]
+        for tab in (CORE_CAM_TAB_NONCONTACT_GEOM, CORE_CAM_TAB_LEADING_GEOM)
+        for cam in CORE_CAM_GEOMS
+    ]
+    previous: dict[str, Any] | None = None
+    prior_p: list[float] = []
+    post_lead_q: list[float] = []
+    lead_seen = False
+    state_flags = {
+        "continuity": [], "gap": [], "counts": [], "source": [],
+        "skip": [], "rebound": [], "contact": [], "finite": [],
+    }
+    for index, state in enumerate(states):
+        prefix = f"state:{index}"
+        if not isinstance(state, dict) or set(state) != expected_state_keys:
+            errors.append(f"{prefix}:keys")
+            previous = state if isinstance(state, dict) else previous
+            continue
+        action = state.get("action")
+        if action not in functional_actions:
+            errors.append(f"{prefix}:action")
+            continue
+        state_counts[action] += 1
+        state_index = state.get("state_index")
+        if state_index != state.get("physics_substep_count") or (
+            isinstance(state_index, bool) or not isinstance(state_index, int)
+        ):
+            errors.append(f"{prefix}:state_index")
+        time_s = _finite_real(state.get("sim_time_s"))
+        p = _finite_real(state.get("preseat_mm"))
+        x = _finite_real(state.get("source_x_mm"))
+        q = _finite_real(state.get("slider_q_mm"))
+        y = _finite_real(state.get("transverse_y_mm"))
+        orientation = _finite_real(state.get("orientation_error_rad"))
+        if None in (time_s, p, x, q, y, orientation):
+            errors.append(f"{prefix}:finite_scalars")
+            continue
+        p = float(p); x = float(x); q = float(q)
+        expected_x = _independent_core_capture_x_mm(max(0.0, p))
+        qmax = max(0.05, min(3.0, max(0.0, p) - x - 3.15))
+        for key, expected in (
+            ("expected_source_x_mm", expected_x),
+            ("source_x_error_mm", x - expected_x),
+            ("source_q_max_mm", qmax),
+            ("q_excess_mm", q - qmax),
+        ):
+            if not _number_matches(state.get(key), expected):
+                errors.append(f"{prefix}:{key}")
+        pose_errors, _ = _replay_pose_map_errors(state.get("replay_world_poses"))
+        errors.extend(f"{prefix}:{error}" for error in pose_errors)
+        replay = state.get("replay_state")
+        if not isinstance(replay, dict) or set(replay) != {
+            "qpos", "qvel", "mocap_pos", "mocap_quat_wxyz",
+            "equality_active", "replay_method",
+        }:
+            errors.append(f"{prefix}:replay_state")
+        elif replay.get("replay_method") != "copy_into_fresh_MjData_then_mj_forward":
+            errors.append(f"{prefix}:replay_method")
+        else:
+            for field in ("qpos", "qvel"):
+                values = replay.get(field)
+                if not isinstance(values, list) or not values or any(
+                    _finite_real(value) is None for value in values
+                ):
+                    errors.append(f"{prefix}:replay:{field}")
+            equality = replay.get("equality_active")
+            if not isinstance(equality, list) or any(
+                not isinstance(item, dict)
+                or set(item) != {"name", "active"}
+                or not isinstance(item.get("name"), str)
+                or not isinstance(item.get("active"), bool)
+                for item in equality
+            ):
+                errors.append(f"{prefix}:replay:equality")
+
+        pair_records = state.get("pair_gap_records")
+        if not isinstance(pair_records, list) or len(pair_records) != 10:
+            errors.append(f"{prefix}:pair_roster")
+            pair_records = []
+        observed_pairs: list[list[str]] = []
+        pair_valid: list[bool] = []
+        contactless_negative_count = 0
+        for pair_index, pair_record in enumerate(pair_records):
+            pair_prefix = f"{prefix}:pair:{pair_index}"
+            pair_keys = {
+                "tab_geom", "cam_geom", "pair", "method", "maximum_distance_m",
+                "signed_distance_mm", "live_contact_count", "live_contact_indices",
+                "contact_position_world_m", "closest_points_world_m",
+                "closest_points_valid", "cutoff_reached", "contactless_negative",
+                "finite", "resolved", "source_pair_clearance_valid",
+            }
+            if not isinstance(pair_record, dict) or set(pair_record) != pair_keys:
+                errors.append(f"{pair_prefix}:keys")
+                continue
+            tab = pair_record.get("tab_geom"); cam = pair_record.get("cam_geom")
+            pair = [tab, cam]
+            observed_pairs.append(pair)
+            if pair_record.get("pair") != pair:
+                errors.append(f"{pair_prefix}:pair")
+            distance = _finite_real(pair_record.get("signed_distance_mm"))
+            live_count = pair_record.get("live_contact_count")
+            live_indices = pair_record.get("live_contact_indices")
+            has_live = isinstance(live_count, int) and live_count > 0
+            if not isinstance(live_indices, list) or live_count != len(live_indices):
+                errors.append(f"{pair_prefix}:live_count")
+            expected_method = (
+                "minimum_live_contact_dist" if has_live
+                else "mj_geomDistance_no_live_contact"
+            )
+            if pair_record.get("method") != expected_method or not _number_matches(
+                pair_record.get("maximum_distance_m"), 0.1
+            ):
+                errors.append(f"{pair_prefix}:method")
+            finite = distance is not None
+            cutoff = bool(finite and float(distance) >= 100.0 - 1.0e-9)
+            contactless_negative = bool(
+                not has_live and finite and float(distance) < -1.0e-6
+            )
+            resolved = bool(finite and not cutoff and not contactless_negative)
+            clearance = bool(
+                finite and float(distance) >= (
+                    -1.0e-6
+                    if tab == CORE_CAM_TAB_NONCONTACT_GEOM or cam in CORE_CAM_GEOMS[3:]
+                    else -0.020
+                )
+            )
+            for key, expected in (
+                ("finite", finite), ("cutoff_reached", cutoff),
+                ("contactless_negative", contactless_negative),
+                ("resolved", resolved), ("source_pair_clearance_valid", clearance),
+            ):
+                if pair_record.get(key) is not expected:
+                    errors.append(f"{pair_prefix}:{key}")
+            contactless_negative_count += int(contactless_negative)
+            pair_valid.append(resolved and clearance)
+        if observed_pairs != pair_roster:
+            errors.append(f"{prefix}:pair_roster_order")
+        if pair_records:
+            minimum = min(pair_records, key=lambda item: float(item["signed_distance_mm"]))
+            if state.get("complete_cam_minimum_pair") != minimum.get("pair"):
+                errors.append(f"{prefix}:minimum_pair")
+            if not _number_matches(
+                state.get("complete_cam_min_signed_distance_mm"),
+                float(minimum["signed_distance_mm"]),
+            ):
+                errors.append(f"{prefix}:minimum_distance")
+        observed_count = state.get("observed_cam_tab_contact_count")
+        eligible = state.get("eligible_cam_tab_contact_count")
+        rejected = state.get("rejected_cam_tab_contact_count")
+        functional = state.get("functional_contact_count")
+        nonfunctional = state.get("nonfunctional_candidate_contact_count")
+        count_partition = bool(
+            all(isinstance(value, int) and value >= 0 for value in (
+                observed_count, eligible, rejected, functional, nonfunctional
+            ))
+            and eligible + rejected == observed_count
+            and functional + nonfunctional == eligible
+        )
+        if state.get("count_partition_valid") is not count_partition:
+            errors.append(f"{prefix}:count_partition")
+        expected_role = (
+            CORE_CAM_FUNCTIONAL_ROLES[0]
+            if action == functional_actions[0] and p <= 6.346666666666667 + 1.0e-6
+            else (CORE_CAM_FUNCTIONAL_ROLES[1] if action == functional_actions[1] else None)
+        )
+        expected_count = (
+            int(state.get("functional_lead_contact_count", 0))
+            if expected_role == CORE_CAM_FUNCTIONAL_ROLES[0]
+            else int(state.get("functional_hold_contact_count", 0))
+            if expected_role == CORE_CAM_FUNCTIONAL_ROLES[1]
+            else 0
+        )
+        required = expected_role is not None
+        if state.get("expected_functional_role") != expected_role:
+            errors.append(f"{prefix}:expected_role")
+        if state.get("functional_contact_required") is not required:
+            errors.append(f"{prefix}:functional_required")
+        if state.get("expected_functional_contact_count") != expected_count:
+            errors.append(f"{prefix}:functional_count")
+        expected_cam = CORE_CAM_GEOMS[1] if expected_role == CORE_CAM_FUNCTIONAL_ROLES[0] else CORE_CAM_GEOMS[2]
+        expected_gap = next((item for item in pair_records if item.get("pair") == [CORE_CAM_TAB_LEADING_GEOM, expected_cam]), None)
+        contact_continuity = bool(
+            not required or expected_count > 0 or (
+                expected_gap is not None and expected_gap.get("resolved") is True
+                and float(expected_gap["signed_distance_mm"]) >= -1.0e-6
+            )
+        )
+        if state.get("contact_continuity_state_passed") is not contact_continuity:
+            errors.append(f"{prefix}:contact_continuity")
+        pair_distances = [
+            _finite_real(item.get("signed_distance_mm"))
+            for item in pair_records
+            if isinstance(item, dict)
+        ]
+        precontact_state_passed = bool(
+            required
+            or (
+                observed_count == 0
+                and len(pair_distances) == 10
+                and all(value is not None for value in pair_distances)
+                and min(float(value) for value in pair_distances if value is not None)
+                >= -1.0e-6
+            )
+        )
+        if state.get("precontact_state_passed") is not precontact_state_passed:
+            errors.append(f"{prefix}:precontact")
+        q_envelope = bool(
+            -1.0e-6 <= q <= (
+                min(3.0 + 1.0e-6, qmax + math.sqrt(2.0) * 0.020)
+                if action == functional_actions[0]
+                else 0.05000000000000071 + 0.020
+            )
+        )
+        phase_range = (
+            3.2 - 0.020 <= p <= 6.4 + 0.020
+            if action == functional_actions[0]
+            else -0.020 <= p <= 3.2 + 0.020
+        )
+        source_valid = bool(
+            phase_range and abs(x - expected_x) <= 0.040
+            and abs(float(y)) <= 0.010 and float(orientation) <= math.radians(0.1)
+            and state.get("dock_hold_active") is True
+            and state.get("attach_equality_active") is False
+        )
+        pair_closure = bool(len(pair_valid) == 10 and all(pair_valid))
+        if state.get("pair_gap_closure_passed") is not pair_closure:
+            errors.append(f"{prefix}:pair_closure")
+        if state.get("contactless_negative_pair_count") != contactless_negative_count:
+            errors.append(f"{prefix}:contactless_count")
+        if state.get("source_pose_state_passed") is not source_valid:
+            errors.append(f"{prefix}:source_pose")
+        if state.get("q_envelope_state_passed") is not q_envelope:
+            errors.append(f"{prefix}:q_envelope")
+        if not _number_matches(state.get("sampled_coordinate_jump_limit_mm"), 0.010):
+            errors.append(f"{prefix}:jump_limit")
+        if previous is None:
+            contiguous = time_contiguous = action_valid = True
+            jump = 0.0
+        else:
+            contiguous = state_index == int(previous["state_index"]) + 1
+            time_contiguous = abs(float(time_s) - float(previous["sim_time_s"]) - 0.00025) <= 1.0e-12
+            action_valid = bool(previous["action"] == action or (
+                previous["action"] == functional_actions[0] and action == functional_actions[1]
+            ))
+            dp = abs(p - float(previous["preseat_mm"])); dx = abs(x - float(previous["source_x_mm"])); dq = abs(q - float(previous["slider_q_mm"]))
+            jump = (dp + dx + dq) / math.sqrt(2.0) if action == functional_actions[0] else dx + dq
+        for key, expected in (
+            ("state_index_contiguous", contiguous),
+            ("sim_time_contiguous", time_contiguous),
+            ("action_transition_valid", action_valid),
+        ):
+            if state.get(key) is not expected:
+                errors.append(f"{prefix}:{key}")
+        if not _number_matches(state.get("sampled_coordinate_jump_mm"), jump, 1.0e-10):
+            errors.append(f"{prefix}:jump")
+        running_p = min(prior_p, default=p)
+        p_no_rebound = p <= running_p + 0.020
+        if not _number_matches(state.get("running_min_preseat_before_mm"), running_p):
+            errors.append(f"{prefix}:running_p")
+        if state.get("preseat_no_rebound") is not p_no_rebound:
+            errors.append(f"{prefix}:p_rebound")
+        if lead_seen:
+            running_q = min(post_lead_q, default=q)
+            q_no_rebound = q <= running_q + 0.020
+        else:
+            running_q = q
+            q_no_rebound = True
+        if state.get("first_lead_contact_previously_observed") is not lead_seen:
+            errors.append(f"{prefix}:lead_seen")
+        if not _number_matches(state.get("running_min_post_lead_q_before_mm"), running_q):
+            errors.append(f"{prefix}:running_q")
+        if state.get("post_first_lead_q_no_rebound") is not q_no_rebound:
+            errors.append(f"{prefix}:q_rebound")
+        skipped = bool(contiguous and time_contiguous and action_valid and jump <= 0.010 and pair_closure and contactless_negative_count == 0)
+        rebound = bool(p_no_rebound and q_no_rebound and q_envelope and contact_continuity)
+        if state.get("discrete_no_skipped_state_passed") is not skipped:
+            errors.append(f"{prefix}:discrete_skip")
+        if state.get("discrete_no_rebound_state_passed") is not rebound:
+            errors.append(f"{prefix}:discrete_rebound")
+        if state.get("continuous_between_mj_steps_authority") is not False or state.get("interval_motion_bound_certified") is not False:
+            errors.append(f"{prefix}:continuous_authority")
+        state_finite = all(_finite_real(state.get(key)) is not None for key in (
+            "preseat_mm", "source_x_mm", "slider_q_mm", "source_q_max_mm",
+            "transverse_y_mm", "orientation_error_rad",
+        ))
+        if state.get("finite") is not state_finite:
+            errors.append(f"{prefix}:finite")
+        state_flags["continuity"].append(contiguous and time_contiguous and action_valid)
+        state_flags["gap"].append(pair_closure)
+        state_flags["counts"].append(count_partition)
+        state_flags["source"].append(source_valid)
+        state_flags["skip"].append(skipped)
+        state_flags["rebound"].append(rebound)
+        state_flags["contact"].append(contact_continuity)
+        state_flags["finite"].append(state_finite)
+        prior_p.append(p)
+        if int(state.get("functional_lead_contact_count", 0)) > 0:
+            lead_seen = True
+        if lead_seen:
+            post_lead_q.append(q)
+        previous = state
+
+    expected_phase_counts = state_counts
+    if envelope.get("state_counts_by_phase") != expected_phase_counts:
+        errors.append("envelope:state_counts")
+    producer_counts = envelope.get("producer_phase_counts")
+    phase_consistent = bool(
+        producer_counts == expected_phase_counts
+        and envelope.get("audited_functional_substeps") == len(states)
+    )
+    if envelope.get("phase_counts_consistent") is not phase_consistent:
+        errors.append("envelope:phase_consistency")
+    both_phases = all(value > 0 for value in expected_phase_counts.values())
+    if envelope.get("both_functional_phases_observed") is not both_phases:
+        errors.append("envelope:both_phases")
+    first_lead = next((state for state in states if isinstance(state, dict) and int(state.get("functional_lead_contact_count", 0)) > 0), None)
+    first_hold = next((state for state in states if isinstance(state, dict) and int(state.get("functional_hold_contact_count", 0)) > 0), None)
+    if envelope.get("first_functional_lead_state") != first_lead:
+        errors.append("envelope:first_lead")
+    if envelope.get("first_functional_hold_state") != first_hold:
+        errors.append("envelope:first_hold")
+    onsets = first_lead is not None and first_hold is not None
+    if envelope.get("functional_role_onsets_observed") is not onsets:
+        errors.append("envelope:onsets")
+    aggregate_flags = {
+        "full_state_continuity_verified": bool(states and all(state_flags["continuity"]) and len({state.get("state_index") for state in states if isinstance(state, dict)}) == len(states)),
+        "exact_two_tab_by_five_cam_gap_closure_verified": bool(states and all(state_flags["gap"])),
+        "per_state_contact_count_partitions_verified": bool(states and all(state_flags["counts"])),
+        "source_pose_and_equality_states_verified": bool(states and all(state_flags["source"])),
+        "discrete_no_skipped_state_verified": bool(states and all(state_flags["skip"])),
+        "discrete_no_rebound_verified": bool(states and all(state_flags["rebound"])),
+        "all_functional_surface_states_contact_or_nonnegative_gap": bool(states and all(state_flags["contact"])),
+        "all_raw_states_finite": bool(states and all(state_flags["finite"])),
+    }
+    for key, expected in aggregate_flags.items():
+        if envelope.get(key) is not expected:
+            errors.append(f"envelope:{key}")
+    numeric_aggregates = {
+        "maximum_sampled_coordinate_jump_mm": max((float(state["sampled_coordinate_jump_mm"]) for state in states), default=None),
+        "minimum_complete_cam_signed_distance_mm": min((float(state["complete_cam_min_signed_distance_mm"]) for state in states), default=None),
+        "contactless_negative_pair_count": sum(int(state.get("contactless_negative_pair_count", 0)) for state in states if isinstance(state, dict)),
+        "unresolved_pair_count": sum(sum(not bool(pair.get("resolved")) for pair in state.get("pair_gap_records", [])) for state in states if isinstance(state, dict)),
+        "cutoff_pair_count": sum(sum(bool(pair.get("cutoff_reached")) for pair in state.get("pair_gap_records", [])) for state in states if isinstance(state, dict)),
+        "maximum_q_excess_mm": max((float(state["q_excess_mm"]) for state in states), default=None),
+    }
+    for key, expected in numeric_aggregates.items():
+        if _evidence_mismatches(envelope.get(key), expected, key):
+            errors.append(f"envelope:{key}")
+    expected_pass = bool(
+        phase_consistent and both_phases and all(aggregate_flags.values())
+    )
+    # Route endpoint/abort conjunction is checked by the enclosing result gate.
+    return errors, expected_pass
+
+
+def _core_cam_functional_state_replay_errors(
+    state: Any,
+    model: Any,
+    mujoco: ModuleType,
+) -> list[str]:
+    """Replay one lossless state in fresh MjData and recompute poses/gaps."""
+
+    if not isinstance(state, dict):
+        return ["state_replay:missing"]
+    replay = state.get("replay_state")
+    if not isinstance(replay, dict):
+        return ["state_replay:state"]
+    errors: list[str] = []
+    data = mujoco.MjData(model)
+    qpos = np.asarray(replay.get("qpos"), dtype=np.float64)
+    qvel = np.asarray(replay.get("qvel"), dtype=np.float64)
+    mocap_pos = np.asarray(replay.get("mocap_pos"), dtype=np.float64)
+    mocap_quat = np.asarray(replay.get("mocap_quat_wxyz"), dtype=np.float64)
+    if model.nmocap == 0 and mocap_pos.size == 0:
+        mocap_pos = mocap_pos.reshape(0, 3)
+    if model.nmocap == 0 and mocap_quat.size == 0:
+        mocap_quat = mocap_quat.reshape(0, 4)
+    if qpos.shape != (model.nq,) or not np.all(np.isfinite(qpos)):
+        return ["state_replay:qpos"]
+    if qvel.shape != (model.nv,) or not np.all(np.isfinite(qvel)):
+        return ["state_replay:qvel"]
+    if mocap_pos.shape != (model.nmocap, 3) or not np.all(np.isfinite(mocap_pos)):
+        return ["state_replay:mocap_pos"]
+    if mocap_quat.shape != (model.nmocap, 4) or not np.all(np.isfinite(mocap_quat)):
+        return ["state_replay:mocap_quat"]
+    if model.nmocap and not np.allclose(
+        np.linalg.norm(mocap_quat, axis=1), 1.0, rtol=0.0, atol=1.0e-9
+    ):
+        errors.append("state_replay:mocap_quat_norm")
+    data.qpos[:] = qpos
+    data.qvel[:] = qvel
+    if model.nmocap:
+        data.mocap_pos[:] = mocap_pos
+        data.mocap_quat[:] = mocap_quat
+    equality = replay.get("equality_active")
+    expected_equality_names = [str(model.equality(index).name) for index in range(model.neq)]
+    if not isinstance(equality, list) or [item.get("name") for item in equality if isinstance(item, dict)] != expected_equality_names:
+        errors.append("state_replay:equality_roster")
+    else:
+        for index, item in enumerate(equality):
+            if not isinstance(item.get("active"), bool):
+                errors.append(f"state_replay:equality:{index}")
+            else:
+                data.eq_active[index] = int(item["active"])
+    mujoco.mj_forward(model, data)
+
+    def quat(rotation: np.ndarray) -> list[float]:
+        value = np.empty(4, dtype=np.float64)
+        mujoco.mju_mat2Quat(value, np.asarray(rotation, dtype=np.float64).reshape(9))
+        value /= np.linalg.norm(value)
+        if value[0] < 0.0:
+            value *= -1.0
+        return [float(item) for item in value]
+
+    expected_poses: dict[str, Any] = {}
+    for key, kind, name in (
+        ("dock_body", "body", "dock_gripper"),
+        ("robot_mating_site", "site", "robot_mating_face"),
+        ("robot_plate_body", "body", "robot_plate_frame"),
+        ("positive_lock_slider_body", "body", "qc_positive_lock_slider"),
+    ):
+        object_data = data.body(name) if kind == "body" else data.site(name)
+        expected_poses[key] = {
+            "name": name,
+            "position_world_m": [float(value) for value in object_data.xpos],
+            "quat_wxyz": quat(np.asarray(object_data.xmat).reshape(3, 3)),
+        }
+    tab_names = [CORE_CAM_TAB_NONCONTACT_GEOM, CORE_CAM_TAB_LEADING_GEOM]
+    expected_poses["slider_tab_geoms"] = []
+    for name in tab_names:
+        geom_id = int(model.geom(name).id)
+        expected_poses["slider_tab_geoms"].append(
+            {
+                "name": name,
+                "position_world_m": [float(value) for value in data.geom_xpos[geom_id]],
+                "quat_wxyz": quat(np.asarray(data.geom_xmat[geom_id]).reshape(3, 3)),
+            }
+        )
+    pose_mismatches = _evidence_mismatches(
+        state.get("replay_world_poses"), expected_poses, "state_replay:poses"
+    )
+    errors.extend(pose_mismatches)
+    dock_position = np.asarray(data.body("dock_gripper").xpos, dtype=np.float64)
+    dock_rotation = np.asarray(data.body("dock_gripper").xmat, dtype=np.float64).reshape(3, 3)
+    mating_position = np.asarray(data.site("robot_mating_face").xpos, dtype=np.float64)
+    mating_rotation = np.asarray(data.site("robot_mating_face").xmat, dtype=np.float64).reshape(3, 3)
+    local_mm = dock_rotation.T @ (mating_position - dock_position) * 1000.0
+    relative = dock_rotation.T @ mating_rotation
+    orientation = math.acos(float(np.clip((np.trace(relative) - 1.0) / 2.0, -1.0, 1.0)))
+    slider_joint = model.joint("qc_positive_lock_slider_joint")
+    slider_q = float(data.qpos[int(slider_joint.qposadr[0])]) * 1000.0
+    p = -float(local_mm[2]); x = float(local_mm[0])
+    qmax = max(0.05, min(3.0, max(0.0, p) - x - 3.15))
+    for key, expected in (
+        ("preseat_mm", p), ("source_x_mm", x),
+        ("transverse_y_mm", float(local_mm[1])),
+        ("orientation_error_rad", orientation), ("slider_q_mm", slider_q),
+        ("source_q_max_mm", qmax),
+    ):
+        if not _number_matches(state.get(key), expected, tolerance=2.0e-9):
+            errors.append(f"state_replay:{key}")
+
+    observed_gap_records = state.get("pair_gap_records")
+    if not isinstance(observed_gap_records, list) or len(observed_gap_records) != 10:
+        return [*errors, "state_replay:pair_gap_roster"]
+    for index, (tab_name, cam_name) in enumerate(
+        (pair for pair in ([tab, cam] for tab in tab_names for cam in CORE_CAM_GEOMS))
+    ):
+        observed = observed_gap_records[index]
+        tab_id = int(model.geom(tab_name).id)
+        cam_id = int(model.geom(cam_name).id)
+        contact_indices = [
+            contact_index
+            for contact_index in range(data.ncon)
+            if frozenset(int(value) for value in data.contact[contact_index].geom)
+            == frozenset((tab_id, cam_id))
+        ]
+        if contact_indices:
+            witness_index = min(
+                contact_indices, key=lambda item: float(data.contact[item].dist)
+            )
+            witness = data.contact[witness_index]
+            distance_mm = float(witness.dist) * 1000.0
+            method = "minimum_live_contact_dist"
+            contact_position = [float(value) for value in witness.pos]
+            closest = None
+            closest_valid = False
+            cutoff = False
+        else:
+            from_to = np.full(6, np.nan, dtype=np.float64)
+            distance_m = float(
+                mujoco.mj_geomDistance(model, data, tab_id, cam_id, 0.1, from_to)
+            )
+            distance_mm = distance_m * 1000.0
+            method = "mj_geomDistance_no_live_contact"
+            cutoff = distance_m >= 0.1 - 1.0e-12
+            closest_valid = bool(not cutoff and np.all(np.isfinite(from_to)))
+            closest = (
+                [[float(value) for value in from_to[:3]], [float(value) for value in from_to[3:]]]
+                if closest_valid else None
+            )
+            contact_position = None
+        checks = {
+            "pair": [tab_name, cam_name], "method": method,
+            "live_contact_count": len(contact_indices),
+            "live_contact_indices": contact_indices,
+            "contact_position_world_m": contact_position,
+            "closest_points_world_m": closest,
+            "closest_points_valid": closest_valid,
+            "cutoff_reached": cutoff,
+        }
+        for key, expected in checks.items():
+            if _evidence_mismatches(observed.get(key), expected, key):
+                errors.append(f"state_replay:pair:{index}:{key}")
+        if not _number_matches(observed.get("signed_distance_mm"), distance_mm, 2.0e-9):
+            errors.append(f"state_replay:pair:{index}:distance")
+    return errors
+
+
+def _core_cam_actual_model_binding_errors(
+    record: Any,
+    contract: dict[str, Any],
+    observations: dict[str, str] | None = None,
+) -> tuple[list[str], bool]:
+    """Recompute the shared init/evidence model-binding arithmetic."""
+
+    if not isinstance(record, dict):
+        return ["model_binding:missing"], False
+    expected_keys = {
+        "schema_version", "binding_state", "expected_source_model_xml_sha256",
+        "compiled_model_xml_equivalent_digest_api",
+        "expected_compiled_model_xml_equivalent_sha256",
+        "initialized_active_collision_geometry_digest_api",
+        "initialized_state_construction",
+        "expected_initialized_active_collision_geometry_sha256",
+        "controller_init_observed_compiled_model_xml_equivalent_sha256",
+        "controller_init_compiled_model_xml_equivalent_matches",
+        "controller_init_observed_initialized_active_geometry_sha256",
+        "controller_init_initialized_active_geometry_matches",
+        "controller_init_passed",
+        "evidence_observed_compiled_model_xml_equivalent_sha256",
+        "evidence_compiled_model_xml_equivalent_matches",
+        "evidence_observed_initialized_active_geometry_sha256",
+        "evidence_initialized_active_geometry_matches",
+        "evidence_recompute_passed",
+        "compiled_model_digest_unchanged_since_controller_init",
+        "active_geometry_digest_unchanged_since_controller_init", "passed",
+    }
+    errors: list[str] = []
+    if set(record) != expected_keys:
+        errors.append("model_binding:keys")
+    expected_compiled = contract["model_binding"][
+        "compiled_model_xml_equivalent_sha256"
+    ]
+    expected_active = contract["model_binding"][
+        "initialized_active_collision_geometry_sha256"
+    ]
+    if observations is None:
+        observations = {
+            "controller_init_compiled": expected_compiled,
+            "controller_init_active": expected_active,
+            "evidence_compiled": expected_compiled,
+            "evidence_active": expected_active,
+        }
+    if set(observations) != {
+        "controller_init_compiled", "controller_init_active",
+        "evidence_compiled", "evidence_active",
+    }:
+        errors.append("model_binding:observations")
+        observations = {
+            "controller_init_compiled": "",
+            "controller_init_active": "",
+            "evidence_compiled": "",
+            "evidence_active": "",
+        }
+    expected_header = {
+        "schema_version": "1.0",
+        "binding_state": (
+            "controller_init_and_evidence_recomputed_actual_passed_model"
+        ),
+        "expected_source_model_xml_sha256": contract["model_binding"][
+            "model_xml_sha256"
+        ],
+        "compiled_model_xml_equivalent_digest_api": (
+            "compiled_model_xml_equivalent_sha256"
+        ),
+        "expected_compiled_model_xml_equivalent_sha256": expected_compiled,
+        "initialized_active_collision_geometry_digest_api": (
+            "initialized_active_collision_geometry_sha256"
+        ),
+        "initialized_state_construction": (
+            "fresh_MjData_then_initialize_and_mj_forward"
+        ),
+        "expected_initialized_active_collision_geometry_sha256": expected_active,
+        "controller_init_observed_compiled_model_xml_equivalent_sha256": (
+            observations["controller_init_compiled"]
+        ),
+        "controller_init_observed_initialized_active_geometry_sha256": (
+            observations["controller_init_active"]
+        ),
+        "evidence_observed_compiled_model_xml_equivalent_sha256": (
+            observations["evidence_compiled"]
+        ),
+        "evidence_observed_initialized_active_geometry_sha256": (
+            observations["evidence_active"]
+        ),
+    }
+    for key, expected in expected_header.items():
+        if record.get(key) != expected:
+            errors.append(f"model_binding:{key}")
+    init_compiled_match = observations["controller_init_compiled"] == expected_compiled
+    init_active_match = observations["controller_init_active"] == expected_active
+    evidence_compiled_match = observations["evidence_compiled"] == expected_compiled
+    evidence_active_match = observations["evidence_active"] == expected_active
+    init_pass = init_compiled_match and init_active_match
+    evidence_pass = evidence_compiled_match and evidence_active_match
+    compiled_unchanged = (
+        observations["controller_init_compiled"] == observations["evidence_compiled"]
+    )
+    active_unchanged = (
+        observations["controller_init_active"] == observations["evidence_active"]
+    )
+    expected_flags = {
+        "controller_init_compiled_model_xml_equivalent_matches": init_compiled_match,
+        "controller_init_initialized_active_geometry_matches": init_active_match,
+        "controller_init_passed": init_pass,
+        "evidence_compiled_model_xml_equivalent_matches": evidence_compiled_match,
+        "evidence_initialized_active_geometry_matches": evidence_active_match,
+        "evidence_recompute_passed": evidence_pass,
+        "compiled_model_digest_unchanged_since_controller_init": compiled_unchanged,
+        "active_geometry_digest_unchanged_since_controller_init": active_unchanged,
+        "passed": bool(init_pass and evidence_pass and compiled_unchanged and active_unchanged),
+    }
+    for key, expected in expected_flags.items():
+        if record.get(key) is not expected:
+            errors.append(f"model_binding:{key}")
+    return errors, expected_flags["passed"]
+
+
+def core_cam_tab_result_errors(
+    result: Any,
+    contract: dict[str, Any],
+    *,
+    model_binding_observations: dict[str, str] | None = None,
+    replay_model: Any | None = None,
+    replay_mujoco: ModuleType | None = None,
+) -> list[str]:
+    """Recompute checkpoint-A contact/free-space evidence from raw samples."""
+
+    if not isinstance(result, dict):
+        return ["cam_tab_result_missing"]
+    errors: list[str] = []
+    abort_reason = result.get("abort_reason")
+    physics_substeps = result.get("physics_substep_count")
+    if (
+        isinstance(physics_substeps, bool)
+        or not isinstance(physics_substeps, int)
+        or physics_substeps < 0
+    ):
+        errors.append("result:physics_substeps")
+        physics_substeps = 0
+    actual_model_binding = result.get("core_cam_actual_model_binding")
+    binding_errors, binding_passed = _core_cam_actual_model_binding_errors(
+        actual_model_binding,
+        contract,
+        model_binding_observations,
+    )
+    errors.extend(binding_errors)
+    alignment = result.get("route_alignment")
+    endpoint_records = (
+        alignment.get("phase_endpoint_journal_evidence", [])
+        if isinstance(alignment, dict)
+        else []
+    )
+    endpoint_actions = {
+        item.get("action")
+        for item in endpoint_records
+        if isinstance(item, dict) and item.get("event") == "move_complete"
+    }
+    all_route_endpoints = endpoint_actions == set(CORE_CAM_CONTACT_ACTIONS)
+
+    evidence = result.get("core_cam_tab_contact_evidence")
+    if not isinstance(evidence, dict):
+        return [*errors, "contact_evidence:missing"]
+    expected_evidence_keys = {
+        "schema_version", "evidence_kind", "runtime_contract_api",
+        "contract_identity_sha256", "model_binding", "physics_timestep_s", "observed",
+        "audited_substeps", "audited_substeps_by_phase",
+        "all_four_capture_phases_observed", "raw_contact_records",
+        "raw_contact_records_sha256", "candidate_contact_count",
+        "rejected_contact_count", "counter_replay_consistent", "functional_role_counts",
+        "functional_coverage_observed", "zero_contact_cannot_pass",
+        "maximum_penetration_mm", "maximum_locus_error_mm",
+        "maximum_abs_normal_force_n_diagnostic_only", "functional_phase_envelope",
+        "provisional_geometry_classification_passed",
+        "contact_forces_are_unbounded_diagnostic_evidence_only",
+        "contact_force_authority", "friction_coefficient_authority",
+        "dynamics_authority",
+        "post_capture_negative_z_and_slider_return_excluded", "passed",
+        "release_ready",
+    }
+    if set(evidence) != expected_evidence_keys:
+        errors.append("contact_evidence:keys")
+    expected_header = {
+        "schema_version": "2.0",
+        "evidence_kind": "real_mujoco_per_substep_capture_cam_tab_envelope",
+        "runtime_contract_api": "core_cam_tab_contact_runtime_contract",
+        "contract_identity_sha256": contract.get("contract_identity_sha256"),
+        "model_binding": actual_model_binding,
+        "physics_timestep_s": 0.00025,
+        "zero_contact_cannot_pass": True,
+        "contact_forces_are_unbounded_diagnostic_evidence_only": True,
+        "contact_force_authority": False,
+        "friction_coefficient_authority": False,
+        "dynamics_authority": False,
+        "post_capture_negative_z_and_slider_return_excluded": True,
+        "release_ready": False,
+    }
+    for key, expected in expected_header.items():
+        if _evidence_mismatches(evidence.get(key), expected, key):
+            errors.append(f"contact_evidence:{key}")
+
+    phase_counts = evidence.get("audited_substeps_by_phase")
+    if not isinstance(phase_counts, dict) or set(phase_counts) != set(
+        CORE_CAM_CONTACT_ACTIONS
+    ):
+        errors.append("contact_evidence:phase_counts")
+        phase_counts = {}
+    valid_counts = bool(phase_counts) and all(
+        isinstance(value, int) and not isinstance(value, bool) and value >= 0
+        for value in phase_counts.values()
+    )
+    if not valid_counts:
+        errors.append("contact_evidence:phase_count_values")
+    audited = evidence.get("audited_substeps")
+    if (
+        isinstance(audited, bool)
+        or not isinstance(audited, int)
+        or audited < 0
+    ):
+        errors.append("contact_evidence:audited_substeps")
+        audited = 0
+    elif valid_counts and audited != sum(phase_counts.values()):
+        errors.append("contact_evidence:audited_sum")
+    if audited > physics_substeps:
+        errors.append("contact_evidence:audited_exceeds_physics")
+    all_phases = valid_counts and all(value > 0 for value in phase_counts.values())
+    if evidence.get("all_four_capture_phases_observed") is not all_phases:
+        errors.append("contact_evidence:all_phases")
+
+    records = evidence.get("raw_contact_records")
+    if not isinstance(records, list):
+        errors.append("contact_evidence:records")
+        records = []
+    if evidence.get("raw_contact_records_sha256") != canonical_json_sha256(records):
+        errors.append("contact_evidence:records_sha")
+    observed = len(records) > 0
+    if evidence.get("observed") is not observed:
+        errors.append("contact_evidence:observed")
+    record_passes: list[bool] = []
+    roles: list[str | None] = []
+    previous_substep = -1
+    for index, record in enumerate(records):
+        record_errors, record_passed, role = (
+            _independent_cam_tab_record_classification(record)
+        )
+        errors.extend(f"contact:{index}:{error}" for error in record_errors)
+        record_passes.append(record_passed)
+        roles.append(role)
+        if isinstance(record, dict):
+            substep = record.get("physics_substep_count")
+            if (
+                isinstance(substep, bool)
+                or not isinstance(substep, int)
+                or substep <= 0
+                or substep > physics_substeps
+                or substep < previous_substep
+            ):
+                errors.append(f"contact:{index}:substep")
+            else:
+                previous_substep = substep
+                if not _number_matches(
+                    record.get("sim_time_s"), substep * 0.00025, tolerance=1.0e-10
+                ):
+                    errors.append(f"contact:{index}:time")
+    candidate_count = sum(record_passes)
+    rejected_count = len(records) - candidate_count
+    if evidence.get("candidate_contact_count") != candidate_count:
+        errors.append("contact_evidence:candidate_count")
+    if evidence.get("rejected_contact_count") != rejected_count:
+        errors.append("contact_evidence:rejected_count")
+    if evidence.get("counter_replay_consistent") is not True:
+        errors.append("contact_evidence:counter_replay_consistent")
+    role_counts = {role: roles.count(role) for role in CORE_CAM_FUNCTIONAL_ROLES}
+    if evidence.get("functional_role_counts") != role_counts:
+        errors.append("contact_evidence:functional_role_counts")
+    functional_coverage = all(value > 0 for value in role_counts.values())
+    if evidence.get("functional_coverage_observed") is not functional_coverage:
+        errors.append("contact_evidence:functional_coverage")
+
+    penetrations = [
+        float(record["penetration_mm"])
+        for record in records
+        if isinstance(record, dict) and _finite_real(record.get("penetration_mm")) is not None
+    ]
+    loci = [
+        float(record["locus_error_mm"])
+        for record in records
+        if isinstance(record, dict) and _finite_real(record.get("locus_error_mm")) is not None
+    ]
+    normal_forces = [
+        abs(float(record["contact_force_torque_6d"][0]))
+        for record in records
+        if isinstance(record, dict)
+        and isinstance(record.get("contact_force_torque_6d"), list)
+        and record["contact_force_torque_6d"]
+        and _finite_real(record["contact_force_torque_6d"][0]) is not None
+    ]
+    for field, expected in (
+        ("maximum_penetration_mm", max(penetrations, default=None)),
+        ("maximum_locus_error_mm", max(loci, default=None)),
+        ("maximum_abs_normal_force_n_diagnostic_only", max(normal_forces, default=None)),
+    ):
+        if _evidence_mismatches(evidence.get(field), expected, field):
+            errors.append(f"contact_evidence:{field}")
+    envelope_errors, envelope_state_pass = _core_cam_functional_envelope_errors(
+        evidence.get("functional_phase_envelope")
+    )
+    errors.extend(envelope_errors)
+    expected_envelope_pass = bool(
+        binding_passed
+        and envelope_state_pass
+        and all_route_endpoints
+        and abort_reason is None
+    )
+    envelope_record = evidence.get("functional_phase_envelope")
+    envelope_states = (
+        envelope_record.get("raw_states", [])
+        if isinstance(envelope_record, dict)
+        else []
+    )
+    if (replay_model is None) != (replay_mujoco is None):
+        errors.append("envelope:replay_authority_incomplete")
+    elif replay_model is not None and replay_mujoco is not None:
+        for state_index, state in enumerate(envelope_states):
+            replay_errors = _core_cam_functional_state_replay_errors(
+                state,
+                replay_model,
+                replay_mujoco,
+            )
+            errors.extend(
+                f"envelope:state_replay:{state_index}:{error}"
+                for error in replay_errors
+            )
+    if isinstance(envelope_record, dict):
+        expected_producer_phase_counts = {
+            name: int(phase_counts.get(name, 0))
+            for name in CORE_CAM_CONTACT_ACTIONS[2:]
+        }
+        if envelope_record.get("producer_phase_counts") != (
+            expected_producer_phase_counts
+        ):
+            errors.append("envelope:producer_phase_counts_vs_contact_audit")
+        records_by_state: dict[int, list[dict[str, Any]]] = {}
+        for record in records:
+            if not isinstance(record, dict):
+                continue
+            state_index = record.get("state_index")
+            if isinstance(state_index, int) and not isinstance(state_index, bool):
+                records_by_state.setdefault(state_index, []).append(record)
+        envelope_state_keys: set[tuple[int, str]] = set()
+        for raw_index, state in enumerate(envelope_states):
+            if not isinstance(state, dict):
+                continue
+            state_index = state.get("state_index")
+            if not isinstance(state_index, int) or isinstance(state_index, bool):
+                continue
+            action_name = state.get("action")
+            state_key = (state_index, str(action_name))
+            if state_key in envelope_state_keys:
+                errors.append(f"envelope:duplicate_state:{raw_index}")
+            envelope_state_keys.add(state_key)
+            if not 1 <= state_index <= physics_substeps:
+                errors.append(f"envelope:state_absolute_index:{raw_index}")
+            if not _number_matches(
+                state.get("sim_time_s"),
+                state_index * 0.00025,
+                tolerance=1.0e-10,
+            ):
+                errors.append(f"envelope:state_absolute_time:{raw_index}")
+            state_records = records_by_state.get(state_index, [])
+            if any(record.get("action") != state.get("action") for record in state_records):
+                errors.append(f"envelope:state_contact_action:{raw_index}")
+            slider_records = [
+                record for record in state_records
+                if record.get("is_slider_tab_contact") is True
+            ]
+            eligible_records = [
+                record for record in slider_records
+                if record.get("provisional_classification_passed") is True
+            ]
+            functional_records = [
+                record for record in eligible_records
+                if record.get("functional_coverage_role") is not None
+            ]
+            expected_counts = {
+                "observed_cam_tab_contact_count": len(slider_records),
+                "eligible_cam_tab_contact_count": len(eligible_records),
+                "rejected_cam_tab_contact_count": (
+                    len(slider_records) - len(eligible_records)
+                ),
+                "functional_contact_count": len(functional_records),
+                "functional_lead_contact_count": sum(
+                    record.get("functional_coverage_role")
+                    == CORE_CAM_FUNCTIONAL_ROLES[0]
+                    for record in functional_records
+                ),
+                "functional_hold_contact_count": sum(
+                    record.get("functional_coverage_role")
+                    == CORE_CAM_FUNCTIONAL_ROLES[1]
+                    for record in functional_records
+                ),
+                "nonfunctional_candidate_contact_count": (
+                    len(eligible_records) - len(functional_records)
+                ),
+                "other_core_cam_contact_count": (
+                    len(state_records) - len(slider_records)
+                ),
+            }
+            for field, expected in expected_counts.items():
+                if state.get(field) != expected:
+                    errors.append(f"envelope:state_contact_count:{raw_index}:{field}")
+        for contact_index, record in enumerate(records):
+            if not isinstance(record, dict) or record.get("action") not in (
+                CORE_CAM_CONTACT_ACTIONS[2:]
+            ):
+                continue
+            contact_key = (
+                record.get("state_index"),
+                str(record.get("action")),
+            )
+            if contact_key not in envelope_state_keys:
+                errors.append(f"envelope:orphan_functional_contact:{contact_index}")
+    if isinstance(envelope_record, dict) and envelope_record.get("passed") is not expected_envelope_pass:
+        errors.append("envelope:passed")
+    expected_contact_pass = bool(
+        binding_passed and observed and all_phases and functional_coverage
+        and rejected_count == 0 and candidate_count == len(records)
+        and expected_envelope_pass
+        and result.get("forbidden_contact_count") == 0
+        and abort_reason is None
+    )
+    for field in ("provisional_geometry_classification_passed", "passed"):
+        if evidence.get(field) is not expected_contact_pass:
+            errors.append(f"contact_evidence:{field}")
+
+    free = result.get("core_capture_free_space_tracking_evidence")
+    if not isinstance(free, dict):
+        return [*errors, "free_space:missing"]
+    expected_free_keys = {
+        "schema_version", "evidence_kind", "route_contract_identity_sha256",
+        "cam_contact_contract_identity_sha256", "model_binding", "physics_timestep_s",
+        "observed", "audited_substeps_by_phase",
+        "all_free_space_phases_observed", "completed_endpoint_actions",
+        "all_free_space_endpoints_completed", "raw_samples",
+        "raw_samples_sha256", "maximum_abs_q_tracking_error_rad",
+        "maximum_abs_preseat_error_mm", "maximum_abs_x_error_mm",
+        "maximum_abs_transverse_y_mm", "maximum_orientation_error_rad",
+        "minimum_lead_x_gap_mm", "cam_contact_observation_count",
+        "thresholds", "passed", "live_dynamics_authority", "release_ready",
+    }
+    if set(free) != expected_free_keys:
+        errors.append("free_space:keys")
+    free_header = {
+        "schema_version": "1.0",
+        "evidence_kind": "real_mujoco_per_substep_free_space_servo_tracking",
+        "route_contract_identity_sha256": contract["source_binding"][
+            "capture_route_contract_identity_sha256"
+        ],
+        "cam_contact_contract_identity_sha256": contract["contract_identity_sha256"],
+        "model_binding": actual_model_binding,
+        "physics_timestep_s": 0.00025,
+        "live_dynamics_authority": False,
+        "release_ready": False,
+        "thresholds": {
+            "maximum_abs_q_tracking_error_rad": 0.002,
+            "maximum_abs_preseat_error_mm": 0.050,
+            "maximum_abs_x_error_mm": 0.040,
+            "maximum_abs_transverse_y_mm": 0.010,
+            "maximum_orientation_error_rad": math.radians(0.1),
+            "minimum_lead_x_gap_mm": 0.0,
+            "maximum_cam_contact_count": 0,
+        },
+    }
+    for key, expected in free_header.items():
+        if _evidence_mismatches(free.get(key), expected, key):
+            errors.append(f"free_space:{key}")
+    free_counts = free.get("audited_substeps_by_phase")
+    free_actions = CORE_CAM_CONTACT_ACTIONS[:2]
+    if not isinstance(free_counts, dict) or set(free_counts) != set(free_actions):
+        errors.append("free_space:phase_counts")
+        free_counts = {}
+    valid_free_counts = bool(free_counts) and all(
+        isinstance(value, int) and not isinstance(value, bool) and value >= 0
+        for value in free_counts.values()
+    )
+    samples = free.get("raw_samples")
+    if not isinstance(samples, list):
+        errors.append("free_space:samples")
+        samples = []
+    if free.get("raw_samples_sha256") != canonical_json_sha256(samples):
+        errors.append("free_space:samples_sha")
+    if valid_free_counts and len(samples) != sum(free_counts.values()):
+        errors.append("free_space:sample_count")
+    free_observed = len(samples) > 0
+    if free.get("observed") is not free_observed:
+        errors.append("free_space:observed")
+    free_all_phases = valid_free_counts and all(value > 0 for value in free_counts.values())
+    if free.get("all_free_space_phases_observed") is not free_all_phases:
+        errors.append("free_space:all_phases")
+
+    expected_sample_keys = {
+        "physics_substep_count", "sim_time_s", "action",
+        "command_smooth_fraction", "commanded_arm_q_rad", "observed_arm_q_rad",
+        "observed_arm_qvel_rad_s", "max_abs_q_tracking_error_rad",
+        "expected_preseat_mm", "observed_preseat_mm", "preseat_error_mm",
+        "expected_x_mm", "observed_x_mm", "x_error_mm", "transverse_y_mm",
+        "orientation_error_rad", "slider_q_mm", "source_q_max_mm",
+        "lead_x_gap_mm", "lead_normal_clearance_mm", "cam_contact_count", "finite",
+    }
+    sample_validity: list[bool] = []
+    previous_by_action: dict[str, int] = {}
+    for index, sample in enumerate(samples):
+        valid = isinstance(sample, dict) and set(sample) == expected_sample_keys
+        if not valid:
+            errors.append(f"free_sample:{index}:keys")
+            sample_validity.append(False)
+            continue
+        action = sample.get("action")
+        substep = sample.get("physics_substep_count")
+        smooth = _finite_real(sample.get("command_smooth_fraction"))
+        if action not in free_actions or smooth is None or not 0.0 <= smooth <= 1.0:
+            errors.append(f"free_sample:{index}:action_or_smooth")
+            valid = False
+        if isinstance(substep, bool) or not isinstance(substep, int) or substep <= 0:
+            errors.append(f"free_sample:{index}:substep")
+            valid = False
+        elif action in previous_by_action and substep != previous_by_action[action] + 1:
+            errors.append(f"free_sample:{index}:continuity")
+            valid = False
+        if isinstance(substep, int) and action in free_actions:
+            previous_by_action[action] = substep
+            if not _number_matches(sample.get("sim_time_s"), substep * 0.00025, 1.0e-10):
+                errors.append(f"free_sample:{index}:time")
+                valid = False
+        commanded = sample.get("commanded_arm_q_rad")
+        observed_q = sample.get("observed_arm_q_rad")
+        observed_qvel = sample.get("observed_arm_qvel_rad_s")
+        arrays: list[np.ndarray] = []
+        for name, value in (
+            ("commanded", commanded), ("observed", observed_q), ("qvel", observed_qvel)
+        ):
+            if not isinstance(value, list) or len(value) != 5:
+                errors.append(f"free_sample:{index}:{name}")
+                valid = False
+                continue
+            array = np.asarray(value, dtype=np.float64)
+            if not np.all(np.isfinite(array)):
+                errors.append(f"free_sample:{index}:{name}:finite")
+                valid = False
+            arrays.append(array)
+        expected_p = 55.0 if action == free_actions[0] else 55.0 - 48.6 * float(smooth or 0.0)
+        expected_x = 0.20 * float(smooth or 0.0) if action == free_actions[0] else 0.20
+        observed_p = _finite_real(sample.get("observed_preseat_mm"))
+        observed_x = _finite_real(sample.get("observed_x_mm"))
+        slider_q = _finite_real(sample.get("slider_q_mm"))
+        if None in (observed_p, observed_x, slider_q):
+            errors.append(f"free_sample:{index}:finite_geometry")
+            valid = False
+        else:
+            qmax = max(0.05, min(3.0, float(observed_p) - float(observed_x) - 3.15))
+            gap = float(observed_p) - float(observed_x) - 3.15 - float(slider_q)
+            checks = {
+                "expected_preseat_mm": expected_p,
+                "preseat_error_mm": float(observed_p) - expected_p,
+                "expected_x_mm": expected_x,
+                "x_error_mm": float(observed_x) - expected_x,
+                "source_q_max_mm": qmax,
+                "lead_x_gap_mm": gap,
+                "lead_normal_clearance_mm": gap / math.sqrt(2.0),
+            }
+            for key, expected in checks.items():
+                if not _number_matches(sample.get(key), expected):
+                    errors.append(f"free_sample:{index}:{key}")
+                    valid = False
+        if len(arrays) >= 2:
+            q_error = float(np.max(np.abs(arrays[1] - arrays[0])))
+            if not _number_matches(sample.get("max_abs_q_tracking_error_rad"), q_error):
+                errors.append(f"free_sample:{index}:q_error")
+                valid = False
+        finite_fields = all(
+            _finite_real(sample.get(key)) is not None
+            for key in (
+                "transverse_y_mm", "orientation_error_rad", "lead_x_gap_mm",
+                "lead_normal_clearance_mm",
+            )
+        )
+        expected_finite = bool(valid and finite_fields)
+        if sample.get("finite") is not expected_finite:
+            errors.append(f"free_sample:{index}:finite_flag")
+            valid = False
+        contact_count = sample.get("cam_contact_count")
+        if isinstance(contact_count, bool) or not isinstance(contact_count, int) or contact_count < 0:
+            errors.append(f"free_sample:{index}:contact_count")
+            valid = False
+        sample_validity.append(valid)
+
+    completed_free = sorted(endpoint_actions.intersection(free_actions))
+    if free.get("completed_endpoint_actions") != completed_free:
+        errors.append("free_space:completed_endpoints")
+    all_free_endpoints = set(completed_free) == set(free_actions)
+    if free.get("all_free_space_endpoints_completed") is not all_free_endpoints:
+        errors.append("free_space:all_endpoints")
+    metric_inputs = {
+        "maximum_abs_q_tracking_error_rad": [
+            float(sample["max_abs_q_tracking_error_rad"]) for sample in samples
+            if isinstance(sample, dict) and _finite_real(sample.get("max_abs_q_tracking_error_rad")) is not None
+        ],
+        "maximum_abs_preseat_error_mm": [
+            abs(float(sample["preseat_error_mm"])) for sample in samples
+            if isinstance(sample, dict) and _finite_real(sample.get("preseat_error_mm")) is not None
+        ],
+        "maximum_abs_x_error_mm": [
+            abs(float(sample["x_error_mm"])) for sample in samples
+            if isinstance(sample, dict) and _finite_real(sample.get("x_error_mm")) is not None
+        ],
+        "maximum_abs_transverse_y_mm": [
+            abs(float(sample["transverse_y_mm"])) for sample in samples
+            if isinstance(sample, dict) and _finite_real(sample.get("transverse_y_mm")) is not None
+        ],
+        "maximum_orientation_error_rad": [
+            float(sample["orientation_error_rad"]) for sample in samples
+            if isinstance(sample, dict) and _finite_real(sample.get("orientation_error_rad")) is not None
+        ],
+    }
+    for field, values in metric_inputs.items():
+        expected = max(values, default=None)
+        if _evidence_mismatches(free.get(field), expected, field):
+            errors.append(f"free_space:{field}")
+    gaps = [
+        float(sample["lead_x_gap_mm"]) for sample in samples
+        if isinstance(sample, dict) and _finite_real(sample.get("lead_x_gap_mm")) is not None
+    ]
+    minimum_gap = min(gaps, default=None)
+    if _evidence_mismatches(free.get("minimum_lead_x_gap_mm"), minimum_gap, "gap"):
+        errors.append("free_space:minimum_gap")
+    contact_total = sum(
+        int(sample["cam_contact_count"]) for sample in samples
+        if isinstance(sample, dict)
+        and isinstance(sample.get("cam_contact_count"), int)
+        and not isinstance(sample.get("cam_contact_count"), bool)
+    )
+    if free.get("cam_contact_observation_count") != contact_total:
+        errors.append("free_space:contact_total")
+    expected_free_pass = bool(
+        binding_passed and free_observed and free_all_phases and all_free_endpoints
+        and sample_validity and all(sample_validity)
+        and metric_inputs["maximum_abs_q_tracking_error_rad"]
+        and max(metric_inputs["maximum_abs_q_tracking_error_rad"]) <= 0.002
+        and max(metric_inputs["maximum_abs_preseat_error_mm"]) <= 0.050
+        and max(metric_inputs["maximum_abs_x_error_mm"]) <= 0.040
+        and max(metric_inputs["maximum_abs_transverse_y_mm"]) <= 0.010
+        and max(metric_inputs["maximum_orientation_error_rad"]) <= math.radians(0.1)
+        and minimum_gap is not None and minimum_gap >= 0.0
+        and contact_total == 0 and abort_reason is None
+    )
+    if free.get("passed") is not expected_free_pass:
+        errors.append("free_space:passed")
+    expected_development_milestone = bool(
+        result.get("completed") is True
+        and result.get("attachment_verified") is True
+        and result.get("attached_tool") == "gripper"
+        and result.get("locked") is False
+        and result.get("physical_lock_confirmed") is False
+        and expected_contact_pass
+        and expected_free_pass
+        and result.get("forbidden_contact_count") == 0
+        and abort_reason is None
+    )
+    if result.get("development_geometry_milestone_passed") is not expected_development_milestone:
+        errors.append("result:development_geometry_milestone_passed")
+    if result.get("success") is not False:
+        errors.append("result:success_must_remain_false")
+    if result.get("physical_lock_confirmed") is not False:
+        errors.append("result:physical_lock_confirmed")
+    if result.get("release_ready") is not False:
+        errors.append("result:release_ready")
     return errors
 
 
@@ -4473,6 +6670,632 @@ class CoreCaptureRouteRuntimeAuthorityTests(unittest.TestCase):
         self.assertIs(initial_result["release_ready"], False)
 
 
+class CoreCamTabContactCheckpointATests(unittest.TestCase):
+    """Bind capture-only cam evidence without promoting physical authority."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.cad = import_file(
+            MAGNETIC_ROOT / "generate_cad.py",
+            "core_cam_tab_checkpoint_cad_authority",
+            "core cam/tab checkpoint CAD authority",
+        )
+        cls.demo = import_file(
+            MATCHA_DEMO,
+            "core_cam_tab_checkpoint_runtime_authority",
+            "core cam/tab checkpoint runtime authority",
+        )
+        cls.route_contract = cls.demo.core_capture_route_runtime_contract()
+        cls.runtime_cam_contract = (
+            cls.demo.qc.positive_lock_cam_runtime_contract()
+        )
+        cls.contract = cls.demo.core_cam_tab_contact_runtime_contract()
+
+    @classmethod
+    def _independent_model_digests(cls, model: Any) -> tuple[str, str]:
+        compiled = _independent_compiled_model_xml_equivalent_sha256(model)
+        scratch = cls.demo.mujoco.MjData(model)
+        cls.demo.initialize(model, scratch)
+        active = _independent_initialized_active_geometry_sha256(
+            model, scratch, cls.demo.mujoco
+        )
+        return compiled, active
+
+    @staticmethod
+    def _binding_observations(
+        initial: tuple[str, str], evidence: tuple[str, str]
+    ) -> dict[str, str]:
+        return {
+            "controller_init_compiled": initial[0],
+            "controller_init_active": initial[1],
+            "evidence_compiled": evidence[0],
+            "evidence_active": evidence[1],
+        }
+
+    @staticmethod
+    def _reseal_contract(mutated: dict[str, Any]) -> None:
+        identity = mutated["contract_identity_digest_preimage"]
+        identity["source_generator_sha256"] = mutated["source_binding"][
+            "generator_file"
+        ]["sha256"]
+        identity["positive_lock_cam_contract_sha256"] = mutated[
+            "source_binding"
+        ]["positive_lock_cam_contract_sha256"]
+        identity["positive_lock_slider_step_sha256"] = mutated[
+            "source_binding"
+        ]["positive_lock_slider_step"]["sha256"]
+        identity["capture_route_contract_identity_sha256"] = mutated[
+            "source_binding"
+        ]["capture_route_contract_identity_sha256"]
+        identity["model_binding"] = {
+            "model_xml_sha256": mutated["model_binding"]["model_xml_sha256"],
+            "compiled_model_xml_equivalent_sha256": mutated["model_binding"][
+                "compiled_model_xml_equivalent_sha256"
+            ],
+            "initialized_active_collision_geometry_sha256": mutated[
+                "model_binding"
+            ]["initialized_active_collision_geometry_sha256"],
+        }
+        identity["classifier_semantics"] = copy.deepcopy(
+            mutated["classifier_semantics"]
+        )
+        mutated["contract_identity_sha256"] = canonical_json_sha256(identity)
+
+    def test_contract_and_honest_red_result_mutations_fail_closed(self) -> None:
+        contract = self.contract
+        self.assertEqual(
+            core_cam_tab_contact_contract_errors(
+                contract,
+                self.cad,
+                self.runtime_cam_contract,
+                self.route_contract,
+            ),
+            [],
+        )
+        mutations: dict[str, dict[str, Any]] = {}
+        mutations["tab000_made_eligible"] = copy.deepcopy(contract)
+        mutations["tab000_made_eligible"]["classifier_semantics"][
+            "runtime_inventory"
+        ]["contact_eligible_leading_tab_geom"] = CORE_CAM_TAB_NONCONTACT_GEOM
+
+        mutations["root_removed_from_complete_roster"] = copy.deepcopy(contract)
+        mutations["root_removed_from_complete_roster"]["classifier_semantics"][
+            "runtime_inventory"
+        ]["complete_cam_geom_roster"].pop()
+
+        mutations["lead_normal_flattened"] = copy.deepcopy(contract)
+        mutations["lead_normal_flattened"]["classifier_semantics"][
+            "surface_classifiers"
+        ][0]["normal_cam_to_tab_dock_local"] = [-1.0, 0.0, 0.0]
+
+        mutations["positive_z_top_cap_allowed"] = copy.deepcopy(contract)
+        mutations["positive_z_top_cap_allowed"]["classifier_semantics"][
+            "surface_classifiers"
+        ][2]["closed_top_cap_positive_z_is_forbidden"] = False
+
+        mutations["guard_widened"] = copy.deepcopy(contract)
+        mutations["guard_widened"]["classifier_semantics"][
+            "provisional_development_guard"
+        ]["maximum_penetration_mm"] = 0.021
+
+        mutations["one_by_five_gap_laundering"] = copy.deepcopy(contract)
+        mutations["one_by_five_gap_laundering"]["classifier_semantics"][
+            "functional_envelope_sampling"
+        ]["complete_cam_distance"]["method"] = (
+            "leading_tab_by_five_cam_geoms"
+        )
+
+        mutations["continuous_authority_laundered"] = copy.deepcopy(contract)
+        mutations["continuous_authority_laundered"]["classifier_semantics"][
+            "functional_envelope_sampling"
+        ]["continuous_tunnel_authority"] = True
+
+        mutations["full_cam_overlap_removed"] = copy.deepcopy(contract)
+        mutations["full_cam_overlap_removed"]["post_capture_exclusion"][
+            "q3_negative_z_1p2mm_complete_cam_overlap_mm3"
+        ] = 0.0
+
+        mutations["source_hash_altered"] = copy.deepcopy(contract)
+        mutations["source_hash_altered"]["source_binding"]["generator_file"][
+            "sha256"
+        ] = "0" * 64
+
+        mutations["release_promoted"] = copy.deepcopy(contract)
+        mutations["release_promoted"]["release_ready"] = True
+        mutations["release_promoted"]["authority_scope"]["release_ready"] = True
+
+        for name, mutated in mutations.items():
+            self._reseal_contract(mutated)
+            with self.subTest(contract_mutation=name):
+                self.assertNotEqual(
+                    core_cam_tab_contact_contract_errors(
+                        mutated,
+                        self.cad,
+                        self.runtime_cam_contract,
+                        self.route_contract,
+                    ),
+                    [],
+                )
+
+        model = self.demo.build_model()
+        data = self.demo.mujoco.MjData(model)
+        self.demo.initialize(model, data)
+        independent = self._independent_model_digests(model)
+        self.assertEqual(
+            independent,
+            (
+                CORE_CAM_COMPILED_MODEL_XML_EQUIVALENT_SHA256,
+                contract["model_binding"][
+                    "initialized_active_collision_geometry_sha256"
+                ],
+            ),
+        )
+        controller = self.demo.MatchaWorkflowController(model, data)
+        result = controller.result()
+        observations = self._binding_observations(independent, independent)
+        self.assertEqual(
+            core_cam_tab_result_errors(
+                result,
+                contract,
+                model_binding_observations=observations,
+                replay_model=model,
+                replay_mujoco=self.demo.mujoco,
+            ),
+            [],
+        )
+        self.assertIs(result["core_cam_tab_contact_evidence"]["observed"], False)
+        self.assertIs(result["core_cam_tab_contact_evidence"]["passed"], False)
+        self.assertIs(
+            result["core_capture_free_space_tracking_evidence"]["passed"], False
+        )
+        self.assertIs(result["development_geometry_milestone_passed"], False)
+        self.assertIs(result["success"], False)
+        self.assertIs(result["release_ready"], False)
+
+        result_mutations: dict[str, dict[str, Any]] = {}
+        result_mutations["zero_contact_false_green"] = copy.deepcopy(result)
+        result_mutations["zero_contact_false_green"][
+            "core_cam_tab_contact_evidence"
+        ]["passed"] = True
+        result_mutations["zero_contact_false_green"][
+            "core_cam_tab_contact_evidence"
+        ]["provisional_geometry_classification_passed"] = True
+        result_mutations["zero_sample_free_false_green"] = copy.deepcopy(result)
+        result_mutations["zero_sample_free_false_green"][
+            "core_capture_free_space_tracking_evidence"
+        ]["passed"] = True
+        result_mutations["development_promoted"] = copy.deepcopy(result)
+        result_mutations["development_promoted"][
+            "development_geometry_milestone_passed"
+        ] = True
+        result_mutations["physical_lock_claimed"] = copy.deepcopy(result)
+        result_mutations["physical_lock_claimed"]["physical_lock_confirmed"] = True
+        result_mutations["release_promoted"] = copy.deepcopy(result)
+        result_mutations["release_promoted"]["release_ready"] = True
+        result_mutations["binding_echo_changed"] = copy.deepcopy(result)
+        result_mutations["binding_echo_changed"]["core_cam_actual_model_binding"][
+            "evidence_observed_initialized_active_geometry_sha256"
+        ] = "f" * 64
+        for name, mutated in result_mutations.items():
+            with self.subTest(result_mutation=name):
+                self.assertNotEqual(
+                    core_cam_tab_result_errors(
+                        mutated,
+                        contract,
+                        model_binding_observations=observations,
+                        replay_model=model,
+                        replay_mujoco=self.demo.mujoco,
+                    ),
+                    [],
+                )
+
+    def test_actual_model_binding_replay_and_contact_audit_are_independent(
+        self,
+    ) -> None:
+        demo = self.demo
+        contract = self.contract
+
+        # Mutating an active geom before controller construction must make both
+        # the init snapshot and evidence-time binding honestly red.
+        pre_model = demo.build_model()
+        pre_data = demo.mujoco.MjData(pre_model)
+        demo.initialize(pre_model, pre_data)
+        floor_id = int(pre_model.geom("matcha_floor_collision").id)
+        pre_model.geom_pos[floor_id, 2] += 1.0e-6
+        pre_digests = self._independent_model_digests(pre_model)
+        self.assertNotEqual(
+            pre_digests,
+            (
+                CORE_CAM_COMPILED_MODEL_XML_EQUIVALENT_SHA256,
+                contract["model_binding"][
+                    "initialized_active_collision_geometry_sha256"
+                ],
+            ),
+        )
+        pre_controller = demo.MatchaWorkflowController(pre_model, pre_data)
+        pre_result = pre_controller.result()
+        pre_observations = self._binding_observations(pre_digests, pre_digests)
+        self.assertEqual(
+            core_cam_tab_result_errors(
+                pre_result,
+                contract,
+                model_binding_observations=pre_observations,
+                replay_model=pre_model,
+                replay_mujoco=demo.mujoco,
+            ),
+            [],
+        )
+        self.assertIs(pre_result["core_cam_actual_model_binding"]["passed"], False)
+        self.assertIs(pre_result["core_cam_tab_contact_evidence"]["passed"], False)
+        self.assertIs(
+            pre_result["core_capture_free_space_tracking_evidence"]["passed"],
+            False,
+        )
+        self.assertIs(pre_result["development_geometry_milestone_passed"], False)
+
+        # A mutation after construction must fail the evidence recomputation
+        # and both unchanged-since-init witnesses.
+        post_model = demo.build_model()
+        post_data = demo.mujoco.MjData(post_model)
+        demo.initialize(post_model, post_data)
+        initial_digests = self._independent_model_digests(post_model)
+        post_controller = demo.MatchaWorkflowController(post_model, post_data)
+        post_floor_id = int(post_model.geom("matcha_floor_collision").id)
+        post_model.geom_pos[post_floor_id, 2] += 1.0e-6
+        evidence_digests = self._independent_model_digests(post_model)
+        self.assertNotEqual(initial_digests, evidence_digests)
+        post_result = post_controller.result()
+        post_observations = self._binding_observations(
+            initial_digests, evidence_digests
+        )
+        self.assertEqual(
+            core_cam_tab_result_errors(
+                post_result,
+                contract,
+                model_binding_observations=post_observations,
+                replay_model=post_model,
+                replay_mujoco=demo.mujoco,
+            ),
+            [],
+        )
+        binding = post_result["core_cam_actual_model_binding"]
+        self.assertIs(binding["controller_init_passed"], True)
+        self.assertIs(binding["evidence_recompute_passed"], False)
+        self.assertIs(
+            binding["compiled_model_digest_unchanged_since_controller_init"],
+            False,
+        )
+        self.assertIs(
+            binding["active_geometry_digest_unchanged_since_controller_init"],
+            False,
+        )
+        self.assertIs(binding["passed"], False)
+        self.assertEqual(
+            post_result["core_cam_tab_contact_evidence"]["model_binding"],
+            binding,
+        )
+        self.assertEqual(
+            post_result["core_capture_free_space_tracking_evidence"][
+                "model_binding"
+            ],
+            binding,
+        )
+
+        # One source-invalid but losslessly published functional state is
+        # enough to test exact scratch-MjData pose and 2x5 gap replay without
+        # running the workflow.
+        replay_model = demo.build_model()
+        replay_data = demo.mujoco.MjData(replay_model)
+        demo.initialize(replay_model, replay_data)
+        replay_controller = demo.MatchaWorkflowController(
+            replay_model, replay_data
+        )
+        replay_controller.physics_substep_count = 1
+        replay_data.time = float(replay_model.opt.timestep)
+        replay_controller._record_core_cam_tab_functional_envelope(
+            replay_controller.actions[2], []
+        )
+        state = copy.deepcopy(
+            replay_controller.core_cam_tab_functional_envelope_samples[0]
+        )
+        self.assertEqual(
+            _core_cam_functional_state_replay_errors(
+                state, replay_model, demo.mujoco
+            ),
+            [],
+        )
+        state_mutations: dict[str, dict[str, Any]] = {}
+        state_mutations["qpos_changed"] = copy.deepcopy(state)
+        state_mutations["qpos_changed"]["replay_state"]["qpos"][0] += 1.0e-6
+        state_mutations["pose_changed"] = copy.deepcopy(state)
+        state_mutations["pose_changed"]["replay_world_poses"][
+            "robot_plate_body"
+        ]["position_world_m"][0] += 1.0e-6
+        state_mutations["gap_changed"] = copy.deepcopy(state)
+        state_mutations["gap_changed"]["pair_gap_records"][0][
+            "signed_distance_mm"
+        ] += 0.1
+        state_mutations["pair_dropped"] = copy.deepcopy(state)
+        state_mutations["pair_dropped"]["pair_gap_records"].pop()
+        for name, mutated in state_mutations.items():
+            with self.subTest(replay_mutation=name):
+                self.assertNotEqual(
+                    _core_cam_functional_state_replay_errors(
+                        mutated, replay_model, demo.mujoco
+                    ),
+                    [],
+                )
+
+        # Exercise the contact classifier itself on real static MuJoCo
+        # contacts at the three source route regimes.  This is forward-only:
+        # no workflow step or force/dynamics authority is claimed.
+        arm_qpos_ids = np.asarray(
+            [
+                replay_model.joint(name).qposadr[0]
+                for name in demo.ARM_JOINTS
+            ],
+            dtype=int,
+        )
+        slider_address = int(
+            replay_model.joint("qc_positive_lock_slider_joint").qposadr[0]
+        )
+        classified_by_role: dict[str, dict[str, Any]] = {}
+        static_cases = (
+            (244, 2, {CORE_CAM_FUNCTIONAL_ROLES[0]}),
+            (
+                260,
+                3,
+                {
+                    "lead_hold_partition_seam_nonfunctional",
+                    CORE_CAM_FUNCTIONAL_ROLES[1],
+                },
+            ),
+            (
+                274,
+                3,
+                {
+                    "main_hold_edge_tangency_nonfunctional",
+                    CORE_CAM_FUNCTIONAL_ROLES[1],
+                },
+            ),
+        )
+        for row_index, action_index, required_roles in static_cases:
+            static_data = demo.mujoco.MjData(replay_model)
+            demo.initialize(replay_model, static_data)
+            source_state = self.route_contract["source_states"][row_index]
+            preseat_mm = float(source_state["preseat_mm"])
+            source_x_mm = float(source_state["source_x_mm"])
+            qmax_mm = max(
+                0.05,
+                min(3.0, max(0.0, preseat_mm) - source_x_mm - 3.15),
+            )
+            static_data.qpos[arm_qpos_ids] = np.asarray(
+                source_state["q_rad"], dtype=np.float64
+            )
+            static_data.qpos[slider_address] = 0.001 * qmax_mm
+            static_data.eq_active[
+                int(replay_model.equality("dock_gripper_hold").id)
+            ] = 1
+            static_data.eq_active[
+                int(replay_model.equality("attach_gripper").id)
+            ] = 0
+            demo.mujoco.mj_forward(replay_model, static_data)
+            static_controller = demo.MatchaWorkflowController(
+                replay_model, static_data
+            )
+            static_controller.physics_substep_count = 1
+            static_data.time = float(replay_model.opt.timestep)
+            action = static_controller.actions[action_index]
+            observed_roles: set[str] = set()
+            for contact_index in range(static_data.ncon):
+                record = static_controller._core_cam_tab_contact_record(
+                    contact_index, action
+                )
+                if record is None:
+                    continue
+                record_errors, passed, role = (
+                    _independent_cam_tab_record_classification(record)
+                )
+                surface_role = str(record.get("surface_role"))
+                if passed and surface_role in required_roles:
+                    self.assertEqual(
+                        record_errors, [], (surface_role, role, record_errors)
+                    )
+                    observed_roles.add(surface_role)
+                    classified_by_role.setdefault(surface_role, record)
+            self.assertTrue(required_roles.issubset(observed_roles), (
+                row_index, required_roles, observed_roles
+            ))
+
+        lead_record = classified_by_role[CORE_CAM_FUNCTIONAL_ROLES[0]]
+        seam_record = classified_by_role[
+            "lead_hold_partition_seam_nonfunctional"
+        ]
+        classifier_mutations: dict[str, dict[str, Any]] = {}
+        classifier_mutations["tab000"] = copy.deepcopy(lead_record)
+        classifier_mutations["tab000"]["tab_or_other_geom"] = (
+            CORE_CAM_TAB_NONCONTACT_GEOM
+        )
+        classifier_mutations["root_component"] = copy.deepcopy(lead_record)
+        classifier_mutations["root_component"]["cam_geom"] = CORE_CAM_GEOMS[3]
+        classifier_mutations["positive_z_cap_normal"] = copy.deepcopy(
+            seam_record
+        )
+        classifier_mutations["positive_z_cap_normal"][
+            "contact_normal_cam_to_tab_dock_local"
+        ] = [0.0, 0.0, 1.0]
+        classifier_mutations["depth_widened"] = copy.deepcopy(lead_record)
+        classifier_mutations["depth_widened"]["contact_dist_mm"] = -0.021
+        classifier_mutations["depth_widened"]["penetration_mm"] = 0.021
+        classifier_mutations["nonfinite_force"] = copy.deepcopy(lead_record)
+        classifier_mutations["nonfinite_force"]["contact_force_torque_6d"][0] = (
+            math.nan
+        )
+        classifier_mutations["attach_equality_active"] = copy.deepcopy(
+            lead_record
+        )
+        classifier_mutations["attach_equality_active"][
+            "attach_equality_active"
+        ] = True
+        for name, mutated in classifier_mutations.items():
+            with self.subTest(classifier_mutation=name):
+                record_errors, passed, _ = (
+                    _independent_cam_tab_record_classification(mutated)
+                )
+                self.assertNotEqual(record_errors, [])
+                self.assertIs(passed, False)
+
+        # The cam classifier runs after every mj_step and before the generic
+        # penetration audit.  Its allow-set is contact-index scoped only.
+        events: list[str] = []
+        audit_controller = demo.MatchaWorkflowController(
+            replay_model, demo.mujoco.MjData(replay_model)
+        )
+        demo.initialize(replay_model, audit_controller.data)
+        patches = (
+            mock.patch.object(
+                demo.mujoco, "mj_step", side_effect=lambda *_: events.append("step")
+            ),
+            mock.patch.object(
+                audit_controller, "_record_route_alignment",
+                side_effect=lambda *_: events.append("route"),
+            ),
+            mock.patch.object(
+                audit_controller, "_record_core_capture_free_space_tracking",
+                side_effect=lambda *_: events.append("free"),
+            ),
+            mock.patch.object(
+                audit_controller, "_audit_core_capture_cam_tab_contacts",
+                side_effect=lambda *_: events.append("cam"),
+            ),
+            mock.patch.object(
+                audit_controller, "_audit_core_capture_source_corridor",
+                side_effect=lambda *_: events.append("corridor"),
+            ),
+            mock.patch.object(
+                audit_controller, "_audit_contacts",
+                side_effect=lambda *_: events.append("generic"),
+            ),
+            mock.patch.object(
+                audit_controller, "_record_actuator_loads",
+                side_effect=lambda *_: events.append("loads"),
+            ),
+            mock.patch.object(demo, "PHYSICS_SUBSTEPS_PER_CONTROLLER_STEP", 2),
+        )
+        with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5], patches[6], patches[7]:
+            audit_controller._integrate()
+        self.assertEqual(
+            events,
+            [
+                "step", "route", "free", "cam", "corridor", "generic", "loads",
+                "step", "route", "free", "cam", "corridor", "generic", "loads",
+            ],
+        )
+        allowed_source = inspect.getsource(
+            demo.MatchaWorkflowController._allowed_penetrating_contact
+        )
+        self.assertIn("core_cam_tab_allowed_contact_indices", allowed_source)
+        self.assertIn("contact_index", allowed_source)
+        self.assertNotIn("startswith", allowed_source)
+
+    def test_retired_negative_z_suffix_and_complete_cam_overlap_stay_red(
+        self,
+    ) -> None:
+        demo = self.demo
+        default_actions = demo._recovery_controller_actions("gripper")
+        self.assertEqual(
+            [action.name for action in default_actions][-1],
+            "gripper_dock_release_verify",
+        )
+        retired_kinds = {
+            "axial_disengage", "slider_return", "physical_lock_confirm"
+        }
+        self.assertTrue(retired_kinds.isdisjoint(
+            action.kind for action in default_actions
+        ))
+        for kind in sorted(retired_kinds):
+            with self.subTest(retired_kind=kind):
+                model = demo.build_model()
+                data = demo.mujoco.MjData(model)
+                demo.initialize(model, data)
+                action = demo.WorkflowAction(
+                    name=f"adversarial_{kind}", kind=kind, timeout_s=1.0
+                )
+                controller = demo.MatchaWorkflowController(
+                    model, data, actions=(action,)
+                )
+                initial_time = float(data.time)
+                with mock.patch.object(
+                    demo.mujoco,
+                    "mj_step",
+                    side_effect=AssertionError("retired path advanced physics"),
+                ):
+                    controller.step()
+                result = controller.result()
+                self.assertEqual(
+                    result["abort_reason"], "retired_negative_z_lock_sequence"
+                )
+                self.assertEqual(result["physics_substep_count"], 0)
+                self.assertEqual(float(data.time), initial_time)
+                self.assertEqual(
+                    result["core_cam_tab_contact_evidence"]["raw_contact_records"],
+                    [],
+                )
+                self.assertEqual(
+                    result["core_cam_tab_contact_evidence"][
+                        "functional_phase_envelope"
+                    ]["raw_states"],
+                    [],
+                )
+                self.assertIs(result["physical_lock_confirmed"], False)
+                self.assertIs(result["locked"], False)
+                self.assertIs(result["success"], False)
+
+        for method_name in (
+            "_command_axial_disengage",
+            "_command_slider_return",
+            "_command_physical_lock_confirm",
+        ):
+            source = inspect.getsource(
+                getattr(demo.MatchaWorkflowController, method_name)
+            )
+            self.assertIn('self._abort("retired_negative_z_lock_sequence")', source)
+            self.assertNotIn("_integrate", source)
+            self.assertNotIn("physical_lock_confirmed = True", source)
+
+        cad = self.cad
+        slider = cad.locking_slider().translate(
+            (3.0, 0.0, cad.SLIDER_Z - cad.PLATE_THICKNESS - 1.2)
+        ).val()
+        complete_cam = cad.positive_lock_cam().val()
+        main_only = cad._positive_lock_cam_main_wedge().val()
+
+        def overlap_mm3(first: Any, second: Any) -> float:
+            if float(first.distance(second)) > 1.0e-9:
+                return 0.0
+            return math.fsum(
+                float(solid.Volume())
+                for solid in first.intersect(second).Solids()
+            )
+
+        complete_overlap = overlap_mm3(slider, complete_cam)
+        self.assertAlmostEqual(complete_overlap, 9.44, places=9)
+        self.assertLessEqual(overlap_mm3(slider, main_only), 1.0e-6)
+        self.assertAlmostEqual(float(slider.distance(main_only)), 0.25, places=9)
+        exclusion = self.contract["post_capture_exclusion"]
+        self.assertAlmostEqual(
+            float(exclusion["q3_negative_z_1p2mm_complete_cam_overlap_mm3"]),
+            complete_overlap,
+            places=12,
+        )
+        self.assertAlmostEqual(
+            float(exclusion["legacy_main_wedge_only_clearance_mm"]), 0.25,
+            places=12,
+        )
+        self.assertIs(exclusion["must_be_reaudited_before_authorization"], True)
+        self.assertIs(self.contract["release_ready"], False)
+
+
 FORBIDDEN_STATE_FIELDS = {"qpos", "qvel", "time", "eq_data"}
 FORBIDDEN_RESET_CALLS = {"mj_resetData", "mj_resetDataKeyframe", "mj_setConst"}
 
@@ -5092,13 +7915,13 @@ class SimCadPlacementContractTests(unittest.TestCase):
     ) -> None:
         actions = self.demo._recovery_controller_actions()
         expected = (
-            ("gripper_to_capture", "move"),
+            ("gripper_capture_lateral_align", "move"),
+            ("gripper_capture_axial_open_side", "move"),
+            ("gripper_capture_coupled_recenter", "move"),
+            ("gripper_capture_centered_final", "move"),
             ("gripper_physical_capture", "capture"),
             ("gripper_lock_verify", "lock_verify"),
             ("gripper_dock_release_verify", "release_verify"),
-            ("gripper_lock_cam_disengagement", "axial_disengage"),
-            ("gripper_slider_return_verify", "slider_return"),
-            ("gripper_physical_lock_confirm", "physical_lock_confirm"),
         )
         self.assertEqual(
             tuple((action.name, action.kind) for action in actions), expected
@@ -5110,16 +7933,10 @@ class SimCadPlacementContractTests(unittest.TestCase):
             all(action.timeout_s >= action.duration_s for action in actions)
         )
         self.assertLessEqual(math.fsum(action.timeout_s for action in actions), 15.0)
-        disengagement = actions[4]
-        np.testing.assert_allclose(
-            np.asarray(disengagement.target_q, dtype=float),
-            np.asarray(self.demo.CORE_LOCK_DISENGAGEMENT_TARGET_Q, dtype=float),
-            rtol=0.0,
-            atol=0.0,
-        )
-        self.assertEqual(
-            disengagement.joint_waypoints,
-            self.demo._core_lock_disengagement_waypoints(),
+        self.assertTrue(
+            {
+                "axial_disengage", "slider_return", "physical_lock_confirm"
+            }.isdisjoint(action.kind for action in actions)
         )
         with self.assertRaisesRegex(ValueError, "rack exit"):
             self.demo._recovery_controller_actions(include_rack_exit=True)
@@ -5129,7 +7946,11 @@ class SimCadPlacementContractTests(unittest.TestCase):
         controller = self.demo.MatchaWorkflowController(
             self.model, data, actions=actions
         )
-        self.assertIs(controller.result().get("release_ready"), False)
+        result = controller.result()
+        self.assertIs(result.get("physical_lock_confirmed"), False)
+        self.assertIs(result.get("locked"), False)
+        self.assertIs(result.get("success"), False)
+        self.assertIs(result.get("release_ready"), False)
 
     @staticmethod
     def _binary_stl_vertices(payload: bytes) -> np.ndarray:
@@ -5646,10 +8467,18 @@ class SimCadPlacementContractTests(unittest.TestCase):
         self.assertNotEqual(observed_bounds["gripper"], observed_bounds["spoon"])
 
     def test_core_keeper_contract_is_exact_and_excludes_the_air_gap_stop(self) -> None:
-        self.assertGreaterEqual(
-            float(getattr(self.demo, "MINIMUM_SOURCE_AXIS_WITHDRAWAL_MM", -math.inf)),
-            15.0,
-            "the core cam still overlaps the slider below the audited 15 mm withdrawal",
+        self.assertEqual(
+            float(self.demo.MINIMUM_SOURCE_AXIS_WITHDRAWAL_MM), 1.15
+        )
+        self.assertEqual(float(self.demo.CORE_LOCK_RELEASE_MIN_STROKE_MM), 1.15)
+        self.assertEqual(float(self.demo.CORE_LOCK_RELEASE_STROKE_MM), 1.20)
+        self.assertTrue(
+            {
+                "axial_disengage", "slider_return", "physical_lock_confirm"
+            }.isdisjoint(
+                action.kind for action in self.demo._recovery_controller_actions()
+            ),
+            "the source-negative -Z lock suffix must remain retired",
         )
         contract = getattr(self.demo, "CORE_KEEPER_CONTACT_CONTRACT", None)
         self.assertIsInstance(contract, (tuple, list))
@@ -6269,7 +9098,7 @@ class SimCadPlacementContractTests(unittest.TestCase):
         cad = self.clearance.CAD
         robot_source = cad.robot_plate().val()
         robot_well_radius_mm = float(cad.ROBOT_STUD_WELL_RADIUS)
-        self.assertEqual(robot_well_radius_mm, 3.325)
+        self.assertEqual(robot_well_radius_mm, 3.6)
         for x_mm in (-float(cad.LOCK_STUD_X), float(cad.LOCK_STUD_X)):
             for z_mm in (3.2, 6.0, 9.2):
                 samples_mm = [(x_mm, 0.0, z_mm)]
@@ -6299,7 +9128,7 @@ class SimCadPlacementContractTests(unittest.TestCase):
                     self.assertEqual(
                         filled,
                         [],
-                        f"fixed robot proxy fills the Ø6.65 mm entry well: {point_mm}",
+                        f"fixed robot proxy fills the Ø7.2 mm entry well: {point_mm}",
                     )
             material_point_mm = (x_mm, 5.0, 6.0)
             self.assertTrue(
@@ -8017,8 +10846,13 @@ class SimCadPlacementContractTests(unittest.TestCase):
 
         manifest = load_json(CORE_CAD_MANIFEST, "core CAD manifest")
         report = load_json(CORE_CLEARANCE_REPORT, "core CAD clearance report")
-        self.assertIs(report.get("passed"), True, report)
-        self.assertIs(report.get("release_ready"), True, report)
+        self.assertIs(report.get("passed"), False, report)
+        self.assertIs(report.get("release_ready"), False, report)
+        self.assertEqual(report.get("blockers"), ["interface_hardware_fit_authority"])
+        interface_fit = report.get("interface_hardware_fit")
+        self.assertIsInstance(interface_fit, dict, report)
+        self.assertIs(interface_fit.get("passed"), False, interface_fit)
+        self.assertIs(interface_fit.get("release_ready"), False, interface_fit)
         manifest_record = report["core_cad_manifest_validation"]["manifest"]
         self.assertEqual(
             manifest_record["sha256"], sha256_file(CORE_CAD_MANIFEST), report
