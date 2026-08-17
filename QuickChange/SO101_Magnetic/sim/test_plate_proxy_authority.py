@@ -59,6 +59,24 @@ class PlateProxySourceAuthorityTests(unittest.TestCase):
 
 
 class PlateProxyConstructionKernelTests(unittest.TestCase):
+    def test_fcpw_patch_neighbourhood_selector_keeps_every_intersecting_cell(self) -> None:
+        patch = np.asarray(
+            [[[0.0, -0.25, -0.25], [0.0, 0.25, -0.25], [0.0, 0.0, 0.25]]]
+        )
+        cells = np.asarray(
+            [
+                [[-0.05, -0.05, -0.05], [0.05, 0.05, 0.05]],
+                [[0.09, -0.05, -0.05], [0.19, 0.05, 0.05]],
+                [[2.0, 2.0, 2.0], [2.1, 2.1, 2.1]],
+            ]
+        )
+        selected, record = generator._cells_near_triangle_patches(
+            cells, patch, 0.10
+        )
+        np.testing.assert_array_equal(selected, [True, True, False])
+        self.assertTrue(record["no_false_negative_neighbourhood_exclusion"])
+        self.assertEqual(record["selected_cell_count"], 2)
+
     def test_greedy_merge_preserves_exact_cell_union(self) -> None:
         records = np.asarray(
             [

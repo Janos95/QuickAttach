@@ -70,6 +70,12 @@ TARGETED_MAX_CELL_EDGE_MM = 0.0625
 MAX_TARGETED_FRONTIER_CELLS = 3_000_000
 MAX_ADAPTIVE_SURFACE_PATCHES = 3_000_000
 FRAME_POSITION_TOLERANCE_MM = 1.0e-12
+PROGRESS_ENVIRONMENT_VARIABLE = "PLATE_PROXY_PROGRESS"
+
+
+def _progress(message: str) -> None:
+    if os.environ.get(PROGRESS_ENVIRONMENT_VARIABLE) == "1":
+        print(f"[plate-proxy] {message}", file=sys.stderr, flush=True)
 
 
 if importlib.metadata.version("fcpw") != FCPW_REQUIRED_VERSION:
@@ -705,6 +711,13 @@ def _scan_source_patches_for_undercoverage(
                 ),
             }
         )
+        _progress(
+            "surface scan iteration "
+            f"{iteration}: evaluated={len(pending)} safe={int(np.count_nonzero(safe))} "
+            f"red={int(np.count_nonzero(red))} "
+            f"seed={int(np.count_nonzero(unresolved_seed))} "
+            f"split={int(np.count_nonzero(subdivide))}"
+        )
         uncertain = pending[subdivide]
         if not len(uncertain):
             pending = np.empty((0, 3, 3), dtype=np.float64)
@@ -804,32 +817,54 @@ def _cells_near_triangle_patches(
     unresolved_mm: np.ndarray,
     selected_patches: np.ndarray,
     radius_mm: float,
-) -> np.ndarray:
-    """Return cells intersecting deterministic expanded red-patch AABBs."""
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Conservatively select cells near refinement patches in linear time.
+
+    If a cell intersects a radius-``r`` neighbourhood of a patch, the exact
+    distance from its centre to that patch is at most the cell half-diagonal
+    plus ``r``.  FCPW's guarded lower bound can therefore exclude a cell only
+    when intersection is impossible.  This replaces the former cells x
+    patches AABB loop without introducing a false-negative route.
+    """
 
     if not len(selected_patches):
-        return np.zeros(len(unresolved_mm), dtype=bool)
+        return np.zeros(len(unresolved_mm), dtype=bool), {
+            "method": "not_required_no_refinement_patches",
+            "cell_count": len(unresolved_mm),
+            "patch_count": 0,
+            "selected_cell_count": 0,
+            "passed": True,
+        }
+    started = time.monotonic()
+    cells = np.asarray(unresolved_mm, dtype=np.float64)
     patches = np.asarray(selected_patches, dtype=np.float64)
-    patch_low = np.min(patches, axis=1) - radius_mm
-    patch_high = np.max(patches, axis=1) + radius_mm
-    selected = np.zeros(len(unresolved_mm), dtype=bool)
-    # Avoid an unbounded cells x patches tensor.  AABB intersection is a
-    # conservative neighborhood selector; it is not a subset proof.
-    for cell_offset in range(0, len(unresolved_mm), 50_000):
-        cells = unresolved_mm[cell_offset : cell_offset + 50_000]
-        hit = np.zeros(len(cells), dtype=bool)
-        for patch_offset in range(0, len(patch_low), 256):
-            low = patch_low[patch_offset : patch_offset + 256]
-            high = patch_high[patch_offset : patch_offset + 256]
-            hit |= np.any(
-                np.all(cells[:, None, 1, :] >= low[None, :, :], axis=2)
-                & np.all(cells[:, None, 0, :] <= high[None, :, :], axis=2),
-                axis=1,
-            )
-            if np.all(hit):
-                break
-        selected[cell_offset : cell_offset + len(cells)] = hit
-    return selected
+    if cells.ndim != 3 or cells.shape[1:] != (2, 3):
+        raise ValueError("unresolved cells must have shape (N,2,3)")
+    centres = np.mean(cells, axis=1)
+    half_diagonals = np.linalg.norm((cells[:, 1] - cells[:, 0]) / 2.0, axis=1)
+    patch_index = SignedFcpwMesh(patches)
+    distance_lower, _ = patch_index.distance_bounds(centres)
+    thresholds = half_diagonals + float(radius_mm)
+    selected = distance_lower <= thresholds + 1.0e-12
+    record = {
+        "method": (
+            "FCPW_guarded_lower_cell_centre_to_patch_distance_le_"
+            "cell_half_diagonal_plus_refinement_radius"
+        ),
+        "no_false_negative_neighbourhood_exclusion": True,
+        "cell_count": len(cells),
+        "patch_count": len(patches),
+        "refinement_radius_mm": float(radius_mm),
+        "selected_cell_count": int(np.count_nonzero(selected)),
+        "minimum_excluded_lower_minus_threshold_mm": (
+            float(np.min(distance_lower[~selected] - thresholds[~selected]))
+            if np.any(~selected)
+            else None
+        ),
+        "wall_seconds_observed": time.monotonic() - started,
+        "passed": True,
+    }
+    return selected, record
 
 
 def _split_integer_records(records: np.ndarray) -> np.ndarray:
@@ -949,6 +984,9 @@ def build_adaptive_subset_boxes(
     """Return merged exact-subset boxes, octree certificate, unresolved cells."""
 
     parameters.validate()
+    _progress(
+        f"octree start: source_triangles={len(triangles)} depth={parameters.maximum_depth}"
+    )
     grid = _root_grid(triangles, parameters.maximum_depth)
     root_min = np.asarray(grid["root_min_mm"], dtype=np.float64)
     leaf_size = np.asarray(grid["leaf_size_mm"], dtype=np.float64)
@@ -1059,6 +1097,10 @@ def build_adaptive_subset_boxes(
     first_merged, first_merged_margins, first_merge_record = greedy_merge_boxes(
         accepted, margins
     )
+    _progress(
+        f"first octree closed: accepted={len(accepted)} unresolved={len(unresolved)} "
+        f"boxes={len(first_merged)} elapsed={time.monotonic() - started:.3f}s"
+    )
     first_boxes_mm = _integer_boxes_to_mm(first_merged, root_min, leaf_size)
     first_unresolved_mm = _integer_boxes_to_mm(unresolved, root_min, leaf_size)
     targeted_passes: list[dict[str, Any]] = []
@@ -1075,18 +1117,26 @@ def build_adaptive_subset_boxes(
     seed_patches, seed_record = _finite_certificate_red_seed_patches(
         triangles, boxes_mm, parameters
     )
+    _progress(
+        f"finite seed scan: patches={len(seed_patches)} "
+        f"elapsed={time.monotonic() - started:.3f}s"
+    )
     seed_pass: dict[str, Any] = {
         "pass_index": 0,
         "mode": "finite_certificate_red_seed_prepass",
         "seed_record": seed_record,
     }
     if len(seed_patches):
-        selected_mask = _cells_near_triangle_patches(
+        selected_mask, neighbourhood = _cells_near_triangle_patches(
             first_unresolved_mm,
             seed_patches,
             parameters.targeted_refinement_radius_mm,
         )
         selected_count = int(np.count_nonzero(selected_mask))
+        _progress(
+            f"finite seed neighbourhood: selected_cells={selected_count} "
+            f"selector={neighbourhood['wall_seconds_observed']:.3f}s"
+        )
         if selected_count == 0:
             raise RuntimeError("finite red seed patches selected no octree cells")
         total_selected_unresolved += selected_count
@@ -1113,7 +1163,13 @@ def build_adaptive_subset_boxes(
                 f"{parameters.max_proxy_boxes_after_merge}"
             )
         boxes_mm = _integer_boxes_to_mm(merged, root_min, leaf_size)
+        _progress(
+            f"finite seed refinement: new_accepted={len(targeted_accepted)} "
+            f"unresolved={len(unresolved)} boxes={len(merged)} "
+            f"elapsed={time.monotonic() - started:.3f}s"
+        )
         seed_pass["selected_unresolved_cell_count"] = selected_count
+        seed_pass["neighbourhood_selection"] = neighbourhood
         seed_pass["refinement"] = refinement
         seed_pass["proxy_box_count_after_pass"] = len(merged)
     else:
@@ -1128,6 +1184,12 @@ def build_adaptive_subset_boxes(
         pass_index = adaptive_index + 1
         refinement_patches, surface_scan = _scan_source_patches_for_undercoverage(
             triangles, boxes_mm, parameters
+        )
+        _progress(
+            f"adaptive pass {pass_index} scan: refinement_patches="
+            f"{len(refinement_patches)} safe="
+            f"{surface_scan['certified_safe_patch_count']} "
+            f"elapsed={time.monotonic() - started:.3f}s"
         )
         pass_record: dict[str, Any] = {
             "pass_index": pass_index,
@@ -1146,12 +1208,16 @@ def build_adaptive_subset_boxes(
         unresolved_mm_current = _integer_boxes_to_mm(
             unresolved, root_min, leaf_size
         )
-        selected_mask = _cells_near_triangle_patches(
+        selected_mask, neighbourhood = _cells_near_triangle_patches(
             unresolved_mm_current,
             refinement_patches,
             parameters.targeted_refinement_radius_mm,
         )
         selected_count = int(np.count_nonzero(selected_mask))
+        _progress(
+            f"adaptive pass {pass_index} neighbourhood: selected_cells="
+            f"{selected_count} selector={neighbourhood['wall_seconds_observed']:.3f}s"
+        )
         if selected_count == 0:
             raise RuntimeError("surface refinement patches selected no octree cells")
         total_selected_unresolved += selected_count
@@ -1178,7 +1244,13 @@ def build_adaptive_subset_boxes(
                 f"{parameters.max_proxy_boxes_after_merge}"
             )
         boxes_mm = _integer_boxes_to_mm(merged, root_min, leaf_size)
+        _progress(
+            f"adaptive pass {pass_index} refinement: new_accepted="
+            f"{len(targeted_accepted)} unresolved={len(unresolved)} "
+            f"boxes={len(merged)} elapsed={time.monotonic() - started:.3f}s"
+        )
         pass_record["selected_unresolved_cell_count"] = selected_count
+        pass_record["neighbourhood_selection"] = neighbourhood
         pass_record["refinement_patch_geometry_sha256"] = hashlib.sha256(
             np.ascontiguousarray(refinement_patches, dtype="<f8").tobytes()
         ).hexdigest()
