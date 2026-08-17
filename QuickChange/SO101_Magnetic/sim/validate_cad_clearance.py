@@ -1558,10 +1558,12 @@ def _pogo_sectional_mount_record() -> dict[str, Any]:
     return {
         "source_contract": contract,
         "ledger_file_record": ledger_record,
-        "fixed_shell_bounds_mm": _bbox_tuple(fixed_shell),
-        "full_extension_plunger_bounds_mm": _bbox_tuple(
-            full_extension_plunger
-        ),
+        "fixed_shell_bounds_mm": [
+            list(bounds) for bounds in _bbox_tuple(fixed_shell)
+        ],
+        "full_extension_plunger_bounds_mm": [
+            list(bounds) for bounds in _bbox_tuple(full_extension_plunger)
+        ],
         "segment_records": segment_records,
         "pin_records": pin_records,
         "checks": checks,

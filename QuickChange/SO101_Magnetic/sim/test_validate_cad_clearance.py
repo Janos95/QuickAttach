@@ -369,6 +369,7 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
         cad = clearance.CAD
         record = clearance._pogo_sectional_mount_record()
         self.assertTrue(record["geometry_passed"], record)
+        self.assertEqual(json.loads(json.dumps(record)), record)
         self.assertFalse(record["release_ready"])
         self.assertEqual(
             set(record["blockers"]),
