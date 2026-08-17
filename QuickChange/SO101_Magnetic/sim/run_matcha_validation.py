@@ -104,6 +104,14 @@ DEVELOPMENT_TESTS = (
     ),
     qualified(
         "SimCadPlacementContractTests",
+        "test_fixed_plate_collision_proxies_preserve_lock_hardware_voids",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
+        "test_positive_lock_slider_is_source_bound_physical_mechanism",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
         "test_withdrawal_threshold_is_exactly_safe_against_source_cam",
     ),
     qualified(

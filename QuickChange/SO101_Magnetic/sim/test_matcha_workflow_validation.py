@@ -39,6 +39,8 @@ PAYLOAD_GENERATOR = HERE / "generate_matcha_payload_proxy_report.py"
 PAYLOAD_VALIDATOR = HERE / "validate_matcha_payload_proxy_report.py"
 PAYLOAD_REPORT = HERE / "matcha_payload_proxy_report.json"
 CORE_CLEARANCE_VALIDATOR = HERE / "validate_cad_clearance.py"
+CORE_CLEARANCE_REPORT = HERE / "cad_clearance_report.json"
+CORE_CAD_MANIFEST = MAGNETIC_ROOT / "exports" / "core_cad_manifest.json"
 CAD_ROOT = MAGNETIC_ROOT / "matcha_tools"
 MATCHA_CAD_GENERATOR = CAD_ROOT / "generate_matcha_tool_cad.py"
 CAD_MANIFEST = CAD_ROOT / "exports" / "matcha_tool_manifest.json"
@@ -757,6 +759,7 @@ class SimCadPlacementContractTests(unittest.TestCase):
         xml_text, cls.assets = build_xml()
         cls.xml_root = ET.fromstring(xml_text)
         cls.model = cls.demo.build_model()
+        cls._geom_hull_equations: dict[int, np.ndarray] = {}
 
     @staticmethod
     def _vector(element: ET.Element, name: str, default: str) -> np.ndarray:
@@ -779,6 +782,99 @@ class SimCadPlacementContractTests(unittest.TestCase):
                 struct.unpack_from("<9f", payload, offset), dtype=np.float64
             ).reshape(3, 3)
         return vertices
+
+    @staticmethod
+    def _quaternion_matrix(quaternion: Any) -> np.ndarray:
+        values = np.array(quaternion, dtype=np.float64, copy=True)
+        values /= np.linalg.norm(values)
+        w_value, x_value, y_value, z_value = values
+        return np.asarray(
+            [
+                [
+                    1.0 - 2.0 * (y_value * y_value + z_value * z_value),
+                    2.0 * (x_value * y_value - w_value * z_value),
+                    2.0 * (x_value * z_value + w_value * y_value),
+                ],
+                [
+                    2.0 * (x_value * y_value + w_value * z_value),
+                    1.0 - 2.0 * (x_value * x_value + z_value * z_value),
+                    2.0 * (y_value * z_value - w_value * x_value),
+                ],
+                [
+                    2.0 * (x_value * z_value - w_value * y_value),
+                    2.0 * (y_value * z_value + w_value * x_value),
+                    1.0 - 2.0 * (x_value * x_value + y_value * y_value),
+                ],
+            ],
+            dtype=np.float64,
+        )
+
+    def _compiled_geom_vertices_in_owner_frame(self, geom_id: int) -> np.ndarray:
+        mujoco = self.demo.mujoco
+        geom_type = int(self.model.geom_type[geom_id])
+        if geom_type == int(mujoco.mjtGeom.mjGEOM_BOX):
+            size = np.asarray(self.model.geom_size[geom_id], dtype=np.float64)
+            vertices = np.asarray(
+                [
+                    (sx * size[0], sy * size[1], sz * size[2])
+                    for sx in (-1.0, 1.0)
+                    for sy in (-1.0, 1.0)
+                    for sz in (-1.0, 1.0)
+                ],
+                dtype=np.float64,
+            )
+        elif geom_type == int(mujoco.mjtGeom.mjGEOM_MESH):
+            mesh_id = int(self.model.geom_dataid[geom_id])
+            start = int(self.model.mesh_vertadr[mesh_id])
+            count = int(self.model.mesh_vertnum[mesh_id])
+            vertices = np.asarray(
+                self.model.mesh_vert[start : start + count], dtype=np.float64
+            )
+        else:
+            raise AssertionError(
+                f"unsupported void/proxy geom type for {self.model.geom(geom_id).name}: "
+                f"{geom_type}"
+            )
+        rotation = self._quaternion_matrix(self.model.geom_quat[geom_id])
+        return (
+            np.asarray(self.model.geom_pos[geom_id], dtype=np.float64)
+            + vertices @ rotation.T
+        )
+
+    def _convex_geom_contains_owner_point(
+        self, geom_id: int, point: Any, *, tolerance_m: float = 1.0e-10
+    ) -> bool:
+        from scipy.spatial import ConvexHull
+
+        equations = self._geom_hull_equations.get(geom_id)
+        if equations is None:
+            vertices = self._compiled_geom_vertices_in_owner_frame(geom_id)
+            equations = np.asarray(ConvexHull(vertices).equations, dtype=np.float64)
+            self._geom_hull_equations[geom_id] = equations
+        query = np.asarray(point, dtype=np.float64)
+        return bool(
+            np.all(equations[:, :3] @ query + equations[:, 3] <= tolerance_m)
+        )
+
+    def _collision_geoms_containing_owner_point(
+        self, body_name: str, prefix: str, point: Any
+    ) -> list[str]:
+        body_id = int(self.model.body(body_name).id)
+        containing: list[str] = []
+        for geom_id in range(self.model.ngeom):
+            name = str(self.model.geom(geom_id).name)
+            if (
+                int(self.model.geom_bodyid[geom_id]) != body_id
+                or not name.startswith(prefix)
+                or not (
+                    int(self.model.geom_contype[geom_id])
+                    or int(self.model.geom_conaffinity[geom_id])
+                )
+            ):
+                continue
+            if self._convex_geom_contains_owner_point(geom_id, point):
+                containing.append(name)
+        return sorted(containing)
 
     def test_stock_gripper_wrapper_composes_to_published_step_mount(self) -> None:
         wrapper = self.xml_root.find(".//body[@name='stock_gripper']")
@@ -1148,69 +1244,30 @@ class SimCadPlacementContractTests(unittest.TestCase):
                     self.assertIsNotNone(mesh_file, mesh_name)
                     self.assertTrue(mesh_file in self.assets, mesh_file)
                     vertices = self._binary_stl_vertices(self.assets[mesh_file])
+                minimum = np.min(vertices, axis=0)
+                maximum = np.max(vertices, axis=0)
+                self.assertTrue(np.all(minimum >= expected_minimum - 1.0e-9), name)
+                self.assertTrue(np.all(maximum <= expected_maximum + 1.0e-9), name)
+                # The stable x-pos semantic now names the outer keeper-bearing
+                # partition only; the lock-bore/nut pieces close the remainder.
+                # Retain the exact released rounded exterior and full Z/y
+                # keeper span without requiring this one partition to fill the
+                # newly validated functional voids.
                 np.testing.assert_allclose(
-                    np.min(vertices, axis=0),
-                    expected_minimum,
-                    rtol=0.0,
-                    atol=1.0e-9,
-                    err_msg=name,
-                )
-                np.testing.assert_allclose(
-                    np.max(vertices, axis=0),
+                    maximum,
                     expected_maximum,
                     rtol=0.0,
                     atol=1.0e-9,
                     err_msg=name,
                 )
-                arc_steps = 16
-                expected_outline = [(0.004, -0.025), (0.024, -0.025)]
-                expected_outline.extend(
-                    (
-                        0.024
-                        + 0.004
-                        * math.cos(
-                            -math.pi / 2.0
-                            + index * math.pi / (2.0 * arc_steps)
-                        ),
-                        -0.021
-                        + 0.004
-                        * math.sin(
-                            -math.pi / 2.0
-                            + index * math.pi / (2.0 * arc_steps)
-                        ),
+                self.assertAlmostEqual(float(minimum[1]), -0.025, 9, name)
+                self.assertAlmostEqual(float(minimum[2]), 0.0, 9, name)
+                for x_value, y_value in vertices[:, :2]:
+                    dx = max(abs(float(x_value)) - 0.024, 0.0)
+                    dy = max(abs(float(y_value)) - 0.021, 0.0)
+                    self.assertLessEqual(
+                        math.hypot(dx, dy), 0.004 + 5.0e-6, name
                     )
-                    for index in range(1, arc_steps + 1)
-                )
-                expected_outline.append((0.028, 0.021))
-                expected_outline.extend(
-                    (
-                        0.024
-                        + 0.004
-                        * math.cos(index * math.pi / (2.0 * arc_steps)),
-                        0.021
-                        + 0.004
-                        * math.sin(index * math.pi / (2.0 * arc_steps)),
-                    )
-                    for index in range(1, arc_steps + 1)
-                )
-                expected_outline.append((0.004, 0.025))
-                observed_outline = {
-                    (round(float(x), 9), round(float(y), 9))
-                    for x, y in vertices[:, :2]
-                }
-                self.assertEqual(
-                    observed_outline,
-                    {
-                        (round(float(x), 9), round(float(y), 9))
-                        for x, y in expected_outline
-                    },
-                    name,
-                )
-                self.assertEqual(
-                    {round(float(value), 9) for value in vertices[:, 2]},
-                    {0.0, round(0.001 * cad.PLATE_THICKNESS, 9)},
-                    name,
-                )
                 continue
             self.assertEqual(geom.get("type"), "box", name)
             quat = self._vector(geom, "quat", "1 0 0 0")
@@ -1549,6 +1606,387 @@ class SimCadPlacementContractTests(unittest.TestCase):
             if "_lock_stud_" in name and name.endswith("_collision")
         }
         self.assertEqual(observed_lock_studs, expected_names)
+
+    def test_fixed_plate_collision_proxies_preserve_lock_hardware_voids(
+        self,
+    ) -> None:
+        """Broad plate prisms may not fill the stud wells or tool pockets."""
+
+        cad = self.clearance.CAD
+        robot_source = cad.robot_plate().val()
+        robot_well_radius_mm = float(cad.ROBOT_STUD_WELL_RADIUS)
+        self.assertEqual(robot_well_radius_mm, 3.325)
+        for x_mm in (-float(cad.LOCK_STUD_X), float(cad.LOCK_STUD_X)):
+            for z_mm in (3.2, 6.0, 9.2):
+                samples_mm = [(x_mm, 0.0, z_mm)]
+                samples_mm.extend(
+                    (
+                        x_mm
+                        + 0.75
+                        * robot_well_radius_mm
+                        * math.cos(index * math.pi / 4.0),
+                        0.75
+                        * robot_well_radius_mm
+                        * math.sin(index * math.pi / 4.0),
+                        z_mm,
+                    )
+                    for index in range(8)
+                )
+                for point_mm in samples_mm:
+                    self.assertFalse(
+                        robot_source.isInside(cad.cq.Vector(*point_mm), 1.0e-7),
+                        point_mm,
+                    )
+                    filled = self._collision_geoms_containing_owner_point(
+                        "robot_plate_frame",
+                        "qc_col_robot_plate_",
+                        0.001 * np.asarray(point_mm, dtype=np.float64),
+                    )
+                    self.assertEqual(
+                        filled,
+                        [],
+                        f"fixed robot proxy fills the Ø6.65 mm entry well: {point_mm}",
+                    )
+            material_point_mm = (x_mm, 5.0, 6.0)
+            self.assertTrue(
+                robot_source.isInside(cad.cq.Vector(*material_point_mm), 1.0e-7)
+            )
+            self.assertTrue(
+                self._collision_geoms_containing_owner_point(
+                    "robot_plate_frame",
+                    "qc_col_robot_plate_",
+                    0.001 * np.asarray(material_point_mm, dtype=np.float64),
+                ),
+                "the filled-void negative is vacuous if adjacent plate material is absent",
+            )
+
+        self.assertEqual(float(cad.LOCK_NUT_POCKET_ACROSS_FLATS), 5.7)
+        bore_radius_mm = 1.6
+        pocket_apothem_mm = 0.5 * float(cad.LOCK_NUT_POCKET_ACROSS_FLATS)
+        pocket_sample_radius_mm = 0.5 * (bore_radius_mm + pocket_apothem_mm)
+        for tool in ("gripper", "spoon", "whisk"):
+            tool_source = cad.tool_plate(stock_gripper=tool == "gripper").val()
+            for x_mm in (-float(cad.LOCK_STUD_X), float(cad.LOCK_STUD_X)):
+                for z_mm in (0.5, 4.5, 9.0):
+                    for index in range(8):
+                        radius_mm = 0.75 * bore_radius_mm
+                        point_mm = (
+                            x_mm + radius_mm * math.cos(index * math.pi / 4.0),
+                            radius_mm * math.sin(index * math.pi / 4.0),
+                            z_mm,
+                        )
+                        self.assertFalse(
+                            tool_source.isInside(
+                                cad.cq.Vector(*point_mm), 1.0e-7
+                            ),
+                            (tool, point_mm),
+                        )
+                        filled = self._collision_geoms_containing_owner_point(
+                            f"tool_{tool}",
+                            f"matcha_col_{tool}_plate_",
+                            0.001 * np.asarray(point_mm, dtype=np.float64),
+                        )
+                        self.assertEqual(
+                            filled,
+                            [],
+                            f"{tool} plate proxy fills the Ø3.2 mm thread bore: {point_mm}",
+                        )
+                for z_mm in (2.0, 5.0, 9.0):
+                    for index in range(12):
+                        point_mm = (
+                            x_mm
+                            + pocket_sample_radius_mm
+                            * math.cos(index * math.pi / 6.0),
+                            pocket_sample_radius_mm
+                            * math.sin(index * math.pi / 6.0),
+                            z_mm,
+                        )
+                        self.assertFalse(
+                            tool_source.isInside(
+                                cad.cq.Vector(*point_mm), 1.0e-7
+                            ),
+                            (tool, point_mm),
+                        )
+                        filled = self._collision_geoms_containing_owner_point(
+                            f"tool_{tool}",
+                            f"matcha_col_{tool}_plate_",
+                            0.001 * np.asarray(point_mm, dtype=np.float64),
+                        )
+                        self.assertEqual(
+                            filled,
+                            [],
+                            f"{tool} plate proxy fills the AF5.7 nut pocket: {point_mm}",
+                        )
+                material_point_mm = (x_mm, 4.0, 5.0)
+                self.assertTrue(
+                    tool_source.isInside(cad.cq.Vector(*material_point_mm), 1.0e-7)
+                )
+                self.assertTrue(
+                    self._collision_geoms_containing_owner_point(
+                        f"tool_{tool}",
+                        f"matcha_col_{tool}_plate_",
+                        0.001 * np.asarray(material_point_mm, dtype=np.float64),
+                    ),
+                    (tool, "adjacent source material missing from collision proxy"),
+                )
+
+    def test_positive_lock_slider_is_source_bound_physical_mechanism(self) -> None:
+        """Bind the moving lock sheet, spring joint, and functional voids to CAD."""
+
+        manifest = load_json(CORE_CAD_MANIFEST, "core CAD manifest")
+        report = load_json(CORE_CLEARANCE_REPORT, "core CAD clearance report")
+        self.assertIs(report.get("passed"), True, report)
+        self.assertIs(report.get("release_ready"), True, report)
+        manifest_record = report["core_cad_manifest_validation"]["manifest"]
+        self.assertEqual(
+            manifest_record["sha256"], sha256_file(CORE_CAD_MANIFEST), report
+        )
+        self.assertEqual(manifest_record["bytes"], CORE_CAD_MANIFEST.stat().st_size)
+        file_records = {
+            str(record["path"]): record for record in manifest.get("files", [])
+        }
+        expected_sources = {
+            "QuickChange/SO101_Magnetic/exports/so101_positive_lock_slider.step": (
+                99_584,
+                "0d0f77a772172963fdc3a63470ff936cfd52c4e4b96db78a1cdf6cc4f14eb7f1",
+            ),
+            "QuickChange/SO101_Magnetic/exports/hardware_McMaster_90318A720_shoulder_screw.step": (
+                13_596,
+                "1a302d3674952d881df75e25e47b64a60b23a72b66fde48c35a0924ca1df6990",
+            ),
+            "QuickChange/SO101_Magnetic/exports/hardware_DIN934_M3_lock_stud_nut.step": (
+                27_468,
+                "7f19e5abdb33083e7d179df78d5dc1a130140eadb74a3b22aa2d8f3c078266c7",
+            ),
+        }
+        for relative_path, (expected_bytes, expected_sha256) in expected_sources.items():
+            self.assertIn(relative_path, file_records)
+            record = file_records[relative_path]
+            path = REPOSITORY_ROOT / relative_path
+            self.assertEqual(record.get("bytes"), expected_bytes, record)
+            self.assertEqual(record.get("sha256"), expected_sha256, record)
+            self.assertEqual(path.stat().st_size, expected_bytes, path)
+            self.assertEqual(sha256_file(path), expected_sha256, path)
+
+        mechanism = report.get("mechanism_preservation")
+        self.assertIsInstance(mechanism, dict, report)
+        self.assertIs(mechanism.get("passed"), True, mechanism)
+        self.assertTrue(all(mechanism.get("checks", {}).values()), mechanism)
+        self.assertEqual(
+            mechanism.get("slider_bbox_native_mm"),
+            {"x_mm": [-16.4, 24.0], "y_mm": [-4.4, 4.4], "z_mm": [0.0, 1.6]},
+        )
+        self.assertAlmostEqual(
+            float(mechanism.get("slider_volume_mm3")),
+            237.20848051509753,
+            places=9,
+        )
+        self.assertEqual(mechanism.get("stud_centres_xy_mm"), [[-12.0, 0.0], [12.0, 0.0]])
+        self.assertEqual(float(mechanism.get("slider_travel_mm")), 3.0)
+        self.assertEqual(float(mechanism.get("keyhole_entry_diameter_mm")), 6.5)
+        self.assertEqual(float(mechanism.get("keyhole_neck_width_mm")), 4.25)
+        self.assertEqual(float(mechanism.get("stud_shoulder_diameter_mm")), 4.0)
+        self.assertEqual(float(mechanism.get("stud_head_diameter_mm")), 6.0)
+
+        qc = self.demo.qc
+        self.assertEqual(
+            qc.POSITIVE_LOCK_SLIDER_STEP_SHA256,
+            expected_sources[
+                "QuickChange/SO101_Magnetic/exports/so101_positive_lock_slider.step"
+            ][1],
+        )
+        self.assertEqual(qc.POSITIVE_LOCK_SLIDER_JOINT_RANGE_M, (0.0, 0.003))
+        self.assertEqual(qc.POSITIVE_LOCK_SLIDER_BASE_POS_M, (0.003, 0.0, 0.0047))
+        self.assertEqual(qc.POSITIVE_LOCK_SLIDER_SPRINGREF_M, 0.0036)
+        self.assertEqual(qc.POSITIVE_LOCK_SLIDER_STIFFNESS_N_M, 980.0)
+        self.assertEqual(qc.POSITIVE_LOCK_SLIDER_ABSOLUTE_DEFLECTION_MM, 0.005)
+        self.assertEqual(qc.POSITIVE_LOCK_SLIDER_ANGULAR_DEFLECTION_RAD, 0.3)
+        self.assertEqual(qc.POSITIVE_LOCK_SLIDER_VOID_EXPANSION_MM, 0.010)
+
+        mujoco = self.demo.mujoco
+        body_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_BODY, "qc_positive_lock_slider"
+        )
+        joint_id = mujoco.mj_name2id(
+            self.model,
+            mujoco.mjtObj.mjOBJ_JOINT,
+            "qc_positive_lock_slider_joint",
+        )
+        self.assertGreaterEqual(body_id, 0, "physical positive-lock slider body missing")
+        self.assertGreaterEqual(joint_id, 0, "physical positive-lock slider joint missing")
+        self.assertEqual(
+            int(self.model.body_parentid[body_id]),
+            int(self.model.body("robot_plate_frame").id),
+        )
+        np.testing.assert_allclose(
+            self.model.body_pos[body_id], qc.POSITIVE_LOCK_SLIDER_BASE_POS_M,
+            rtol=0.0, atol=1.0e-12,
+        )
+        self.assertEqual(
+            int(self.model.jnt_type[joint_id]), int(mujoco.mjtJoint.mjJNT_SLIDE)
+        )
+        np.testing.assert_allclose(
+            self.model.jnt_axis[joint_id], [1.0, 0.0, 0.0], rtol=0.0, atol=1.0e-12
+        )
+        np.testing.assert_allclose(
+            self.model.jnt_range[joint_id], qc.POSITIVE_LOCK_SLIDER_JOINT_RANGE_M,
+            rtol=0.0, atol=1.0e-12,
+        )
+        self.assertEqual(
+            float(self.model.jnt_stiffness[joint_id]),
+            qc.POSITIVE_LOCK_SLIDER_STIFFNESS_N_M,
+        )
+        qpos_address = int(self.model.jnt_qposadr[joint_id])
+        self.assertEqual(float(self.model.qpos0[qpos_address]), 0.003)
+        self.assertEqual(
+            float(self.model.qpos_spring[qpos_address]),
+            qc.POSITIVE_LOCK_SLIDER_SPRINGREF_M,
+        )
+
+        prefixes = (
+            "qc_col_lock_slider_bridge_part_",
+            "qc_col_lock_slider_left_lobe_part_",
+            "qc_col_lock_slider_right_lobe_part_",
+            "qc_col_lock_slider_tab_part_",
+        )
+        groups: dict[str, list[int]] = {prefix: [] for prefix in prefixes}
+        active_direct: list[int] = []
+        for geom_id in range(self.model.ngeom):
+            if int(self.model.geom_bodyid[geom_id]) != body_id:
+                continue
+            if not (
+                int(self.model.geom_contype[geom_id])
+                or int(self.model.geom_conaffinity[geom_id])
+            ):
+                continue
+            active_direct.append(geom_id)
+            name = str(self.model.geom(geom_id).name)
+            matches = [prefix for prefix in prefixes if name.startswith(prefix)]
+            self.assertEqual(len(matches), 1, name)
+            suffix = name.removeprefix(matches[0])
+            self.assertTrue(suffix.isdigit(), name)
+            groups[matches[0]].append(geom_id)
+        self.assertTrue(active_direct, "slider has no active collision geometry")
+        self.assertTrue(all(groups.values()), groups)
+        active_names = [str(self.model.geom(index).name) for index in active_direct]
+        self.assertEqual(len(active_names), len(set(active_names)))
+        for prefix, geom_ids in groups.items():
+            suffixes = sorted(
+                int(str(self.model.geom(index).name).removeprefix(prefix))
+                for index in geom_ids
+            )
+            self.assertEqual(suffixes, list(range(len(suffixes))), prefix)
+
+        from scipy.spatial import ConvexHull
+
+        quaternion_snapshot = np.array(self.model.geom_quat, copy=True)
+        piece_vertices: dict[int, np.ndarray] = {}
+        piece_equations: dict[int, np.ndarray] = {}
+        proxy_volume_mm3 = 0.0
+        for geom_id in active_direct:
+            name = str(self.model.geom(geom_id).name)
+            self.assertEqual(
+                int(self.model.geom_type[geom_id]),
+                int(mujoco.mjtGeom.mjGEOM_MESH),
+                name,
+            )
+            vertices = self._compiled_geom_vertices_in_owner_frame(geom_id)
+            piece_vertices[geom_id] = vertices
+            hull = ConvexHull(vertices)
+            piece_equations[geom_id] = np.asarray(
+                hull.equations, dtype=np.float64
+            )
+            proxy_volume_mm3 += float(hull.volume) * 1.0e9
+            for tool in ("gripper", "spoon", "whisk"):
+                for side in ("left", "right"):
+                    stud_id = int(
+                        self.model.geom(
+                            f"{tool}_lock_stud_{side}_shoulder_collision"
+                        ).id
+                    )
+                    self.assertTrue(
+                        (int(self.model.geom_contype[geom_id]) & int(self.model.geom_conaffinity[stud_id]))
+                        or (int(self.model.geom_contype[stud_id]) & int(self.model.geom_conaffinity[geom_id])),
+                        (name, self.model.geom(stud_id).name),
+                    )
+        np.testing.assert_array_equal(self.model.geom_quat, quaternion_snapshot)
+        all_vertices = np.concatenate(list(piece_vertices.values()), axis=0)
+        np.testing.assert_allclose(
+            np.min(all_vertices, axis=0), [-0.0164, -0.0044, 0.0],
+            rtol=0.0,
+            atol=1.0e-3 * qc.POSITIVE_LOCK_SLIDER_ABSOLUTE_DEFLECTION_MM,
+        )
+        np.testing.assert_allclose(
+            np.max(all_vertices, axis=0), [0.024, 0.0044, 0.0016],
+            rtol=0.0,
+            atol=1.0e-3 * qc.POSITIVE_LOCK_SLIDER_ABSOLUTE_DEFLECTION_MM,
+        )
+        self.assertLessEqual(proxy_volume_mm3, 237.20848051509753 + 1.0e-6)
+        self.assertGreaterEqual(proxy_volume_mm3, 0.995 * 237.20848051509753)
+
+        # Functional void negatives: adding even a small hidden component in
+        # an entry hole, keyhole neck, or guide slot must make this test red.
+        void_points_mm: list[tuple[float, float, float]] = []
+        for x_mm in (-12.0, 12.0):
+            void_points_mm.append((x_mm, 0.0, 0.8))
+            void_points_mm.extend(
+                (
+                    x_mm + 2.5 * math.cos(index * math.pi / 4.0),
+                    2.5 * math.sin(index * math.pi / 4.0),
+                    0.8,
+                )
+                for index in range(8)
+            )
+        void_points_mm.extend(
+            [(-14.5, 0.0, 0.8), (9.5, 0.0, 0.8), (-1.5, 0.0, 0.8)]
+        )
+        for point_mm in void_points_mm:
+            point_m = 0.001 * np.asarray(point_mm, dtype=np.float64)
+            filled_by = [
+                str(self.model.geom(geom_id).name)
+                for geom_id, equations in piece_equations.items()
+                if np.all(
+                    equations[:, :3] @ point_m + equations[:, 3] <= 1.0e-10
+                )
+            ]
+            self.assertEqual(filled_by, [], f"slider proxy fills source void {point_mm}")
+
+        data = mujoco.MjData(self.model)
+        self.demo.initialize(self.model, data)
+        self.assertAlmostEqual(float(data.qpos[qpos_address]), 0.003, places=9)
+
+        parent_id = int(self.model.body_parentid[body_id])
+
+        def relative_slider_pose(qpos_m: float) -> tuple[np.ndarray, np.ndarray]:
+            data.qpos[qpos_address] = qpos_m
+            mujoco.mj_forward(self.model, data)
+            parent_rotation = np.asarray(
+                data.xmat[parent_id], dtype=np.float64
+            ).reshape(3, 3)
+            slider_rotation = np.asarray(
+                data.xmat[body_id], dtype=np.float64
+            ).reshape(3, 3)
+            position = parent_rotation.T @ (
+                np.asarray(data.xpos[body_id], dtype=np.float64)
+                - np.asarray(data.xpos[parent_id], dtype=np.float64)
+            )
+            rotation = parent_rotation.T @ slider_rotation
+            return position, rotation
+
+        unlocked_position, unlocked_rotation = relative_slider_pose(0.0)
+        locked_position, locked_rotation = relative_slider_pose(0.003)
+        np.testing.assert_allclose(
+            unlocked_position, [0.0, 0.0, 0.0047], rtol=0.0, atol=1.0e-12
+        )
+        np.testing.assert_allclose(
+            locked_position, [0.003, 0.0, 0.0047], rtol=0.0, atol=1.0e-12
+        )
+        np.testing.assert_allclose(
+            unlocked_rotation, np.eye(3), rtol=0.0, atol=1.0e-12
+        )
+        np.testing.assert_allclose(
+            locked_rotation, np.eye(3), rtol=0.0, atol=1.0e-12
+        )
 
     def test_withdrawal_threshold_is_exactly_safe_against_source_cam(self) -> None:
         cad = self.clearance.CAD
