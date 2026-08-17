@@ -958,6 +958,213 @@ class SimCadPlacementContractTests(unittest.TestCase):
             @ principal_rotation.T
         )
 
+    def _subtree_mass_properties_in_root_frame(
+        self,
+        data: Any,
+        root_id: int,
+        *,
+        inertia_scale_overrides: dict[int, float] | None = None,
+    ) -> tuple[float, np.ndarray, np.ndarray, list[int]]:
+        """Compose a moving body subtree about its instantaneous total COM."""
+
+        descendants: list[int] = []
+        for body_id in range(1, self.model.nbody):
+            ancestor = body_id
+            while ancestor not in (0, root_id):
+                ancestor = int(self.model.body_parentid[ancestor])
+            if ancestor == root_id:
+                descendants.append(body_id)
+        if not descendants or descendants.count(root_id) != 1:
+            raise AssertionError(
+                f"invalid subtree roster for {self.model.body(root_id).name}: "
+                f"{descendants}"
+            )
+        masses_kg = np.asarray(
+            [float(self.model.body_mass[body_id]) for body_id in descendants],
+            dtype=np.float64,
+        )
+        if np.any(masses_kg <= 0.0) or not np.all(np.isfinite(masses_kg)):
+            raise AssertionError(f"invalid subtree body masses: {masses_kg}")
+        total_mass_kg = float(math.fsum(float(value) for value in masses_kg))
+        root_rotation_world = np.asarray(
+            data.xmat[root_id], dtype=np.float64
+        ).reshape(3, 3)
+        root_position_world = np.asarray(data.xpos[root_id], dtype=np.float64)
+        centers_root_m = np.asarray(
+            [
+                root_rotation_world.T
+                @ (
+                    np.asarray(data.xipos[body_id], dtype=np.float64)
+                    - root_position_world
+                )
+                for body_id in descendants
+            ],
+            dtype=np.float64,
+        )
+        composite_com_m = np.sum(
+            masses_kg[:, None] * centers_root_m, axis=0
+        ) / total_mass_kg
+        composite_inertia_kg_m2 = np.zeros((3, 3), dtype=np.float64)
+        scales = inertia_scale_overrides or {}
+        for body_id, mass_kg, center_root_m in zip(
+            descendants, masses_kg, centers_root_m, strict=True
+        ):
+            body_rotation_world = np.asarray(
+                data.xmat[body_id], dtype=np.float64
+            ).reshape(3, 3)
+            body_to_root_rotation = root_rotation_world.T @ body_rotation_world
+            body_inertia_root = (
+                body_to_root_rotation
+                @ self._compiled_body_inertia_tensor(body_id)
+                @ body_to_root_rotation.T
+            ) * float(scales.get(body_id, 1.0))
+            offset_m = center_root_m - composite_com_m
+            composite_inertia_kg_m2 += body_inertia_root + float(mass_kg) * (
+                float(offset_m @ offset_m) * np.eye(3)
+                - np.outer(offset_m, offset_m)
+            )
+        return (
+            total_mass_kg,
+            composite_com_m,
+            composite_inertia_kg_m2,
+            descendants,
+        )
+
+    def _isolated_slider_return_result(
+        self,
+        *,
+        spring_enabled: bool,
+        pin_at_unlocked: bool,
+        maximum_time_s: float = 1.0,
+    ) -> dict[str, Any]:
+        """Run a minimal equality-controlled copy using only ``mj_step``."""
+
+        mujoco = self.demo.mujoco
+        slider_body = self.xml_root.find(
+            ".//body[@name='qc_positive_lock_slider']"
+        )
+        self.assertIsNotNone(slider_body)
+        inertial = slider_body.find("./inertial")
+        joint = slider_body.find("./joint[@name='qc_positive_lock_slider_joint']")
+        self.assertIsNotNone(inertial)
+        self.assertIsNotNone(joint)
+        stiffness = float(joint.get("stiffness", "nan")) if spring_enabled else 0.0
+        equality_active = "true" if pin_at_unlocked else "false"
+        # Joint equalities are expressed relative to qpos0=ref.  A -3 mm
+        # constant therefore pins the physical q=0 unlocked state.
+        pin_offset_m = -float(joint.get("ref", "0"))
+        limit_solver_attributes = ""
+        for attribute in ("solreflimit", "solimplimit"):
+            if attribute in joint.attrib:
+                limit_solver_attributes += (
+                    f' {attribute}="{joint.attrib[attribute]}"'
+                )
+        xml = f"""
+<mujoco model="isolated_positive_lock_return">
+  <option timestep="{float(self.model.opt.timestep):.17g}" gravity="0 0 0"/>
+  <worldbody>
+    <body name="slider">
+      <inertial pos="{inertial.get('pos')}" mass="{inertial.get('mass')}"
+                fullinertia="{inertial.get('fullinertia')}"/>
+      <joint name="slider_joint" type="slide" axis="1 0 0"
+             range="{joint.get('range')}" limited="true"
+             ref="{joint.get('ref')}" stiffness="{stiffness:.17g}"
+             springref="{joint.get('springref')}"
+             damping="{joint.get('damping')}"
+             frictionloss="{joint.get('frictionloss')}"
+             armature="{joint.get('armature')}"{limit_solver_attributes}/>
+    </body>
+  </worldbody>
+  <equality>
+    <joint name="unlocked_pin" joint1="slider_joint"
+           polycoef="{pin_offset_m:.17g} 0 0 0 0"
+           active="{equality_active}" solref="0.0001 1"
+           solimp="0.999 0.9999 0.00001"/>
+  </equality>
+  <keyframe><key name="unlocked" qpos="0"/></keyframe>
+</mujoco>
+"""
+        model = mujoco.MjModel.from_xml_string(xml)
+        data = mujoco.MjData(model)
+        mujoco.mj_resetDataKeyframe(model, data, 0)
+        self.assertEqual(float(data.qpos[0]), 0.0)
+        self.assertEqual(float(data.qvel[0]), 0.0)
+        self.assertEqual(bool(data.eq_active[0]), pin_at_unlocked)
+
+        timestep_s = float(model.opt.timestep)
+        dwell_samples = int(math.ceil(0.050 / timestep_s))
+        window_q_m: list[float] = []
+        window_qvel_m_s: list[float] = []
+        trajectory_min_q_m = math.inf
+        trajectory_max_q_m = -math.inf
+        maximum_steps = int(math.ceil(maximum_time_s / timestep_s))
+        for _ in range(maximum_steps):
+            mujoco.mj_step(model, data)
+            q_m = float(data.qpos[0])
+            qvel_m_s = float(data.qvel[0])
+            trajectory_min_q_m = min(trajectory_min_q_m, q_m)
+            trajectory_max_q_m = max(trajectory_max_q_m, q_m)
+            window_q_m.append(q_m)
+            window_qvel_m_s.append(qvel_m_s)
+            if len(window_q_m) > dwell_samples:
+                window_q_m.pop(0)
+                window_qvel_m_s.pop(0)
+
+        lower_range_tolerance_m = 0.00002
+        upper_range_tolerance_m = 0.00005
+        locked_band_min_m = 0.00295
+        locked_band_max_m = 0.00302
+        maximum_abs_qvel_m_s = 0.005
+        final_window_complete = len(window_q_m) == dwell_samples
+        final_window_in_band = bool(
+            final_window_complete
+            and min(window_q_m) >= locked_band_min_m
+            and max(window_q_m) <= locked_band_max_m
+        )
+        final_window_low_speed = bool(
+            final_window_complete
+            and max(abs(value) for value in window_qvel_m_s)
+            <= maximum_abs_qvel_m_s
+        )
+        trajectory_within_range = bool(
+            trajectory_min_q_m >= -lower_range_tolerance_m
+            and trajectory_max_q_m <= 0.003 + upper_range_tolerance_m
+        )
+        passed = bool(
+            spring_enabled
+            and not pin_at_unlocked
+            and trajectory_within_range
+            and final_window_in_band
+            and final_window_low_speed
+        )
+        return {
+            "spring_enabled": spring_enabled,
+            "pin_equality_active": pin_at_unlocked,
+            "direct_state_writes_after_initialization": 0,
+            "physics_timestep_s": timestep_s,
+            "simulated_time_s": float(data.time),
+            "required_dwell_s": 0.050,
+            "dwell_sample_count": dwell_samples,
+            "locked_band_m": [locked_band_min_m, locked_band_max_m],
+            "maximum_abs_qvel_m_s": maximum_abs_qvel_m_s,
+            "trajectory_range_m": [
+                -lower_range_tolerance_m,
+                0.003 + upper_range_tolerance_m,
+            ],
+            "trajectory_min_q_m": trajectory_min_q_m,
+            "trajectory_max_q_m": trajectory_max_q_m,
+            "trajectory_within_range": trajectory_within_range,
+            "final_window_min_q_m": min(window_q_m),
+            "final_window_max_q_m": max(window_q_m),
+            "final_window_max_abs_qvel_m_s": max(
+                abs(value) for value in window_qvel_m_s
+            ),
+            "final_window_in_band": final_window_in_band,
+            "final_window_low_speed": final_window_low_speed,
+            "passed": passed,
+            "release_ready": False,
+        }
+
     @staticmethod
     def _full_inertia_vector(matrix: np.ndarray) -> np.ndarray:
         return np.asarray(
@@ -2071,6 +2278,120 @@ class SimCadPlacementContractTests(unittest.TestCase):
                 geom.get("name"),
             )
 
+    def test_positive_lock_slider_joint_dynamics_are_explicit(self) -> None:
+        """Reject servo-default inheritance on the passive lock slide."""
+
+        body_xml = self.xml_root.find(".//body[@name='qc_positive_lock_slider']")
+        self.assertIsNotNone(body_xml)
+        joint_xml = body_xml.find(
+            "./joint[@name='qc_positive_lock_slider_joint']"
+        )
+        self.assertIsNotNone(joint_xml)
+        explicit_values: dict[str, float] = {}
+        for attribute in ("armature", "frictionloss", "damping"):
+            self.assertIn(
+                attribute,
+                joint_xml.attrib,
+                f"slider joint must explicitly override inherited {attribute}",
+            )
+            value = float(joint_xml.attrib[attribute])
+            self.assertTrue(math.isfinite(value), (attribute, value))
+            self.assertGreaterEqual(value, 0.0, attribute)
+            explicit_values[attribute] = value
+
+        joint_id = int(self.model.joint("qc_positive_lock_slider_joint").id)
+        dof_id = int(self.model.jnt_dofadr[joint_id])
+        compiled_values = {
+            "armature": float(self.model.dof_armature[dof_id]),
+            "frictionloss": float(self.model.dof_frictionloss[dof_id]),
+            "damping": float(self.model.dof_damping[dof_id]),
+        }
+        self.assertEqual(compiled_values, explicit_values)
+        slider_body_id = int(self.model.body("qc_positive_lock_slider").id)
+        expected_critical_damping = 2.0 * math.sqrt(
+            float(self.model.jnt_stiffness[joint_id])
+            * float(self.model.body_mass[slider_body_id])
+        )
+        self.assertEqual(explicit_values["armature"], 0.0)
+        self.assertEqual(explicit_values["frictionloss"], 0.0)
+        self.assertAlmostEqual(
+            explicit_values["damping"],
+            expected_critical_damping,
+            delta=1.0e-12,
+            msg="passive slider damping must be derived from exact source mass",
+        )
+        expected_solref = np.asarray([0.0005, 1.0], dtype=np.float64)
+        expected_solimp = np.asarray(
+            [0.99, 0.9999, 0.00001, 0.5, 2.0], dtype=np.float64
+        )
+        for attribute in ("solreflimit", "solimplimit"):
+            self.assertIn(
+                attribute,
+                joint_xml.attrib,
+                f"slider limit must explicitly declare {attribute}",
+            )
+        np.testing.assert_allclose(
+            self._vector(joint_xml, "solreflimit", "nan nan"),
+            expected_solref,
+            rtol=0.0,
+            atol=1.0e-12,
+        )
+        np.testing.assert_allclose(
+            self._vector(
+                joint_xml, "solimplimit", "nan nan nan nan nan"
+            ),
+            expected_solimp,
+            rtol=0.0,
+            atol=1.0e-12,
+        )
+        np.testing.assert_allclose(
+            self.model.jnt_solref[joint_id],
+            expected_solref,
+            rtol=0.0,
+            atol=1.0e-12,
+        )
+        np.testing.assert_allclose(
+            self.model.jnt_solimp[joint_id],
+            expected_solimp,
+            rtol=0.0,
+            atol=1.0e-12,
+        )
+
+    def test_isolated_positive_lock_spring_return_and_negative_controls(
+        self,
+    ) -> None:
+        """Require a bounded equality-off return and prove both negatives fail."""
+
+        spring_removed = self._isolated_slider_return_result(
+            spring_enabled=False, pin_at_unlocked=False
+        )
+        q_pinned = self._isolated_slider_return_result(
+            spring_enabled=True, pin_at_unlocked=True
+        )
+        self.assertIs(spring_removed["passed"], False, spring_removed)
+        self.assertIs(q_pinned["passed"], False, q_pinned)
+        self.assertLess(
+            spring_removed["final_window_max_q_m"],
+            spring_removed["locked_band_m"][0],
+            spring_removed,
+        )
+        self.assertLess(
+            q_pinned["final_window_max_q_m"],
+            q_pinned["locked_band_m"][0],
+            q_pinned,
+        )
+
+        nominal = self._isolated_slider_return_result(
+            spring_enabled=True, pin_at_unlocked=False
+        )
+        self.assertEqual(nominal["direct_state_writes_after_initialization"], 0)
+        self.assertIs(
+            nominal["passed"],
+            True,
+            "the equality-off slider must remain inside its declared range and "
+            "dwell in [2.95, 3.02] mm at <=5 mm/s for 50 ms",
+        )
+
     def test_positive_lock_hardware_uses_exact_source_inertials(self) -> None:
         """Stud/nut collision proxies may not inflate or double-count mass."""
 
@@ -2231,8 +2552,10 @@ class SimCadPlacementContractTests(unittest.TestCase):
                 self.assertIsNotNone(geom_xml, name)
                 self.assertEqual(float(geom_xml.get("mass", "nan")), 0.0, name)
 
-    def test_complete_matcha_tool_mass_and_com_match_cad_ledgers(self) -> None:
-        """Keep payload mass closure separate from lock-mechanism closure."""
+    def test_complete_matcha_tool_mass_com_and_inertia_match_cad_ledgers(
+        self,
+    ) -> None:
+        """Compose every moving descendant without double-counting hardware."""
 
         self.maxDiff = None
         manifest = load_json(CAD_MANIFEST, "matcha CAD manifest")
@@ -2252,45 +2575,57 @@ class SimCadPlacementContractTests(unittest.TestCase):
             )
             expected_mass_kg = float(ledger["total_mass_kg"])
             expected_com_m = 0.001 * np.asarray(ledger["com_mm"], dtype=np.float64)
-            root_id = int(self.model.body(f"tool_{runtime_tool}").id)
-            descendants: list[int] = []
-            for body_id in range(1, self.model.nbody):
-                ancestor = body_id
-                while ancestor not in (0, root_id):
-                    ancestor = int(self.model.body_parentid[ancestor])
-                if ancestor == root_id:
-                    descendants.append(body_id)
-            observed_mass_kg = math.fsum(
-                float(self.model.body_mass[body_id]) for body_id in descendants
+            expected_inertia_kg_m2 = np.asarray(
+                ledger["inertia_about_com_kg_m2"], dtype=np.float64
             )
+            self.assertEqual(expected_inertia_kg_m2.shape, (3, 3))
+            np.testing.assert_allclose(
+                expected_inertia_kg_m2,
+                expected_inertia_kg_m2.T,
+                rtol=0.0,
+                atol=1.0e-15,
+            )
+            self.assertTrue(
+                np.all(np.linalg.eigvalsh(expected_inertia_kg_m2) > 0.0),
+                expected_inertia_kg_m2,
+            )
+            root_id = int(self.model.body(f"tool_{runtime_tool}").id)
+            (
+                observed_mass_kg,
+                observed_com_m,
+                observed_inertia_kg_m2,
+                descendants,
+            ) = self._subtree_mass_properties_in_root_frame(data, root_id)
+            descendant_names = [
+                str(self.model.body(body_id).name) for body_id in descendants
+            ]
+            hardware_body_name = f"tool_{runtime_tool}_positive_lock_hardware"
+            self.assertEqual(
+                descendant_names.count(hardware_body_name),
+                1,
+                "the source-derived stud/nut inertial must be composed exactly once",
+            )
+            if runtime_tool == "whisk":
+                self.assertTrue(
+                    {
+                        "whisk_eccentric_rotor",
+                        "whisk_compliance_carriage",
+                    }.issubset(descendant_names),
+                    descendant_names,
+                )
             self.assertAlmostEqual(
                 observed_mass_kg,
                 float(self.model.body_subtreemass[root_id]),
                 delta=1.0e-15,
             )
-            root_rotation = np.asarray(
-                data.xmat[root_id], dtype=np.float64
-            ).reshape(3, 3)
-            root_position = np.asarray(data.xpos[root_id], dtype=np.float64)
-            observed_com_m = sum(
-                (
-                    float(self.model.body_mass[body_id])
-                    * (
-                        root_rotation.T
-                        @ (
-                            np.asarray(data.xipos[body_id], dtype=np.float64)
-                            - root_position
-                        )
-                    )
-                    for body_id in descendants
-                ),
-                start=np.zeros(3, dtype=np.float64),
-            ) / observed_mass_kg
             mass_error_kg = observed_mass_kg - expected_mass_kg
             com_error_mm = 1000.0 * (observed_com_m - expected_com_m)
+            inertia_error_kg_m2 = (
+                observed_inertia_kg_m2 - expected_inertia_kg_m2
+            )
             if abs(mass_error_kg) > 1.0e-9 or float(
                 np.linalg.norm(com_error_mm)
-            ) > 0.001:
+            ) > 0.001 or float(np.linalg.norm(inertia_error_kg_m2)) > 1.0e-10:
                 mismatches[runtime_tool] = {
                     "expected_mass_kg": expected_mass_kg,
                     "observed_mass_kg": observed_mass_kg,
@@ -2298,15 +2633,70 @@ class SimCadPlacementContractTests(unittest.TestCase):
                     "expected_com_mm": (1000.0 * expected_com_m).tolist(),
                     "observed_com_mm": (1000.0 * observed_com_m).tolist(),
                     "com_error_mm": com_error_mm.tolist(),
-                    "descendant_bodies": [
-                        str(self.model.body(body_id).name)
-                        for body_id in descendants
-                    ],
+                    "expected_inertia_about_com_kg_m2": (
+                        expected_inertia_kg_m2.tolist()
+                    ),
+                    "observed_inertia_about_com_kg_m2": (
+                        observed_inertia_kg_m2.tolist()
+                    ),
+                    "inertia_error_kg_m2": inertia_error_kg_m2.tolist(),
+                    "inertia_error_frobenius_kg_m2": float(
+                        np.linalg.norm(inertia_error_kg_m2)
+                    ),
+                    "descendant_bodies": descendant_names,
                 }
         self.assertEqual(
             mismatches,
             {},
-            "runtime payload inertials must close the complete CAD mass ledger",
+            "runtime payload mass, COM, and inertia must close the complete CAD ledger",
+        )
+
+    def test_mass_property_oracle_detects_altered_moving_child_inertia(self) -> None:
+        """A moving whisk child inertia mutation must change the composed tensor."""
+
+        mujoco = self.demo.mujoco
+        data = mujoco.MjData(self.model)
+        self.demo.initialize(self.model, data)
+        mujoco.mj_forward(self.model, data)
+        root_id = int(self.model.body("tool_whisk").id)
+        child_id = int(self.model.body("whisk_compliance_carriage").id)
+        baseline = self._subtree_mass_properties_in_root_frame(data, root_id)
+        altered = self._subtree_mass_properties_in_root_frame(
+            data, root_id, inertia_scale_overrides={child_id: 1.10}
+        )
+        manifest = load_json(CAD_MANIFEST, "matcha CAD manifest")
+        ledger = load_json(
+            CAD_ROOT
+            / str(
+                tool_from_manifest(manifest, "matcha_whisk")[
+                    "mass_ledger_path"
+                ]
+            ),
+            "matcha whisk mass ledger",
+        )
+        expected_mass_kg = float(ledger["total_mass_kg"])
+        expected_com_m = 0.001 * np.asarray(ledger["com_mm"], dtype=np.float64)
+        expected_inertia_kg_m2 = np.asarray(
+            ledger["inertia_about_com_kg_m2"], dtype=np.float64
+        )
+        self.assertAlmostEqual(baseline[0], expected_mass_kg, delta=1.0e-9)
+        np.testing.assert_allclose(
+            baseline[1], expected_com_m, rtol=0.0, atol=1.0e-6
+        )
+        np.testing.assert_allclose(
+            baseline[2], expected_inertia_kg_m2, rtol=0.0, atol=1.0e-10
+        )
+        self.assertEqual(baseline[0], altered[0])
+        np.testing.assert_allclose(baseline[1], altered[1], rtol=0.0, atol=0.0)
+        inertia_delta = altered[2] - baseline[2]
+        self.assertGreater(float(np.linalg.norm(inertia_delta)), 1.0e-10)
+        self.assertFalse(
+            np.allclose(
+                expected_inertia_kg_m2,
+                altered[2],
+                rtol=0.0,
+                atol=1.0e-10,
+            )
         )
 
     def test_positive_lock_slider_is_source_bound_physical_mechanism(self) -> None:

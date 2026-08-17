@@ -120,11 +120,23 @@ DEVELOPMENT_TESTS = (
     ),
     qualified(
         "SimCadPlacementContractTests",
+        "test_positive_lock_slider_joint_dynamics_are_explicit",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
+        "test_isolated_positive_lock_spring_return_and_negative_controls",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
         "test_positive_lock_hardware_uses_exact_source_inertials",
     ),
     qualified(
         "SimCadPlacementContractTests",
-        "test_complete_matcha_tool_mass_and_com_match_cad_ledgers",
+        "test_complete_matcha_tool_mass_com_and_inertia_match_cad_ledgers",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
+        "test_mass_property_oracle_detects_altered_moving_child_inertia",
     ),
     qualified(
         "SimCadPlacementContractTests",

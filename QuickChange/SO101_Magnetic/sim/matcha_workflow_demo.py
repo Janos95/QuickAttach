@@ -17,6 +17,7 @@ import math
 import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +32,36 @@ REPO_ROOT = HERE.parents[2]
 ROBOT_XML = REPO_ROOT / "Simulation" / "SO101" / "so101_new_calib.xml"
 SCENE_XML = HERE / "matcha_workflow_scene.xml"
 CONFIG_PATH = HERE / "matcha_tool_geometry.json"
+MATCHA_CAD_EXPORTS = HERE.parent / "matcha_tools" / "exports"
+PAYLOAD_MASS_LEDGER_PATHS = {
+    "spoon": MATCHA_CAD_EXPORTS / "so101_matcha_spoon_mass_ledger.json",
+    "whisk": MATCHA_CAD_EXPORTS / "so101_matcha_whisk_mass_ledger.json",
+}
+PAYLOAD_MASS_LEDGER_SHA256 = {
+    "spoon": "576bec2226d22644feb0d2a196c795804f5f0e6dd947562dccfd0ff9cb4cc2a4",
+    "whisk": "9403fd9a3ec6474fe152b636526c378695e5c8e044eafa1ff963a8b287369fc0",
+}
+WHISK_ROTOR_LEDGER_COMPONENT_IDS = (
+    "whisk_motor_shaft",
+    "whisk_eccentric_rotor",
+    "whisk_eccentric_pin",
+    "whisk_rotor_counterweight",
+)
+WHISK_CARRIAGE_LEDGER_COMPONENT_IDS = (
+    "whisk_carriage_x",
+    "whisk_compliance_carriage",
+    "whisk_compliance_spring",
+    "whisk_food_grade_bellows",
+    "whisk_brush_hub",
+    "whisk_bamboo_bristles",
+    "whisk_brush_collision_envelope",
+)
+LEDGER_LOCK_HARDWARE_COMPONENT_IDS = (
+    "shoulder_lock_stud_1_McMaster_90318A720",
+    "lock_stud_nut_1_DIN934_M3",
+    "shoulder_lock_stud_2_McMaster_90318A720",
+    "lock_stud_nut_2_DIN934_M3",
+)
 
 ARM_JOINTS = (
     "shoulder_pan",
@@ -317,7 +348,12 @@ CORE_POSITIVE_LOCK_CONTRACT = {
             ],
         },
     ],
-    "damping_authority": None,
+    "slider_damping_n_s_m": qc.POSITIVE_LOCK_SLIDER_DAMPING_N_S_M,
+    "damping_authority": "critical_damping_2_sqrt_exact_step_mass_times_spring_k",
+    "slider_frictionloss_n": 0.0,
+    "slider_armature_kg": 0.0,
+    "slider_limit_solref": list(qc.POSITIVE_LOCK_SLIDER_LIMIT_SOLREF),
+    "slider_limit_solimp": list(qc.POSITIVE_LOCK_SLIDER_LIMIT_SOLIMP),
     "dynamic_settling_release_ready": False,
     "source_artifact": (
         "QuickChange/SO101_Magnetic/exports/so101_positive_lock_slider.step"
@@ -620,6 +656,292 @@ def _add_visual_twin(
     body.append(visual)
 
 
+def _parallel_axis_term(mass_kg: float, com_m: np.ndarray) -> np.ndarray:
+    return mass_kg * (
+        float(com_m @ com_m) * np.eye(3, dtype=np.float64)
+        - np.outer(com_m, com_m)
+    )
+
+
+def _validated_mass_properties(
+    *, mass_kg: float, com_m: Any, inertia_about_com_kg_m2: Any, label: str
+) -> dict[str, Any]:
+    com = np.asarray(com_m, dtype=np.float64)
+    inertia = np.asarray(inertia_about_com_kg_m2, dtype=np.float64)
+    if not math.isfinite(mass_kg) or mass_kg <= 0.0:
+        raise RuntimeError(f"{label} has invalid mass {mass_kg}")
+    if com.shape != (3,) or not np.all(np.isfinite(com)):
+        raise RuntimeError(f"{label} has invalid COM {com}")
+    if inertia.shape != (3, 3) or not np.all(np.isfinite(inertia)):
+        raise RuntimeError(f"{label} has invalid inertia tensor")
+    if not np.allclose(inertia, inertia.T, rtol=0.0, atol=1.0e-15):
+        raise RuntimeError(f"{label} inertia tensor is not symmetric")
+    inertia = 0.5 * (inertia + inertia.T)
+    if float(np.min(np.linalg.eigvalsh(inertia))) <= 0.0:
+        raise RuntimeError(f"{label} inertia tensor is not positive definite")
+    return {
+        "mass_kg": float(mass_kg),
+        "com_tool_m": com,
+        "inertia_about_com_tool_kg_m2": inertia,
+    }
+
+
+def _aggregate_ledger_components(
+    component_records: list[dict[str, Any]], *, label: str
+) -> dict[str, Any]:
+    positive_records = [
+        record for record in component_records if float(record["mass_kg"]) > 0.0
+    ]
+    if not positive_records:
+        raise RuntimeError(f"{label} has no positive-mass ledger components")
+    mass_kg = math.fsum(float(record["mass_kg"]) for record in positive_records)
+    moment = np.sum(
+        [
+            float(record["mass_kg"])
+            * (0.001 * np.asarray(record["com_mm"], dtype=np.float64))
+            for record in positive_records
+        ],
+        axis=0,
+    )
+    com_m = moment / mass_kg
+    inertia_about_origin = np.zeros((3, 3), dtype=np.float64)
+    for record in positive_records:
+        component_mass = float(record["mass_kg"])
+        component_com = 0.001 * np.asarray(record["com_mm"], dtype=np.float64)
+        component_inertia = np.asarray(
+            record["inertia_about_com_kg_m2"], dtype=np.float64
+        )
+        inertia_about_origin += component_inertia + _parallel_axis_term(
+            component_mass, component_com
+        )
+    inertia_about_com = inertia_about_origin - _parallel_axis_term(mass_kg, com_m)
+    result = _validated_mass_properties(
+        mass_kg=mass_kg,
+        com_m=com_m,
+        inertia_about_com_kg_m2=inertia_about_com,
+        label=label,
+    )
+    result["component_ids"] = tuple(
+        str(record["name"]) for record in component_records
+    )
+    return result
+
+
+def _subtract_mass_properties(
+    total: dict[str, Any],
+    children: list[dict[str, Any]],
+    *,
+    label: str,
+) -> dict[str, Any]:
+    residual_mass = float(total["mass_kg"])
+    residual_moment = residual_mass * np.asarray(total["com_tool_m"])
+    residual_inertia_origin = np.asarray(
+        total["inertia_about_com_tool_kg_m2"], dtype=np.float64
+    ) + _parallel_axis_term(residual_mass, np.asarray(total["com_tool_m"]))
+    for child in children:
+        child_mass = float(child["mass_kg"])
+        child_com = np.asarray(child["com_tool_m"], dtype=np.float64)
+        residual_mass -= child_mass
+        residual_moment -= child_mass * child_com
+        residual_inertia_origin -= np.asarray(
+            child["inertia_about_com_tool_kg_m2"], dtype=np.float64
+        ) + _parallel_axis_term(child_mass, child_com)
+    if residual_mass <= 0.0:
+        raise RuntimeError(f"{label} residual mass is not positive")
+    residual_com = residual_moment / residual_mass
+    residual_inertia = residual_inertia_origin - _parallel_axis_term(
+        residual_mass, residual_com
+    )
+    return _validated_mass_properties(
+        mass_kg=residual_mass,
+        com_m=residual_com,
+        inertia_about_com_kg_m2=residual_inertia,
+        label=label,
+    )
+
+
+@cache
+def _payload_mass_inertia_authority(tool: str) -> dict[str, Any]:
+    """Load one pinned ledger and partition its inertia across runtime bodies."""
+
+    if tool not in PAYLOAD_MASS_LEDGER_PATHS:
+        raise ValueError(f"no matcha payload ledger for {tool!r}")
+    ledger_path = PAYLOAD_MASS_LEDGER_PATHS[tool]
+    source_bytes = ledger_path.read_bytes()
+    observed_sha256 = hashlib.sha256(source_bytes).hexdigest()
+    expected_sha256 = PAYLOAD_MASS_LEDGER_SHA256[tool]
+    if observed_sha256 != expected_sha256:
+        raise RuntimeError(
+            f"{tool} mass-ledger hash mismatch: expected {expected_sha256}, "
+            f"got {observed_sha256}"
+        )
+    ledger = json.loads(source_bytes)
+    if ledger.get("tool") != tool or ledger.get("schema_version") != "1.0":
+        raise RuntimeError(f"unexpected {tool} mass-ledger identity")
+    component_records = list(ledger.get("components", []))
+    records_by_name = {str(record["name"]): record for record in component_records}
+    if len(records_by_name) != len(component_records):
+        raise RuntimeError(f"{tool} mass ledger has duplicate component names")
+    missing_hardware = sorted(
+        set(LEDGER_LOCK_HARDWARE_COMPONENT_IDS) - records_by_name.keys()
+    )
+    if missing_hardware:
+        raise RuntimeError(f"{tool} ledger omits lock hardware: {missing_hardware}")
+
+    total = _validated_mass_properties(
+        mass_kg=float(ledger["total_mass_kg"]),
+        com_m=0.001 * np.asarray(ledger["com_mm"], dtype=np.float64),
+        inertia_about_com_kg_m2=ledger["inertia_about_com_kg_m2"],
+        label=f"{tool} total mass ledger",
+    )
+    hardware = _validated_mass_properties(
+        mass_kg=qc.POSITIVE_LOCK_HARDWARE_SOURCE_MASS_KG,
+        com_m=qc.POSITIVE_LOCK_HARDWARE_SOURCE_COM_M,
+        inertia_about_com_kg_m2=np.asarray(
+            [
+                [qc.POSITIVE_LOCK_HARDWARE_SOURCE_INERTIA_KG_M2[0], 0.0, 0.0],
+                [0.0, qc.POSITIVE_LOCK_HARDWARE_SOURCE_INERTIA_KG_M2[1], 0.0],
+                [0.0, 0.0, qc.POSITIVE_LOCK_HARDWARE_SOURCE_INERTIA_KG_M2[2]],
+            ],
+            dtype=np.float64,
+        ),
+        label=f"{tool} exact lock hardware",
+    )
+    moving: dict[str, dict[str, Any]] = {}
+    if tool == "whisk":
+        for body_role, component_ids in (
+            ("rotor", WHISK_ROTOR_LEDGER_COMPONENT_IDS),
+            ("carriage", WHISK_CARRIAGE_LEDGER_COMPONENT_IDS),
+        ):
+            missing = sorted(set(component_ids) - records_by_name.keys())
+            if missing:
+                raise RuntimeError(
+                    f"whisk ledger omits {body_role} components: {missing}"
+                )
+            moving[body_role] = _aggregate_ledger_components(
+                [records_by_name[name] for name in component_ids],
+                label=f"whisk {body_role} ledger partition",
+            )
+    root = _subtract_mass_properties(
+        total,
+        [hardware, *moving.values()],
+        label=f"{tool} rigid-root ledger residual",
+    )
+
+    # Recombine the declared runtime bodies and require exact target closure.
+    declared = [root, hardware, *moving.values()]
+    combined_mass = math.fsum(float(record["mass_kg"]) for record in declared)
+    combined_com = np.sum(
+        [float(record["mass_kg"]) * record["com_tool_m"] for record in declared],
+        axis=0,
+    ) / combined_mass
+    combined_inertia_origin = np.sum(
+        [
+            record["inertia_about_com_tool_kg_m2"]
+            + _parallel_axis_term(float(record["mass_kg"]), record["com_tool_m"])
+            for record in declared
+        ],
+        axis=0,
+    )
+    combined_inertia = combined_inertia_origin - _parallel_axis_term(
+        combined_mass, combined_com
+    )
+    if abs(combined_mass - float(total["mass_kg"])) > 1.0e-15:
+        raise RuntimeError(f"{tool} runtime mass partition does not close")
+    if not np.allclose(
+        combined_com, total["com_tool_m"], rtol=0.0, atol=1.0e-15
+    ) or not np.allclose(
+        combined_inertia,
+        total["inertia_about_com_tool_kg_m2"],
+        rtol=0.0,
+        atol=1.0e-15,
+    ):
+        raise RuntimeError(f"{tool} runtime inertia partition does not close")
+    return {
+        "ledger_path": ledger_path,
+        "ledger_sha256": expected_sha256,
+        "total": total,
+        "root": root,
+        "hardware": hardware,
+        **moving,
+    }
+
+
+def payload_mass_inertia_contract(tool: str) -> dict[str, Any]:
+    """Return a JSON-safe public description of one runtime inertia split."""
+
+    authority = _payload_mass_inertia_authority(tool)
+    result: dict[str, Any] = {
+        "tool": tool,
+        "source_ledger": str(authority["ledger_path"].relative_to(REPO_ROOT)),
+        "source_ledger_sha256": authority["ledger_sha256"],
+        "collision_geoms_contribute_inertia": False,
+        "ledger_lock_hardware_component_ids_replaced_by_exact_source_child": list(
+            LEDGER_LOCK_HARDWARE_COMPONENT_IDS
+        ),
+        "runtime_bodies": {},
+    }
+    role_to_body = {
+        "root": f"tool_{tool}",
+        "hardware": f"tool_{tool}_positive_lock_hardware",
+        "rotor": "whisk_eccentric_rotor",
+        "carriage": "whisk_compliance_carriage",
+    }
+    for role in ("root", "hardware", "rotor", "carriage"):
+        if role not in authority:
+            continue
+        properties = authority[role]
+        result["runtime_bodies"][role] = {
+            "body": role_to_body[role],
+            "mass_kg": float(properties["mass_kg"]),
+            "com_tool_m": np.asarray(properties["com_tool_m"]).tolist(),
+            "inertia_about_com_tool_kg_m2": np.asarray(
+                properties["inertia_about_com_tool_kg_m2"]
+            ).tolist(),
+            "component_ids": list(properties.get("component_ids", ())),
+        }
+    return result
+
+
+def _append_explicit_inertial(
+    body: ET.Element,
+    properties: dict[str, Any],
+    *,
+    body_origin_tool_m: tuple[float, float, float],
+) -> None:
+    if body.find("./inertial") is not None:
+        raise RuntimeError(f"body {body.get('name')} already has an inertial")
+    com_local = np.asarray(properties["com_tool_m"], dtype=np.float64) - np.asarray(
+        body_origin_tool_m, dtype=np.float64
+    )
+    inertia = np.asarray(
+        properties["inertia_about_com_tool_kg_m2"], dtype=np.float64
+    )
+    full_inertia = (
+        inertia[0, 0],
+        inertia[1, 1],
+        inertia[2, 2],
+        inertia[0, 1],
+        inertia[0, 2],
+        inertia[1, 2],
+    )
+    ET.SubElement(
+        body,
+        "inertial",
+        {
+            "pos": " ".join(f"{value:.17g}" for value in com_local),
+            "mass": f"{float(properties['mass_kg']):.17g}",
+            "fullinertia": " ".join(f"{value:.17g}" for value in full_inertia),
+        },
+    )
+
+
+def _make_descendant_geoms_massless(body: ET.Element) -> None:
+    for geom in body.iter("geom"):
+        geom.attrib.pop("density", None)
+        geom.set("mass", "0")
+
+
 def _add_payload_geom(
     body: ET.Element,
     *,
@@ -697,7 +1019,11 @@ def _add_spoon_payload(tool: ET.Element) -> None:
     )
 
 
-def _add_whisk_payload(tool: ET.Element, actuator: ET.Element) -> None:
+def _add_whisk_payload(
+    tool: ET.Element,
+    actuator: ET.Element,
+    mass_authority: dict[str, Any],
+) -> None:
     _add_payload_geom(
         tool,
         name="whisk_housing_collision",
@@ -715,6 +1041,11 @@ def _add_whisk_payload(tool: ET.Element, actuator: ET.Element) -> None:
         rgba="0.12 0.55 0.25 0.5",
     )
     rotor = ET.SubElement(tool, "body", {"name": "whisk_eccentric_rotor", "pos": "0 0 0.052"})
+    _append_explicit_inertial(
+        rotor,
+        mass_authority["rotor"],
+        body_origin_tool_m=(0.0, 0.0, 0.052),
+    )
     ET.SubElement(
         rotor,
         "joint",
@@ -737,6 +1068,11 @@ def _add_whisk_payload(tool: ET.Element, actuator: ET.Element) -> None:
         rgba="0.8 0.5 0.1 0.8",
     )
     carriage = ET.SubElement(tool, "body", {"name": "whisk_compliance_carriage", "pos": "0 0 0.060"})
+    _append_explicit_inertial(
+        carriage,
+        mass_authority["carriage"],
+        body_origin_tool_m=(0.0, 0.0, 0.060),
+    )
     ET.SubElement(
         carriage,
         "joint",
@@ -822,6 +1158,11 @@ def _add_tool(
     stock_gripper: ET.Element | None,
 ) -> ET.Element:
     position, quat = DOCK_POSES[tool_name]
+    mass_authority = (
+        _payload_mass_inertia_authority(tool_name)
+        if tool_name in PAYLOAD_MASS_LEDGER_PATHS
+        else None
+    )
     tool = ET.SubElement(
         worldbody,
         "body",
@@ -831,6 +1172,12 @@ def _add_tool(
             "quat": " ".join(f"{value:.12g}" for value in quat),
         },
     )
+    if mass_authority is not None:
+        _append_explicit_inertial(
+            tool,
+            mass_authority["root"],
+            body_origin_tool_m=(0.0, 0.0, 0.0),
+        )
     ET.SubElement(tool, "freejoint", {"name": f"tool_{tool_name}_free"})
     qc.add_tool_quick_change_interface(tool, asset, tool_name)
     if tool_name == "gripper":
@@ -840,7 +1187,9 @@ def _add_tool(
     elif tool_name == "spoon":
         _add_spoon_payload(tool)
     elif tool_name == "whisk":
-        _add_whisk_payload(tool, actuator)
+        if mass_authority is None:
+            raise RuntimeError("whisk payload mass authority is absent")
+        _add_whisk_payload(tool, actuator, mass_authority)
     else:
         raise RuntimeError(f"Unsupported tool {tool_name}")
     ET.SubElement(
@@ -848,6 +1197,8 @@ def _add_tool(
         "site",
         {"name": f"{tool_name}_tool_id_site", "pos": "-0.031 0 0", "size": "0.001"},
     )
+    if mass_authority is not None:
+        _make_descendant_geoms_massless(tool)
     return tool
 
 
@@ -1244,6 +1595,156 @@ def _build_xml_and_assets() -> tuple[str, dict[str, bytes]]:
     names = qc.collision_geom_names(robot_root)
     qc.require_unique_names(names)
     return ET.tostring(robot_root, encoding="unicode"), assets
+
+
+def isolated_positive_lock_return(
+    *,
+    spring_enabled: bool = True,
+    pin_equality_active: bool = False,
+    max_time_s: float = 0.5,
+) -> dict[str, Any]:
+    """Exercise only the physical slider spring and declared upper limit.
+
+    The unlocked initial state is loaded with ``mj_resetDataKeyframe`` before
+    observation.  Every subsequent state transition is a real ``mj_step``;
+    no Python write to qpos/qvel occurs after initialization.  Negative hooks
+    can remove the spring or pin q=0 without changing the acceptance logic.
+    """
+
+    if not math.isfinite(max_time_s) or not 0.05 <= max_time_s <= 5.0:
+        raise ValueError("max_time_s must be finite and in [0.05, 5.0]")
+    timestep_s = 0.00025
+    stiffness_n_m = (
+        qc.POSITIVE_LOCK_SLIDER_STIFFNESS_N_M if spring_enabled else 0.0
+    )
+    # A one-joint equality pins that joint to its compiled reference state.
+    # The negative-only model therefore uses qref=0 so the equality genuinely
+    # holds the unlocked coordinate; the nominal model retains production's
+    # qref=3 mm semantics.
+    isolated_joint_reference_m = (
+        0.0 if pin_equality_active else qc.POSITIVE_LOCK_SLIDER_JOINT_RANGE_M[1]
+    )
+    equality_xml = (
+        '<equality><joint name="pin_unlocked" joint1="slider" '
+        'polycoef="0 0 0 0 0" active="true" solref="0.00001 1" '
+        'solimp="0.9999 0.99999 0.000001 0.5 2"/></equality>'
+        if pin_equality_active
+        else "<equality/>"
+    )
+    full_inertia = " ".join(
+        f"{value:.17g}"
+        for value in qc.POSITIVE_LOCK_SLIDER_SOURCE_FULL_INERTIA_KG_M2
+    )
+    xml = f"""
+<mujoco model="isolated positive lock return">
+  <compiler autolimits="true"/>
+  <option timestep="{timestep_s:.12g}" integrator="implicitfast"
+          gravity="0 0 0" iterations="80" ls_iterations="20"/>
+  <worldbody>
+    <body name="slider_body" pos="{isolated_joint_reference_m:.17g} 0 0">
+      <inertial pos="{qc.POSITIVE_LOCK_SLIDER_SOURCE_COM_M[0]:.17g} 0
+                     {qc.POSITIVE_LOCK_SLIDER_SOURCE_COM_M[2]:.17g}"
+                mass="{qc.POSITIVE_LOCK_SLIDER_SOURCE_MASS_KG:.17g}"
+                fullinertia="{full_inertia}"/>
+      <joint name="slider" type="slide" axis="1 0 0" limited="true"
+             range="0 0.003" ref="{isolated_joint_reference_m:.17g}"
+             stiffness="{stiffness_n_m:.17g}"
+             springref="{qc.POSITIVE_LOCK_SLIDER_SPRINGREF_M:.17g}"
+             damping="{qc.POSITIVE_LOCK_SLIDER_DAMPING_N_S_M:.17g}"
+             frictionloss="0" armature="0"
+             solreflimit="{' '.join(f'{value:.12g}' for value in qc.POSITIVE_LOCK_SLIDER_LIMIT_SOLREF)}"
+             solimplimit="{' '.join(f'{value:.12g}' for value in qc.POSITIVE_LOCK_SLIDER_LIMIT_SOLIMP)}"/>
+    </body>
+  </worldbody>
+  {equality_xml}
+  <keyframe><key name="unlocked" qpos="0"/></keyframe>
+</mujoco>
+"""
+    model = mujoco.MjModel.from_xml_string(xml)
+    data = mujoco.MjData(model)
+    mujoco.mj_resetDataKeyframe(model, data, 0)
+    mujoco.mj_forward(model, data)
+    joint_id = int(model.joint("slider").id)
+    qpos_address = int(model.jnt_qposadr[joint_id])
+    dof_address = int(model.jnt_dofadr[joint_id])
+    initial_q_m = float(data.qpos[qpos_address])
+    initial_qvel_m_s = float(data.qvel[dof_address])
+
+    steps = math.ceil(max_time_s / timestep_s)
+    q_history = np.empty(steps, dtype=np.float64)
+    qvel_history = np.empty(steps, dtype=np.float64)
+    for index in range(steps):
+        mujoco.mj_step(model, data)
+        q_history[index] = float(data.qpos[qpos_address])
+        qvel_history[index] = float(data.qvel[dof_address])
+
+    locked_lower_m = 0.00295
+    locked_upper_m = 0.00305
+    speed_limit_m_s = 0.001
+    required_dwell_s = 0.050
+    dwell_steps = math.ceil(required_dwell_s / timestep_s)
+    final_q = q_history[-dwell_steps:]
+    final_qvel = qvel_history[-dwell_steps:]
+    reached_locked_band = bool(
+        np.any((q_history >= locked_lower_m) & (q_history <= locked_upper_m))
+    )
+    final_position_in_band = bool(
+        np.all((final_q >= locked_lower_m) & (final_q <= locked_upper_m))
+    )
+    final_speed_bounded = bool(np.all(np.abs(final_qvel) <= speed_limit_m_s))
+    low_speed_dwell_verified = final_position_in_band and final_speed_bounded
+    range_excursion_verified = bool(
+        float(np.min(q_history)) >= -0.00005
+        and float(np.max(q_history)) <= locked_upper_m
+    )
+    passed = bool(
+        spring_enabled
+        and not pin_equality_active
+        and reached_locked_band
+        and low_speed_dwell_verified
+        and range_excursion_verified
+    )
+    return {
+        "spring_enabled": bool(spring_enabled),
+        "pin_equality_active": bool(pin_equality_active),
+        "initialization_method": "mj_resetDataKeyframe_before_observation",
+        "direct_state_writes_after_initialization": 0,
+        "physics_transition_method": "mujoco.mj_step",
+        "physics_substep_count": int(steps),
+        "timestep_s": timestep_s,
+        "elapsed_s": float(steps * timestep_s),
+        "initial_q_m": initial_q_m,
+        "initial_qvel_m_s": initial_qvel_m_s,
+        "isolated_joint_reference_m": isolated_joint_reference_m,
+        "spring_stiffness_n_m": float(stiffness_n_m),
+        "spring_reference_m": qc.POSITIVE_LOCK_SLIDER_SPRINGREF_M,
+        "damping_n_s_m": qc.POSITIVE_LOCK_SLIDER_DAMPING_N_S_M,
+        "damping_derivation": "2*sqrt(exact_step_mass_kg*spring_stiffness_n_m)",
+        "frictionloss_n": 0.0,
+        "armature_kg": 0.0,
+        "limit_solref": list(qc.POSITIVE_LOCK_SLIDER_LIMIT_SOLREF),
+        "limit_solimp": list(qc.POSITIVE_LOCK_SLIDER_LIMIT_SOLIMP),
+        "declared_joint_range_m": list(qc.POSITIVE_LOCK_SLIDER_JOINT_RANGE_M),
+        "locked_dwell_band_m": [locked_lower_m, locked_upper_m],
+        "settled_speed_limit_m_s": speed_limit_m_s,
+        "required_dwell_s": required_dwell_s,
+        "reached_locked_band": reached_locked_band,
+        "low_speed_dwell_verified": low_speed_dwell_verified,
+        "dwell_s": required_dwell_s if low_speed_dwell_verified else 0.0,
+        "q_min_final_m": float(np.min(final_q)),
+        "q_max_final_m": float(np.max(final_q)),
+        "max_abs_qvel_final_m_s": float(np.max(np.abs(final_qvel))),
+        "q_min_trajectory_m": float(np.min(q_history)),
+        "q_max_trajectory_m": float(np.max(q_history)),
+        "max_abs_qvel_trajectory_m_s": float(np.max(np.abs(qvel_history))),
+        "maximum_upper_limit_penetration_m": max(
+            0.0,
+            float(np.max(q_history)) - qc.POSITIVE_LOCK_SLIDER_JOINT_RANGE_M[1],
+        ),
+        "range_excursion_verified": range_excursion_verified,
+        "passed": passed,
+        "release_ready": False,
+    }
 
 
 def build_model(*, verify_collision_authorities: bool = True) -> mujoco.MjModel:

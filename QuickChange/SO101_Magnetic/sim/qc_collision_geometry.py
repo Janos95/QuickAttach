@@ -114,6 +114,11 @@ POSITIVE_LOCK_SLIDER_SOURCE_FULL_INERTIA_KG_M2 = (
     0.0,
     0.0,
 )
+POSITIVE_LOCK_SLIDER_DAMPING_N_S_M = 2.0 * math.sqrt(
+    POSITIVE_LOCK_SLIDER_STIFFNESS_N_M * POSITIVE_LOCK_SLIDER_SOURCE_MASS_KG
+)
+POSITIVE_LOCK_SLIDER_LIMIT_SOLREF = (0.0005, 1.0)
+POSITIVE_LOCK_SLIDER_LIMIT_SOLIMP = (0.99, 0.9999, 0.00001, 0.5, 2.0)
 
 # The positive-lock hardware is a rigid, tool-owned source assembly.  Its
 # dynamics are derived from the two hash-pinned shoulder-screw and holed-nut
@@ -465,6 +470,21 @@ def add_positive_lock_slider(frame: ET.Element, asset: ET.Element) -> list[str]:
             "ref": f"{POSITIVE_LOCK_SLIDER_JOINT_RANGE_M[1]:.12g}",
             "stiffness": f"{POSITIVE_LOCK_SLIDER_STIFFNESS_N_M:.12g}",
             "springref": f"{POSITIVE_LOCK_SLIDER_SPRINGREF_M:.12g}",
+            # The calibrated SO-101 default joint class is a servo-joint
+            # model and is not authority for this passive sheet-metal slide.
+            # Damping is the analytically derived critical value 2*sqrt(k*m)
+            # for the exact STEP mass; Coulomb friction and virtual armature
+            # remain explicitly absent.  Limit impedance is frozen separately
+            # so the physical 3 mm travel is not governed by MuJoCo defaults.
+            "damping": f"{POSITIVE_LOCK_SLIDER_DAMPING_N_S_M:.15g}",
+            "frictionloss": "0",
+            "armature": "0",
+            "solreflimit": " ".join(
+                f"{value:.12g}" for value in POSITIVE_LOCK_SLIDER_LIMIT_SOLREF
+            ),
+            "solimplimit": " ".join(
+                f"{value:.12g}" for value in POSITIVE_LOCK_SLIDER_LIMIT_SOLIMP
+            ),
         },
     )
     names: list[str] = []
