@@ -2699,6 +2699,726 @@ class SimCadPlacementContractTests(unittest.TestCase):
         self.assertIs(diagnostic["passed"], False, diagnostic)
         self.assertIs(diagnostic["release_ready"], False, diagnostic)
 
+    def test_passive_positive_lock_cam_source_sequence_is_exact_and_ordered(
+        self,
+    ) -> None:
+        """Independently certify the coupled cam-open/recenter/release path.
+
+        Production publishes a convenient machine-readable record, but this
+        gate does not use that record as geometry authority.  It reconstructs
+        the ruled loft, hold finger, root bridge, capture transforms and
+        release transforms from the exact source contract, then runs its own
+        OCCT distances and Booleans.  Only after those checks pass is the
+        production record compared with the independent witnesses.
+        """
+
+        cad = self.clearance.CAD
+        cq = cad.cq
+        overlap_tolerance_mm3 = float(
+            self.clearance.OVERLAP_VOLUME_TOLERANCE_MM3
+        )
+        distance_tolerance_mm = float(
+            self.clearance.NUMERIC_DISTANCE_TOLERANCE_MM
+        )
+        manufacturing_clearance_mm = float(
+            self.clearance.MANUFACTURING_CLEARANCE_MM
+        )
+        contract = cad.positive_lock_cam_contract()
+        self.assertEqual(
+            set(contract),
+            {
+                "schema_version",
+                "frame",
+                "construction",
+                "main_xy_wedge",
+                "axial_lead",
+                "hold_finger",
+                "outer_root_bridge",
+                "expected_geometry",
+                "passive_capture",
+                "passive_release",
+                "manufacturability",
+                "quasistatic_load_envelope",
+            },
+        )
+        self.assertEqual(contract["schema_version"], "1.0")
+        self.assertEqual(contract["frame"], "dock_local_mm")
+        self.assertEqual(
+            contract["construction"],
+            "union_main_xy_wedge_ruled_axial_lead_hold_finger",
+        )
+
+        def shape_volume_mm3(shape: Any) -> float:
+            solids = shape.Solids()
+            return math.fsum(float(solid.Volume()) for solid in solids)
+
+        def overlap_mm3(first: Any, second: Any) -> float:
+            if float(first.distance(second)) > distance_tolerance_mm:
+                return 0.0
+            return float(
+                self.clearance._intersection_volume_mm3(first, second)
+            )
+
+        def box_from_contract(bounds: dict[str, list[float]]) -> Any:
+            axis_bounds = [bounds[axis] for axis in ("x", "y", "z")]
+            for values in axis_bounds:
+                self.assertEqual(len(values), 2)
+                self.assertGreater(float(values[1]), float(values[0]))
+            size = [float(values[1]) - float(values[0]) for values in axis_bounds]
+            center = [0.5 * math.fsum(map(float, values)) for values in axis_bounds]
+            return (
+                cq.Workplane("XY")
+                .box(*size, centered=True)
+                .translate(tuple(center))
+            )
+
+        def rectangle_wire(record: dict[str, Any]) -> Any:
+            x_min, x_max = map(float, record["x"])
+            y_min, y_max = map(float, record["y"])
+            z_value = float(record["z"])
+            return cq.Wire.makePolygon(
+                [
+                    cq.Vector(x_min, y_min, z_value),
+                    cq.Vector(x_max, y_min, z_value),
+                    cq.Vector(x_max, y_max, z_value),
+                    cq.Vector(x_min, y_max, z_value),
+                ],
+                close=True,
+            )
+
+        lead_contract = contract["axial_lead"]
+        self.assertEqual(
+            lead_contract["kind"], "ruled_loft_between_rectangles"
+        )
+        lower_rectangle = lead_contract["lower_rectangle_mm"]
+        upper_rectangle = lead_contract["upper_rectangle_mm"]
+        self.assertEqual(lower_rectangle["y"], [0.0, 2.0])
+        self.assertEqual(upper_rectangle["y"], [0.0, 2.0])
+        independent_ruled_lead = cq.Workplane(
+            obj=cq.Solid.makeLoft(
+                [
+                    rectangle_wire(lower_rectangle),
+                    rectangle_wire(upper_rectangle),
+                ],
+                ruled=True,
+            )
+        )
+        independent_hold = box_from_contract(
+            contract["hold_finger"]["bounds_mm"]
+        )
+        bridge_contract = contract["outer_root_bridge"]
+        self.assertEqual(
+            bridge_contract["bounds_mm"],
+            {
+                "x": [28.0, 29.0],
+                "y": [-1.0, 1.0],
+                "z": [-4.65, -3.65],
+            },
+        )
+        independent_bridge = box_from_contract(bridge_contract["bounds_mm"])
+        independent_lead = (
+            independent_ruled_lead
+            .union(independent_hold)
+            .union(independent_bridge)
+            .clean()
+        )
+
+        main_contract = contract["main_xy_wedge"]
+        main_z = list(map(float, main_contract["z_bounds_mm"]))
+        independent_main = (
+            cq.Workplane("XY")
+            .polyline(
+                [tuple(map(float, point)) for point in main_contract["polygon_xy_mm"]]
+            )
+            .close()
+            .extrude(main_z[1] - main_z[0])
+            .translate((0.0, 0.0, main_z[0]))
+            .clean()
+        )
+        independent_cam = independent_main.union(independent_lead).clean().val()
+        source_lead = cad.positive_lock_cam_axial_lead().val()
+        source_cam = cad.positive_lock_cam().val()
+        self.assertTrue(source_cam.isValid())
+        self.assertEqual(len(source_cam.Solids()), 1)
+        self.assertTrue(independent_cam.isValid())
+        self.assertEqual(len(independent_cam.Solids()), 1)
+        self.assertLessEqual(
+            shape_volume_mm3(source_lead.cut(independent_lead.val())),
+            overlap_tolerance_mm3,
+        )
+        self.assertLessEqual(
+            shape_volume_mm3(independent_lead.val().cut(source_lead)),
+            overlap_tolerance_mm3,
+        )
+        self.assertLessEqual(
+            shape_volume_mm3(source_cam.cut(independent_cam)),
+            overlap_tolerance_mm3,
+        )
+        self.assertLessEqual(
+            shape_volume_mm3(independent_cam.cut(source_cam)),
+            overlap_tolerance_mm3,
+        )
+        expected_geometry = contract["expected_geometry"]
+        source_cam_volume_mm3 = shape_volume_mm3(source_cam)
+        self.assertAlmostEqual(source_cam_volume_mm3, 325.435, places=9)
+        self.assertAlmostEqual(
+            source_cam_volume_mm3,
+            float(expected_geometry["total_volume_mm3"]),
+            places=9,
+        )
+        source_cam_bounds = source_cam.BoundingBox()
+        for axis, observed in (
+            ("x", [source_cam_bounds.xmin, source_cam_bounds.xmax]),
+            ("y", [source_cam_bounds.ymin, source_cam_bounds.ymax]),
+            ("z", [source_cam_bounds.zmin, source_cam_bounds.zmax]),
+        ):
+            np.testing.assert_allclose(
+                observed,
+                expected_geometry["bounds_mm"][axis],
+                rtol=0.0,
+                atol=1.0e-6,
+            )
+        self.assertIs(bridge_contract["outside_locked_tab_swept_x"], True)
+        self.assertGreaterEqual(
+            float(bridge_contract["bounds_mm"]["x"][0])
+            - (
+                float(cad.SLIDER_TAB_END_X)
+                + float(cad.SLIDER_TRAVEL)
+                + float(cad.ROBOT_CAM_GUIDED_APPROACH_OFFSET_MM)
+            ),
+            0.79,
+        )
+
+        capture_contract = contract["passive_capture"]
+        release_contract = contract["passive_release"]
+        recenter_start_mm = float(
+            capture_contract["recenter_start_preseat_mm"]
+        )
+        recenter_end_mm = float(capture_contract["recenter_end_preseat_mm"])
+        head_entry_mm = float(
+            capture_contract["head_entry_tangent_preseat_mm"]
+        )
+        passive_open_q_mm = float(capture_contract["passive_open_q_max_mm"])
+        self.assertAlmostEqual(recenter_start_mm, 6.4, places=12)
+        self.assertAlmostEqual(recenter_end_mm, 3.2, places=12)
+        self.assertAlmostEqual(head_entry_mm, 3.1, places=12)
+        self.assertAlmostEqual(passive_open_q_mm, 0.05, places=12)
+        self.assertGreater(recenter_end_mm, head_entry_mm)
+        self.assertEqual(
+            capture_contract["lateral_offset_breakpoints_mm"],
+            [[6.4, 0.2], [3.2, 0.0], [0.0, 0.0]],
+        )
+        q_coefficients = capture_contract["ramp_q_affine_coefficients"]
+
+        def independent_capture_x_mm(preseat_mm: float) -> float:
+            if not math.isfinite(preseat_mm) or preseat_mm < 0.0:
+                raise AssertionError(f"invalid preseat: {preseat_mm}")
+            if preseat_mm >= recenter_start_mm:
+                return 0.20
+            if preseat_mm <= recenter_end_mm:
+                return 0.0
+            return 0.20 * (
+                (preseat_mm - recenter_end_mm)
+                / (recenter_start_mm - recenter_end_mm)
+            )
+
+        def independent_capture_q_mm(preseat_mm: float) -> float:
+            lateral_mm = independent_capture_x_mm(preseat_mm)
+            raw_q_mm = math.fsum(
+                (
+                    float(q_coefficients["preseat"]) * preseat_mm,
+                    float(q_coefficients["lateral_offset"]) * lateral_mm,
+                    float(q_coefficients["constant"]),
+                )
+            )
+            q_min_mm, q_max_mm = map(float, q_coefficients["clamp_mm"])
+            return max(q_min_mm, min(q_max_mm, raw_q_mm))
+
+        def independent_release_q_mm(withdrawal_mm: float) -> float:
+            raw_q_mm = passive_open_q_mm + float(
+                release_contract["q_per_withdrawal_slope"]
+            ) * (
+                withdrawal_mm
+                - float(release_contract["initial_q_hold_withdrawal_mm"])
+            )
+            return max(
+                passive_open_q_mm,
+                min(float(cad.SLIDER_TRAVEL), raw_q_mm),
+            )
+
+        slider_native = cad.locking_slider()
+        plate_native = cad.robot_plate()
+        studs = {
+            side: cad.shoulder_lock_stud().translate(
+                (stud_x_mm, 0.0, 0.0)
+            ).val()
+            for side, stud_x_mm in (
+                ("left", -float(cad.LOCK_STUD_X)),
+                ("right", float(cad.LOCK_STUD_X)),
+            )
+        }
+        capture_preseats_mm = [
+            round(15.0 - 0.1 * index, 10) for index in range(151)
+        ]
+        capture_samples: list[dict[str, float]] = []
+        maximum_capture_cam_overlap_mm3 = 0.0
+        maximum_capture_stud_overlap_mm3 = 0.0
+        minimum_plate_cam_distance_mm = math.inf
+        plate_translations: list[np.ndarray] = []
+        for preseat_mm in capture_preseats_mm:
+            lateral_mm = independent_capture_x_mm(preseat_mm)
+            q_mm = independent_capture_q_mm(preseat_mm)
+            self.assertAlmostEqual(
+                cad.positive_lock_cam_capture_lateral_offset_mm(preseat_mm),
+                lateral_mm,
+                places=12,
+            )
+            self.assertAlmostEqual(
+                cad.positive_lock_cam_capture_q_max_mm(preseat_mm),
+                q_mm,
+                places=12,
+            )
+            slider = slider_native.translate(
+                (
+                    q_mm + lateral_mm,
+                    0.0,
+                    cad.SLIDER_Z - cad.PLATE_THICKNESS - preseat_mm,
+                )
+            ).val()
+            slider_cam_distance_mm = float(slider.distance(source_cam))
+            slider_cam_overlap_mm3 = overlap_mm3(slider, source_cam)
+            maximum_capture_cam_overlap_mm3 = max(
+                maximum_capture_cam_overlap_mm3,
+                slider_cam_overlap_mm3,
+            )
+            stud_distances = {
+                side: float(slider.distance(stud))
+                for side, stud in studs.items()
+            }
+            stud_overlaps = {
+                side: overlap_mm3(slider, stud)
+                for side, stud in studs.items()
+            }
+            maximum_capture_stud_overlap_mm3 = max(
+                maximum_capture_stud_overlap_mm3,
+                *stud_overlaps.values(),
+            )
+            plate = plate_native.translate(
+                (lateral_mm, 0.0, -cad.PLATE_THICKNESS - preseat_mm)
+            ).val()
+            plate_cam_distance_mm = float(plate.distance(source_cam))
+            minimum_plate_cam_distance_mm = min(
+                minimum_plate_cam_distance_mm, plate_cam_distance_mm
+            )
+            self.assertLessEqual(
+                overlap_mm3(plate, source_cam), overlap_tolerance_mm3
+            )
+            plate_translations.append(
+                np.asarray([lateral_mm, 0.0, -preseat_mm], dtype=np.float64)
+            )
+            capture_samples.append(
+                {
+                    "preseat_mm": preseat_mm,
+                    "lateral_mm": lateral_mm,
+                    "q_mm": q_mm,
+                    "slider_cam_distance_mm": slider_cam_distance_mm,
+                    "minimum_slider_stud_distance_mm": min(
+                        stud_distances.values()
+                    ),
+                }
+            )
+        self.assertLessEqual(
+            maximum_capture_cam_overlap_mm3, overlap_tolerance_mm3
+        )
+        self.assertLessEqual(
+            maximum_capture_stud_overlap_mm3, overlap_tolerance_mm3
+        )
+        self.assertTrue(
+            all(
+                capture_samples[index + 1]["lateral_mm"]
+                <= capture_samples[index]["lateral_mm"] + 1.0e-12
+                and capture_samples[index + 1]["q_mm"]
+                <= capture_samples[index]["q_mm"] + 1.0e-12
+                for index in range(len(capture_samples) - 1)
+            )
+        )
+        head_entry_sample = next(
+            sample
+            for sample in capture_samples
+            if math.isclose(
+                sample["preseat_mm"], head_entry_mm, abs_tol=1.0e-12
+            )
+        )
+        self.assertEqual(head_entry_sample["lateral_mm"], 0.0)
+        self.assertLessEqual(
+            head_entry_sample["q_mm"], passive_open_q_mm + 1.0e-12
+        )
+        self.assertGreaterEqual(
+            head_entry_sample["minimum_slider_stud_distance_mm"], 0.20
+        )
+        for sample in capture_samples:
+            if sample["preseat_mm"] <= recenter_end_mm + 1.0e-12:
+                self.assertEqual(sample["lateral_mm"], 0.0, sample)
+                self.assertLessEqual(
+                    sample["q_mm"], passive_open_q_mm + 1.0e-12, sample
+                )
+        contact_start_mm = float(
+            capture_contract["ramp_contact_start_preseat_mm"]
+        )
+        self.assertGreater(contact_start_mm, head_entry_mm)
+        for sample in capture_samples:
+            if sample["preseat_mm"] <= math.floor(contact_start_mm * 10.0) / 10.0:
+                self.assertLessEqual(
+                    sample["slider_cam_distance_mm"],
+                    distance_tolerance_mm,
+                    sample,
+                )
+
+        plate_interval_motion_mm = max(
+            float(np.linalg.norm(second - first))
+            for first, second in zip(
+                plate_translations, plate_translations[1:]
+            )
+        )
+        plate_motion_bound_mm = plate_interval_motion_mm / 2.0
+        continuous_plate_cam_clearance_mm = (
+            minimum_plate_cam_distance_mm - plate_motion_bound_mm
+        )
+        self.assertGreaterEqual(
+            continuous_plate_cam_clearance_mm,
+            0.2498,
+        )
+
+        # Tight exact source sweep around the complete head-entry interval.
+        # Distance is 1-Lipschitz under translation; subtracting half of the
+        # maximum state-to-state displacement certifies the continuum.
+        tight_samples: list[tuple[float, float, np.ndarray]] = []
+        for index in range(331):
+            preseat_mm = round(0.01 * index, 10)
+            lateral_mm = independent_capture_x_mm(preseat_mm)
+            q_mm = independent_capture_q_mm(preseat_mm)
+            translation = np.asarray(
+                [q_mm + lateral_mm, 0.0, -preseat_mm], dtype=np.float64
+            )
+            slider = slider_native.translate(
+                (
+                    translation[0],
+                    0.0,
+                    cad.SLIDER_Z - cad.PLATE_THICKNESS + translation[2],
+                )
+            ).val()
+            minimum_stud_distance_mm = min(
+                float(slider.distance(stud)) for stud in studs.values()
+            )
+            for stud in studs.values():
+                self.assertLessEqual(
+                    overlap_mm3(slider, stud), overlap_tolerance_mm3
+                )
+            tight_samples.append(
+                (preseat_mm, minimum_stud_distance_mm, translation)
+            )
+        tight_motion_bound_mm = 0.5 * max(
+            float(np.linalg.norm(second[2] - first[2]))
+            for first, second in zip(tight_samples, tight_samples[1:])
+        )
+        tight_witness = min(tight_samples, key=lambda sample: sample[1])
+        continuous_stud_clearance_mm = (
+            tight_witness[1] - tight_motion_bound_mm
+        )
+        self.assertGreaterEqual(continuous_stud_clearance_mm, 0.20)
+
+        # Close the source roster against the new cam, rather than proving
+        # only the slider and plate.  The 17 tool components remain fixed in
+        # the dock; robot magnets follow the same coupled p/x translation.
+        tool_components = self.clearance._tool_side_components()
+        self.assertEqual(len(tool_components), 17)
+        component_cam_overlaps: dict[str, float] = {}
+        for component in tool_components:
+            component_cam_overlaps[component.name] = overlap_mm3(
+                component.shape.val(), source_cam
+            )
+        robot_components = self.clearance._robot_side_components()
+        for component in robot_components:
+            if component.name == "robot_plate" or component.role == "positive_lock_slider":
+                continue
+            maximum_overlap = 0.0
+            for sample in capture_samples:
+                placed = component.shape.translate(
+                    (
+                        sample["lateral_mm"],
+                        0.0,
+                        -sample["preseat_mm"],
+                    )
+                ).val()
+                maximum_overlap = max(
+                    maximum_overlap, overlap_mm3(placed, source_cam)
+                )
+            component_cam_overlaps[component.name] = maximum_overlap
+        self.assertTrue(component_cam_overlaps)
+        self.assertLessEqual(
+            max(component_cam_overlaps.values()), overlap_tolerance_mm3
+        )
+
+        self.assertEqual(release_contract["axis"], "dock_local_negative_y")
+        self.assertAlmostEqual(
+            float(release_contract["q3_tangent_withdrawal_mm"]),
+            13.949367088607595,
+            places=12,
+        )
+        self.assertAlmostEqual(
+            float(release_contract["nominal_exit_withdrawal_mm"]),
+            15.0,
+            places=12,
+        )
+        self.assertAlmostEqual(
+            float(release_contract["required_exit_clearance_mm"]),
+            0.20,
+            places=12,
+        )
+        release_samples: list[dict[str, float]] = []
+        maximum_release_cam_overlap_mm3 = 0.0
+        for index in range(151):
+            withdrawal_mm = round(0.1 * index, 10)
+            q_mm = independent_release_q_mm(withdrawal_mm)
+            self.assertAlmostEqual(
+                cad.positive_lock_cam_release_q_max_mm(withdrawal_mm),
+                q_mm,
+                places=12,
+            )
+            slider = slider_native.translate(
+                (
+                    q_mm,
+                    -withdrawal_mm,
+                    cad.SLIDER_Z - cad.PLATE_THICKNESS,
+                )
+            ).val()
+            distance_mm = float(slider.distance(source_cam))
+            overlap = overlap_mm3(slider, source_cam)
+            maximum_release_cam_overlap_mm3 = max(
+                maximum_release_cam_overlap_mm3, overlap
+            )
+            release_samples.append(
+                {
+                    "withdrawal_mm": withdrawal_mm,
+                    "q_mm": q_mm,
+                    "slider_cam_distance_mm": distance_mm,
+                }
+            )
+        self.assertLessEqual(
+            maximum_release_cam_overlap_mm3, overlap_tolerance_mm3
+        )
+        self.assertTrue(
+            all(
+                second["q_mm"] + 1.0e-12 >= first["q_mm"]
+                for first, second in zip(release_samples, release_samples[1:])
+            )
+        )
+        first_manufacturing_clear_sample = next(
+            sample
+            for sample in release_samples
+            if sample["q_mm"] >= float(cad.SLIDER_TRAVEL) - 1.0e-12
+            and sample["slider_cam_distance_mm"]
+            >= float(release_contract["required_exit_clearance_mm"])
+            - distance_tolerance_mm
+        )
+        self.assertGreaterEqual(
+            first_manufacturing_clear_sample["withdrawal_mm"], 14.8
+        )
+        nominal_exit_sample = release_samples[-1]
+        self.assertEqual(nominal_exit_sample["withdrawal_mm"], 15.0)
+        self.assertAlmostEqual(
+            nominal_exit_sample["q_mm"], float(cad.SLIDER_TRAVEL), places=12
+        )
+        self.assertGreaterEqual(
+            nominal_exit_sample["slider_cam_distance_mm"], 0.20
+        )
+
+        # Recompute the complete attached source assembly's first 15 mm of
+        # rack withdrawal on a 0.5 mm grid.  The 0.25 mm Lipschitz bound still
+        # leaves >=0.5 mm on every forbidden pair.  Only the exact five
+        # published keeper tangencies may stay at zero distance.
+        dock = self.clearance._dock_authority()
+        full_dock = dock["full_dock"].val()
+        dock_without_cam = dock["dock_without_cam"].val()
+        exit_positions_mm = [0.5 * index for index in range(31)]
+        exit_components = tool_components + [
+            component
+            for component in robot_components
+            if component.role != "positive_lock_slider"
+        ]
+        tangency_components = {"stock_tool_plate", "robot_plate"}
+        exit_component_records: dict[str, dict[str, float]] = {}
+        for component in exit_components:
+            distances: list[float] = []
+            maximum_overlap = 0.0
+            for withdrawal_mm in exit_positions_mm:
+                placed = component.shape.translate(
+                    (0.0, -withdrawal_mm, 0.0)
+                ).val()
+                distance_mm = float(placed.distance(full_dock))
+                distances.append(distance_mm)
+                maximum_overlap = max(
+                    maximum_overlap, overlap_mm3(placed, full_dock)
+                )
+            minimum_distance_mm = min(distances)
+            exit_component_records[component.name] = {
+                "minimum_sampled_distance_mm": minimum_distance_mm,
+                "maximum_overlap_mm3": maximum_overlap,
+            }
+            self.assertLessEqual(
+                maximum_overlap, overlap_tolerance_mm3, component.name
+            )
+            if component.name not in tangency_components:
+                self.assertGreaterEqual(
+                    minimum_distance_mm - 0.25,
+                    manufacturing_clearance_mm,
+                    component.name,
+                )
+
+        dynamic_slider_distances: list[float] = []
+        maximum_dynamic_slider_forbidden_overlap = 0.0
+        for withdrawal_mm in exit_positions_mm:
+            q_mm = independent_release_q_mm(withdrawal_mm)
+            slider = slider_native.translate(
+                (
+                    q_mm,
+                    -withdrawal_mm,
+                    cad.SLIDER_Z - cad.PLATE_THICKNESS,
+                )
+            ).val()
+            dynamic_slider_distances.append(
+                float(slider.distance(dock_without_cam))
+            )
+            maximum_dynamic_slider_forbidden_overlap = max(
+                maximum_dynamic_slider_forbidden_overlap,
+                overlap_mm3(slider, dock_without_cam),
+            )
+        self.assertLessEqual(
+            maximum_dynamic_slider_forbidden_overlap,
+            overlap_tolerance_mm3,
+        )
+        self.assertGreaterEqual(
+            min(dynamic_slider_distances) - 0.25,
+            manufacturing_clearance_mm,
+        )
+
+        by_name = {component.name: component for component in exit_components}
+        intended_rail_pairs = {
+            "stock_tool_plate": (
+                "left_lower_rail",
+                "right_lower_rail",
+                "left_upper_rail",
+                "right_upper_rail",
+            ),
+            "robot_plate": ("left_lower_rail",),
+        }
+        for component_name, rail_names in intended_rail_pairs.items():
+            component = by_name[component_name]
+            for rail_name in rail_names:
+                rail = dock[rail_name].val()
+                # Both source features are prismatic along dock Y, and the
+                # only motion is dock-local -Y.  Exact tangency at both ends,
+                # plus overlapping Y intervals at both ends, proves the whole
+                # linear interval without 31 redundant zero-volume Booleans.
+                for withdrawal_mm in (0.0, 15.0):
+                    placed = component.shape.translate(
+                        (0.0, -withdrawal_mm, 0.0)
+                    ).val()
+                    self.assertLessEqual(
+                        float(placed.distance(rail)),
+                        distance_tolerance_mm,
+                        (component_name, rail_name, withdrawal_mm),
+                    )
+                    self.assertLessEqual(
+                        overlap_mm3(placed, rail),
+                        overlap_tolerance_mm3,
+                        (component_name, rail_name, withdrawal_mm),
+                    )
+                    placed_bounds = placed.BoundingBox()
+                    rail_bounds = rail.BoundingBox()
+                    self.assertLessEqual(
+                        max(placed_bounds.ymin, rail_bounds.ymin),
+                        min(placed_bounds.ymax, rail_bounds.ymax),
+                        (component_name, rail_name, withdrawal_mm),
+                    )
+
+        travel_record = self.clearance._positive_lock_travel_record()
+        self.assertIs(travel_record["passed"], True, travel_record)
+        self.assertGreaterEqual(
+            float(travel_record["continuous_minimum_shoulder_clearance_mm"]),
+            0.125,
+        )
+        self.assertGreater(
+            min(
+                map(
+                    float,
+                    travel_record[
+                        "locked_projected_head_retention_volume_mm3"
+                    ].values(),
+                )
+            ),
+            overlap_tolerance_mm3,
+        )
+
+        source_order = [
+            "coupled_axial_lead_opens_and_recenters",
+            "passive_open_head_passage_at_x0",
+            "axial_seat_at_x0",
+            "attach_then_dock_release",
+            "negative_y_cam_following_withdrawal",
+            "q3_tangent_without_lock_claim",
+            "physical_lock_eligible_after_14p8mm_clearance",
+            "nominal_lock_witness_at_15mm",
+        ]
+        self.assertLess(
+            source_order.index("coupled_axial_lead_opens_and_recenters"),
+            source_order.index("passive_open_head_passage_at_x0"),
+        )
+        self.assertLess(
+            source_order.index("attach_then_dock_release"),
+            source_order.index("negative_y_cam_following_withdrawal"),
+        )
+        self.assertLess(
+            source_order.index("q3_tangent_without_lock_claim"),
+            source_order.index("physical_lock_eligible_after_14p8mm_clearance"),
+        )
+
+        # Cross-check the production record last.  Equality here cannot turn a
+        # fabricated record green because every compared witness above was
+        # already regenerated from exact source shapes and transforms.
+        production_record = self.clearance._passive_positive_lock_cam_record()
+        self.assertIs(production_record["passed"], True, production_record)
+        self.assertEqual(production_record["source_contract"], contract)
+        self.assertAlmostEqual(
+            float(production_record["geometry"]["cam_volume_mm3"]),
+            source_cam_volume_mm3,
+            places=9,
+        )
+        production_tight = production_record["capture"]["tight_stud_clearance"]
+        self.assertAlmostEqual(
+            float(production_tight["continuous_certified_clearance_mm"]),
+            continuous_stud_clearance_mm,
+            places=12,
+        )
+        production_exit = production_record["release"]["nominal_exit_sample"]
+        self.assertAlmostEqual(
+            float(production_exit["q_mm"]),
+            nominal_exit_sample["q_mm"],
+            places=12,
+        )
+        self.assertAlmostEqual(
+            float(production_exit["slider_cam_distance_mm"]),
+            nominal_exit_sample["slider_cam_distance_mm"],
+            places=12,
+        )
+        source_only_result = {"passed": True, "release_ready": False}
+        self.assertIs(source_only_result["passed"], True)
+        self.assertIs(
+            source_only_result["release_ready"],
+            False,
+            "source-only geometry cannot claim workflow release readiness",
+        )
+
     def test_positive_lock_slider_mass_properties_match_exact_step(self) -> None:
         """Collision tessellation must not define the moving slider inertia."""
 

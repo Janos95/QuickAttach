@@ -128,6 +128,10 @@ DEVELOPMENT_TESTS = (
     ),
     qualified(
         "SimCadPlacementContractTests",
+        "test_passive_positive_lock_cam_source_sequence_is_exact_and_ordered",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
         "test_positive_lock_slider_mass_properties_match_exact_step",
     ),
     qualified(
