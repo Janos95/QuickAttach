@@ -10,12 +10,15 @@ used only for named mechanical captures/locks after their physical guards.
 from __future__ import annotations
 
 import argparse
+import ast
 import base64
 import copy
 import hashlib
+import inspect
 import json
 import math
 import struct
+import textwrap
 import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -440,6 +443,20 @@ def _float64_bytes_sha256(value: object) -> str:
     return hashlib.sha256(array.tobytes()).hexdigest()
 
 
+def _numeric_tree_all_finite(value: object) -> bool:
+    """Return false for any non-finite numeric leaf in a JSON-like tree."""
+
+    if isinstance(value, bool) or value is None or isinstance(value, str):
+        return True
+    if isinstance(value, (int, float, np.integer, np.floating)):
+        return math.isfinite(float(value))
+    if isinstance(value, dict):
+        return all(_numeric_tree_all_finite(item) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return all(_numeric_tree_all_finite(item) for item in value)
+    return False
+
+
 def _decode_core_capture_route_source_states(
 ) -> tuple[tuple[float, float, tuple[float, ...]], ...]:
     raw = base64.b64decode(_CORE_CAPTURE_ROUTE_STATE_BASE64, validate=True)
@@ -511,11 +528,8 @@ CORE_CAPTURE_ROUTE_DESIRED_START_Q = MappingProxyType(
         ),
     }
 )
-CORE_CAPTURE_ROUTE_DESIRED_START_Q_SHA256 = _canonical_json_sha256(
-    {
-        name: list(values)
-        for name, values in CORE_CAPTURE_ROUTE_DESIRED_START_Q.items()
-    }
+CORE_CAPTURE_ROUTE_DESIRED_START_Q_SHA256 = (
+    "fa630130c3e7a911e81bb01c681ee82a070569256a317cbb8a9474fe441df668"
 )
 CORE_CAPTURE_ROUTE_ENDPOINT_Q_ERROR_RAD = 0.002
 CORE_CAPTURE_ROUTE_ENDPOINT_QVEL_RAD_S = 0.02
@@ -532,31 +546,60 @@ CORE_CAPTURE_ROUTE_DENSE_FRACTIONS = tuple(
 CORE_CAPTURE_ROUTE_SOURCE_X_OPEN_MM = 0.20
 CORE_CAPTURE_ROUTE_RECENTER_START_PRESEAT_MM = 6.4
 CORE_CAPTURE_ROUTE_RECENTER_END_PRESEAT_MM = 3.2
-CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_DIGEST_PREIMAGE = {
-    "source_generator_sha256": qc.POGO_CAD_SOURCE_SHA256,
-    "positive_lock_cam_contract_sha256": (
-        qc.CORE_DOCK_CAM_CONTRACT_CANONICAL_SHA256
-    ),
-    "embedded_state_bytes_sha256": CORE_CAPTURE_ROUTE_STATE_BYTES_SHA256,
-    "source_state_sha256": CORE_CAPTURE_ROUTE_SOURCE_STATE_SHA256,
-    "q_roster_sha256": CORE_CAPTURE_ROUTE_Q_SHA256,
-    "phase_row_ranges": CORE_CAPTURE_ROUTE_PHASE_ROW_RANGES,
-    "phase_timing_s": CORE_CAPTURE_ROUTE_PHASE_TIMING_S,
-    "endpoint_guard": {
-        "q_error_rad": CORE_CAPTURE_ROUTE_ENDPOINT_Q_ERROR_RAD,
-        "qvel_rad_s": CORE_CAPTURE_ROUTE_ENDPOINT_QVEL_RAD_S,
-        "position_error_m": CORE_CAPTURE_ROUTE_ENDPOINT_POSITION_ERROR_M,
-        "orientation_error_rad": (
-            CORE_CAPTURE_ROUTE_ENDPOINT_ORIENTATION_ERROR_RAD
+def _current_core_capture_route_identity_preimage() -> dict[str, Any]:
+    """Rebuild the route identity from live module values, never a cache."""
+
+    state_records = [
+        {
+            "preseat_mm": p_mm,
+            "source_x_mm": x_mm,
+            "q_rad": list(q_rad),
+        }
+        for p_mm, x_mm, q_rad in CORE_CAPTURE_ROUTE_SOURCE_STATES
+    ]
+    desired_start_records = {
+        name: list(values)
+        for name, values in CORE_CAPTURE_ROUTE_DESIRED_START_Q.items()
+    }
+    return {
+        "source_generator_sha256": qc.POGO_CAD_SOURCE_SHA256,
+        "positive_lock_cam_contract_sha256": (
+            qc.CORE_DOCK_CAM_CONTRACT_CANONICAL_SHA256
         ),
-        "dwell_ticks": CORE_CAPTURE_ROUTE_ENDPOINT_DWELL_TICKS,
-    },
-    "live_source_corridor_max_error_mm": (
-        CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
-    ),
-}
-CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_SHA256 = _canonical_json_sha256(
-    CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_DIGEST_PREIMAGE
+        "embedded_state_bytes_sha256": hashlib.sha256(
+            base64.b64decode(_CORE_CAPTURE_ROUTE_STATE_BASE64, validate=True)
+        ).hexdigest(),
+        "source_state_sha256": _canonical_json_sha256(state_records),
+        "q_roster_sha256": _canonical_json_sha256(
+            [record["q_rad"] for record in state_records]
+        ),
+        "desired_start_q_sha256": _canonical_json_sha256(
+            desired_start_records
+        ),
+        "phase_row_ranges": copy.deepcopy(
+            CORE_CAPTURE_ROUTE_PHASE_ROW_RANGES
+        ),
+        "phase_timing_s": copy.deepcopy(CORE_CAPTURE_ROUTE_PHASE_TIMING_S),
+        "endpoint_guard": {
+            "q_error_rad": CORE_CAPTURE_ROUTE_ENDPOINT_Q_ERROR_RAD,
+            "qvel_rad_s": CORE_CAPTURE_ROUTE_ENDPOINT_QVEL_RAD_S,
+            "position_error_m": CORE_CAPTURE_ROUTE_ENDPOINT_POSITION_ERROR_M,
+            "orientation_error_rad": (
+                CORE_CAPTURE_ROUTE_ENDPOINT_ORIENTATION_ERROR_RAD
+            ),
+            "dwell_ticks": CORE_CAPTURE_ROUTE_ENDPOINT_DWELL_TICKS,
+        },
+        "live_source_corridor_max_error_mm": (
+            CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
+        ),
+    }
+
+
+CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_DIGEST_PREIMAGE = (
+    _current_core_capture_route_identity_preimage()
+)
+CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_SHA256 = (
+    "6451fadc64d30fb64523671d7568e4912d7631026c0be8dc336a55d995e7c283"
 )
 
 
@@ -687,38 +730,142 @@ CORE_CAPTURE_ARM_CTRLRANGE_SHA256 = (
 CORE_CAPTURE_ARM_FORCERANGE_SHA256 = (
     "2b1c560a63c760ed53819eca8ed65031871b4415028102367cb36718389f575a"
 )
-CORE_CAPTURE_GRAVITY_BIAS_FORMULA = {
+CORE_CAPTURE_GRAVITY_BIAS_NON_ARM_QPOS_SHA256 = (
+    "0c73793cef16963cc3272489395f735acc98ef1efd77f816fff02798b941469d"
+)
+def _current_core_capture_gravity_bias_formula() -> dict[str, Any]:
+    """Build the executable formula identity from current module values."""
+
+    return {
+        "schema_version": "2.0",
+        "eligible_actions": sorted(CORE_CAPTURE_ROUTE_ACTION_NAMES),
+        "desired_route_authority": (
+            "immutable_source_route_q_roster_and_per_action_desired_start"
+        ),
+        "scratch_state": (
+            "private_MjData_distinct_from_live_at_desired_q_with_all_qvel_zero"
+        ),
+        "scratch_position_update": (
+            "mj_differentiatePos_then_mj_integratePos_then_mj_forward"
+        ),
+        "bias_source": "scratch_data.qfrc_bias[arm_dof_ids]",
+        "offset_formula": (
+            "qfrc_bias/(actuator_gainprm[arm_actuator_ids,0]*"
+            "actuator_gear[arm_actuator_ids,0])"
+        ),
+        "offset_sign": "positive",
+        "unsaturated_control_formula": "q_des+gravity_bias_offset",
+        "applied_control_formula": (
+            "clip(unsaturated_control,actuator_ctrlrange)"
+        ),
+        "saturation_policy": "any_saturation_fails_development_evidence",
+        "runtime_isolation": {
+            "scratch_and_live_object_identity_must_differ": True,
+            "live_qpos_qvel_snapshots_must_be_bitwise_unchanged": True,
+            "all_scratch_qvel_must_be_exact_zero": True,
+            "non_arm_scratch_qpos_digest_must_remain_frozen": True,
+            "failure_aborts_before_ctrl_write": True,
+        },
+        "prohibited_inputs": [
+            "qfrc_constraint",
+            "mj_contactForce",
+            "mj_inverse",
+            "live_qpos_write",
+            "live_qvel_write",
+        ],
+        "authority_scope": "development_free_space_tracking_only",
+    }
+
+
+CORE_CAPTURE_GRAVITY_BIAS_FORMULA = (
+    _current_core_capture_gravity_bias_formula()
+)
+CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256 = (
+    "7084ee29d3ff1ab3b30bcd940633459f7e199c5d59b5d1dc0e06958c4810a2c8"
+)
+def _current_core_capture_gravity_bias_guard_thresholds() -> dict[str, Any]:
+    """Return every current guard value consumed by FF evidence."""
+
+    return {
+        "endpoint_maximum_q_error_rad": (
+            CORE_CAPTURE_ROUTE_ENDPOINT_Q_ERROR_RAD
+        ),
+        "endpoint_maximum_abs_qvel_rad_s": (
+            CORE_CAPTURE_ROUTE_ENDPOINT_QVEL_RAD_S
+        ),
+        "endpoint_maximum_fk_position_error_m": (
+            CORE_CAPTURE_ROUTE_ENDPOINT_POSITION_ERROR_M
+        ),
+        "endpoint_maximum_fk_orientation_error_rad": (
+            CORE_CAPTURE_ROUTE_ENDPOINT_ORIENTATION_ERROR_RAD
+        ),
+        "endpoint_maximum_abs_source_x_error_mm": (
+            CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
+        ),
+        "endpoint_required_contiguous_controller_ticks": (
+            CORE_CAPTURE_ROUTE_ENDPOINT_DWELL_TICKS
+        ),
+        "free_space_maximum_abs_q_error_rad": (
+            CORE_CAPTURE_ROUTE_ENDPOINT_Q_ERROR_RAD
+        ),
+        "free_space_maximum_abs_preseat_error_mm": 0.050,
+        "free_space_maximum_abs_source_x_error_mm": (
+            CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
+        ),
+        "free_space_maximum_abs_transverse_y_mm": 0.010,
+        "free_space_maximum_orientation_error_rad": (
+            CORE_CAPTURE_ROUTE_ENDPOINT_ORIENTATION_ERROR_RAD
+        ),
+        "free_space_maximum_raw_cam_contact_count": 0,
+        "state_time_anchor_absolute_tolerance_s": 1.0e-10,
+        "adjacent_state_time_absolute_tolerance_s": 1.0e-12,
+        "all_four_phases_and_endpoints_required_for_pass": True,
+        "any_saturation_fails": True,
+        "abort_must_be_absent": True,
+    }
+
+
+CORE_CAPTURE_GRAVITY_BIAS_GUARD_THRESHOLDS = (
+    _current_core_capture_gravity_bias_guard_thresholds()
+)
+CORE_CAPTURE_GRAVITY_BIAS_TRANSITIVE_CALLGRAPH_SHA256 = (
+    "122899a2db90050b4f7adbb603d5b726340429a1ab992e9a3cbc0eef4cd7649a"
+)
+CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY = {
     "schema_version": "1.0",
-    "eligible_actions": sorted(CORE_CAPTURE_ROUTE_ACTION_NAMES),
-    "desired_route_authority": (
-        "immutable_source_route_q_roster_and_per_action_desired_start"
-    ),
-    "scratch_state": "private_MjData_at_desired_q_with_qvel_zero",
-    "scratch_position_update": (
-        "mj_differentiatePos_then_mj_integratePos_then_mj_forward"
-    ),
-    "bias_source": "scratch_data.qfrc_bias[arm_dof_ids]",
-    "offset_formula": (
-        "qfrc_bias/(actuator_gainprm[arm_actuator_ids,0]*"
-        "actuator_gear[arm_actuator_ids,0])"
-    ),
-    "offset_sign": "positive",
-    "unsaturated_control_formula": "q_des+gravity_bias_offset",
-    "applied_control_formula": (
-        "clip(unsaturated_control,actuator_ctrlrange)"
-    ),
-    "saturation_policy": "any_saturation_fails_development_evidence",
-    "prohibited_inputs": [
-        "qfrc_constraint",
-        "contact_force",
-        "mj_inverse",
-        "live_qpos_write",
-        "live_qvel_write",
+    "audited_functions": [
+        "_move_action_desired_q",
+        "_forward_scratch_arm_configuration",
+        "_core_capture_gravity_bias_control",
+        "MatchaWorkflowController._command_move",
     ],
-    "authority_scope": "development_free_space_tracking_only",
+    "allowed_direct_mujoco_calls": [
+        "mj_differentiatePos",
+        "mj_forward",
+        "mj_integratePos",
+    ],
+    "allowed_scratch_state_attributes": [
+        "qfrc_bias",
+        "qpos",
+        "qvel",
+    ],
+    "allowed_model_feedforward_arrays": [
+        "actuator_ctrlrange",
+        "actuator_gainprm",
+        "actuator_gear",
+    ],
+    "prohibited_attributes": ["qfrc_constraint"],
+    "prohibited_calls": ["mj_contactForce", "mj_inverse"],
+    "prohibited_assignment_targets": [
+        "self.data.qpos",
+        "self.data.qvel",
+    ],
+    "command_branch_live_state_policy": (
+        "live_qpos_qvel_reads_only_after_control_evaluation;no_assignment"
+    ),
 }
-CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256 = _canonical_json_sha256(
-    CORE_CAPTURE_GRAVITY_BIAS_FORMULA
+CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY_SHA256 = (
+    "a37f23d5febca6be18c72cd00dbdeb4f03a44b6aa803a5f128cfa98b15b0e407"
 )
 CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_PREIMAGE = {
     "robot_xml_sha256": CORE_CAPTURE_ROBOT_XML_SHA256,
@@ -745,10 +892,20 @@ CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_PREIMAGE = {
     "arm_gear_sha256": CORE_CAPTURE_ARM_GEAR_SHA256,
     "arm_ctrlrange_sha256": CORE_CAPTURE_ARM_CTRLRANGE_SHA256,
     "arm_forcerange_sha256": CORE_CAPTURE_ARM_FORCERANGE_SHA256,
+    "initialized_non_arm_qpos_sha256": (
+        CORE_CAPTURE_GRAVITY_BIAS_NON_ARM_QPOS_SHA256
+    ),
     "formula_sha256": CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256,
+    "guard_thresholds": copy.deepcopy(
+        CORE_CAPTURE_GRAVITY_BIAS_GUARD_THRESHOLDS
+    ),
+    "transitive_callgraph_sha256": (
+        CORE_CAPTURE_GRAVITY_BIAS_TRANSITIVE_CALLGRAPH_SHA256
+    ),
+    "ast_policy_sha256": CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY_SHA256,
 }
-CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_SHA256 = _canonical_json_sha256(
-    CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_PREIMAGE
+CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_SHA256 = (
+    "6d1562adc58501f6db1d69c6037b4a5bc1ded0775150b7d376c4bc440f8236f5"
 )
 
 
@@ -1838,6 +1995,11 @@ def _move_action_desired_q(
             target - desired_start_q
         )
     return np.asarray(desired_q, dtype=np.float64), float(smooth)
+
+
+_CORE_CAPTURE_MOVE_ACTION_DESIRED_Q_IMPLEMENTATION = (
+    _move_action_desired_q
+)
 
 
 def _recovery_controller_actions(
@@ -3344,9 +3506,299 @@ def _core_capture_gravity_bias_model_digests(
         "arm_ctrlrange": [
             [float(value) for value in row] for row in arm_ctrlrange
         ],
-        "arm_forcerange_n": [
+        "arm_forcerange_nm": [
             [float(value) for value in row] for row in arm_forcerange
         ],
+    }
+
+
+def _ast_attribute_path(node: ast.AST) -> str | None:
+    """Return a dotted attribute/subscript base path when statically known."""
+
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        parent = _ast_attribute_path(node.value)
+        return f"{parent}.{node.attr}" if parent else None
+    if isinstance(node, ast.Subscript):
+        return _ast_attribute_path(node.value)
+    return None
+
+
+def _core_capture_gravity_bias_source_audit() -> dict[str, Any]:
+    """Inspect the exact FF callgraph and count prohibited operations."""
+
+    functions = {
+        "_move_action_desired_q": _move_action_desired_q,
+        "_forward_scratch_arm_configuration": (
+            _forward_scratch_arm_configuration
+        ),
+        "_core_capture_gravity_bias_control": (
+            _core_capture_gravity_bias_control
+        ),
+        "MatchaWorkflowController._command_move": (
+            MatchaWorkflowController._command_move
+        ),
+    }
+    records: list[dict[str, Any]] = []
+    counts = {
+        "direct_live_qpos_write_count": 0,
+        "direct_live_qvel_write_count": 0,
+        "qfrc_constraint_read_count": 0,
+        "mj_contact_force_call_count": 0,
+        "mj_inverse_call_count": 0,
+        "unapproved_direct_mujoco_call_count": 0,
+        "unapproved_scratch_state_attribute_count": 0,
+        "unapproved_model_feedforward_array_count": 0,
+    }
+    inspection_errors: list[str] = []
+    allowed_mujoco = frozenset(
+        CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY[
+            "allowed_direct_mujoco_calls"
+        ]
+    )
+    allowed_scratch = frozenset(
+        CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY[
+            "allowed_scratch_state_attributes"
+        ]
+    )
+    allowed_model = frozenset(
+        CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY[
+            "allowed_model_feedforward_arrays"
+        ]
+    )
+    for name, function in functions.items():
+        try:
+            source = textwrap.dedent(inspect.getsource(function))
+            tree = ast.parse(source)
+        except (OSError, TypeError, SyntaxError) as exc:
+            inspection_errors.append(f"{name}:{type(exc).__name__}")
+            continue
+        ast_dump = ast.dump(tree, annotate_fields=True, include_attributes=False)
+        records.append(
+            {
+                "name": name,
+                "source_sha256": hashlib.sha256(source.encode()).hexdigest(),
+                "normalized_ast_sha256": hashlib.sha256(
+                    ast_dump.encode()
+                ).hexdigest(),
+            }
+        )
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Attribute):
+                if node.attr == "qfrc_constraint":
+                    counts["qfrc_constraint_read_count"] += 1
+                base_path = _ast_attribute_path(node.value)
+                if base_path == "scratch_data" and node.attr not in allowed_scratch:
+                    counts["unapproved_scratch_state_attribute_count"] += 1
+                if (
+                    name == "_core_capture_gravity_bias_control"
+                    and base_path == "model"
+                    and node.attr not in allowed_model
+                ):
+                    counts["unapproved_model_feedforward_array_count"] += 1
+            if isinstance(node, ast.Call):
+                call_path = _ast_attribute_path(node.func)
+                call_name = call_path.rsplit(".", 1)[-1] if call_path else ""
+                if call_name == "mj_contactForce":
+                    counts["mj_contact_force_call_count"] += 1
+                if call_name == "mj_inverse":
+                    counts["mj_inverse_call_count"] += 1
+                if (
+                    call_path
+                    and call_path.startswith("mujoco.")
+                    and call_name not in allowed_mujoco
+                ):
+                    counts["unapproved_direct_mujoco_call_count"] += 1
+            if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+                targets: list[ast.AST]
+                if isinstance(node, ast.Assign):
+                    targets = list(node.targets)
+                else:
+                    targets = [node.target]
+                for target in targets:
+                    path = _ast_attribute_path(target)
+                    if path == "self.data.qpos":
+                        counts["direct_live_qpos_write_count"] += 1
+                    if path == "self.data.qvel":
+                        counts["direct_live_qvel_write_count"] += 1
+    callgraph_sha256 = _canonical_json_sha256(records)
+    policy_sha256 = _canonical_json_sha256(
+        CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY
+    )
+    transitive_function_bindings_match_frozen = bool(
+        _core_capture_gravity_bias_control
+        is _CORE_CAPTURE_GRAVITY_BIAS_CONTROL_IMPLEMENTATION
+        and _move_action_desired_q
+        is _CORE_CAPTURE_MOVE_ACTION_DESIRED_Q_IMPLEMENTATION
+        and _forward_scratch_arm_configuration
+        is _CORE_CAPTURE_GRAVITY_BIAS_FORWARD_IMPLEMENTATION
+        and MatchaWorkflowController._command_move
+        is _CORE_CAPTURE_COMMAND_MOVE_IMPLEMENTATION
+    )
+    passed = bool(
+        not inspection_errors
+        and [record["name"] for record in records]
+        == list(CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY["audited_functions"])
+        and all(count == 0 for count in counts.values())
+        and callgraph_sha256
+        == CORE_CAPTURE_GRAVITY_BIAS_TRANSITIVE_CALLGRAPH_SHA256
+        and policy_sha256 == CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY_SHA256
+        and transitive_function_bindings_match_frozen
+    )
+    return {
+        "schema_version": "1.0",
+        "policy": copy.deepcopy(CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY),
+        "expected_policy_sha256": CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY_SHA256,
+        "observed_policy_sha256": policy_sha256,
+        "expected_transitive_callgraph_sha256": (
+            CORE_CAPTURE_GRAVITY_BIAS_TRANSITIVE_CALLGRAPH_SHA256
+        ),
+        "observed_transitive_callgraph_sha256": callgraph_sha256,
+        "function_records": records,
+        "prohibited_operation_counts": counts,
+        "transitive_function_bindings_match_frozen": (
+            transitive_function_bindings_match_frozen
+        ),
+        "inspection_errors": inspection_errors,
+        "passed": passed,
+    }
+
+
+def _current_core_capture_gravity_bias_identity_snapshot(
+    model: mujoco.MjModel,
+) -> dict[str, Any]:
+    """Rebuild the complete FF identity from current executable inputs."""
+
+    model_digests = _core_capture_gravity_bias_model_digests(model)
+    initialized_scratch = mujoco.MjData(model)
+    initialize(model, initialized_scratch)
+    arm_qpos_ids = np.asarray(
+        [model.joint(name).qposadr[0] for name in ARM_JOINTS], dtype=int
+    )
+    non_arm_qpos_ids = np.asarray(
+        sorted(set(range(model.nq)) - set(arm_qpos_ids.tolist())), dtype=int
+    )
+    _CORE_CAPTURE_GRAVITY_BIAS_FORWARD_IMPLEMENTATION(
+        model,
+        initialized_scratch,
+        arm_qpos_ids,
+        np.asarray(initialized_scratch.qpos, dtype=np.float64)[
+            arm_qpos_ids
+        ],
+    )
+    initialized_non_arm_qpos_sha256 = _float64_bytes_sha256(
+        np.asarray(initialized_scratch.qpos, dtype=np.float64)[
+            non_arm_qpos_ids
+        ]
+    )
+    cam_model_binding = actual_core_cam_model_binding_snapshot(model)
+    route_preimage = _current_core_capture_route_identity_preimage()
+    route_identity_sha256 = _canonical_json_sha256(route_preimage)
+    desired_start_sha256 = _canonical_json_sha256(
+        {
+            name: list(values)
+            for name, values in CORE_CAPTURE_ROUTE_DESIRED_START_Q.items()
+        }
+    )
+    current_formula = _current_core_capture_gravity_bias_formula()
+    formula_sha256 = _canonical_json_sha256(current_formula)
+    guard_thresholds = _current_core_capture_gravity_bias_guard_thresholds()
+    source_audit = _core_capture_gravity_bias_source_audit()
+    observed_preimage = {
+        "robot_xml_sha256": hashlib.sha256(ROBOT_XML.read_bytes()).hexdigest(),
+        "model_xml_sha256": hashlib.sha256(
+            _build_xml_and_assets()[0].encode()
+        ).hexdigest(),
+        "compiled_model_xml_equivalent_sha256": cam_model_binding[
+            "observed_compiled_model_xml_equivalent_sha256"
+        ],
+        "initialized_active_collision_geometry_sha256": cam_model_binding[
+            "observed_initialized_active_collision_geometry_sha256"
+        ],
+        "capture_route_contract_identity_sha256": route_identity_sha256,
+        "desired_start_q_sha256": desired_start_sha256,
+        "gravity_sha256": model_digests["gravity_sha256"],
+        "body_mass_sha256": model_digests["body_mass_sha256"],
+        "body_inertia_sha256": model_digests["body_inertia_sha256"],
+        "body_ipos_sha256": model_digests["body_ipos_sha256"],
+        "body_iquat_sha256": model_digests["body_iquat_sha256"],
+        "inertial_bundle_sha256": model_digests[
+            "inertial_bundle_sha256"
+        ],
+        "arm_gainprm_sha256": model_digests["arm_gainprm_sha256"],
+        "arm_gear_sha256": model_digests["arm_gear_sha256"],
+        "arm_ctrlrange_sha256": model_digests["arm_ctrlrange_sha256"],
+        "arm_forcerange_sha256": model_digests["arm_forcerange_sha256"],
+        "initialized_non_arm_qpos_sha256": (
+            initialized_non_arm_qpos_sha256
+        ),
+        "formula_sha256": formula_sha256,
+        "guard_thresholds": guard_thresholds,
+        "transitive_callgraph_sha256": source_audit[
+            "observed_transitive_callgraph_sha256"
+        ],
+        "ast_policy_sha256": source_audit["observed_policy_sha256"],
+    }
+    observed_identity_sha256 = _canonical_json_sha256(observed_preimage)
+    component_matches = {
+        key: observed_preimage.get(key) == expected_value
+        for key, expected_value in (
+            CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_PREIMAGE.items()
+        )
+    }
+    public_objects_match = bool(
+        CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_DIGEST_PREIMAGE
+        == route_preimage
+        and CORE_CAPTURE_GRAVITY_BIAS_FORMULA == current_formula
+        and CORE_CAPTURE_GRAVITY_BIAS_GUARD_THRESHOLDS == guard_thresholds
+    )
+    passed = bool(
+        all(component_matches.values())
+        and public_objects_match
+        and source_audit["passed"]
+        and observed_identity_sha256
+        == CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_SHA256
+    )
+    return {
+        "schema_version": "1.0",
+        "expected_identity_preimage": copy.deepcopy(
+            CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_PREIMAGE
+        ),
+        "observed_identity_preimage": observed_preimage,
+        "expected_identity_sha256": (
+            CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_SHA256
+        ),
+        "observed_identity_sha256": observed_identity_sha256,
+        "component_matches": component_matches,
+        "public_objects_match_fresh_reconstruction": public_objects_match,
+        "route_identity": {
+            "expected_sha256": CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_SHA256,
+            "observed_sha256": route_identity_sha256,
+            "observed_preimage": route_preimage,
+            "matches": bool(
+                route_identity_sha256
+                == CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_SHA256
+            ),
+        },
+        "formula": {
+            "expected_sha256": CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256,
+            "observed_sha256": formula_sha256,
+            "matches": bool(
+                formula_sha256 == CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256
+                and CORE_CAPTURE_GRAVITY_BIAS_FORMULA == current_formula
+            ),
+        },
+        "desired_start_q": {
+            "expected_sha256": CORE_CAPTURE_ROUTE_DESIRED_START_Q_SHA256,
+            "observed_sha256": desired_start_sha256,
+            "matches": bool(
+                desired_start_sha256
+                == CORE_CAPTURE_ROUTE_DESIRED_START_Q_SHA256
+            ),
+        },
+        "source_audit": source_audit,
+        "passed": passed,
     }
 
 
@@ -3401,24 +3853,59 @@ def actual_core_capture_gravity_bias_binding_snapshot(
 def _core_capture_gravity_bias_control(
     model: mujoco.MjModel,
     scratch_data: mujoco.MjData,
+    live_data: mujoco.MjData,
     arm_qpos_ids: np.ndarray,
+    non_arm_qpos_ids: np.ndarray,
     arm_dof_ids: np.ndarray,
     arm_actuator_ids: np.ndarray,
     desired_q: np.ndarray,
+    expected_non_arm_qpos_sha256: str,
 ) -> dict[str, Any]:
     """Evaluate positive gravity bias on private scratch state only."""
 
-    _forward_scratch_arm_configuration(
+    if scratch_data is live_data:
+        raise RuntimeError("gravity-bias scratch aliases live MjData")
+    live_qpos_before = np.asarray(live_data.qpos, dtype=np.float64).copy()
+    live_qvel_before = np.asarray(live_data.qvel, dtype=np.float64).copy()
+    all_scratch_qvel_before = np.asarray(
+        scratch_data.qvel, dtype=np.float64
+    ).copy()
+    if not np.array_equal(
+        all_scratch_qvel_before, np.zeros_like(all_scratch_qvel_before)
+    ):
+        raise RuntimeError("gravity-bias scratch qvel must be entirely zero")
+    non_arm_qpos_before_sha256 = _float64_bytes_sha256(
+        np.asarray(scratch_data.qpos, dtype=np.float64)[non_arm_qpos_ids]
+    )
+    if non_arm_qpos_before_sha256 != expected_non_arm_qpos_sha256:
+        raise RuntimeError("gravity-bias scratch non-arm qpos drifted")
+    _CORE_CAPTURE_GRAVITY_BIAS_FORWARD_IMPLEMENTATION(
         model,
         scratch_data,
         arm_qpos_ids,
         np.asarray(desired_q, dtype=np.float64),
     )
-    scratch_qvel = np.asarray(
-        scratch_data.qvel[arm_dof_ids], dtype=np.float64
+    all_scratch_qvel_after = np.asarray(
+        scratch_data.qvel, dtype=np.float64
+    ).copy()
+    if not np.array_equal(
+        all_scratch_qvel_after, np.zeros_like(all_scratch_qvel_after)
+    ):
+        raise RuntimeError("gravity-bias scratch qvel changed from zero")
+    scratch_qvel = all_scratch_qvel_after[np.asarray(arm_dof_ids, dtype=int)]
+    non_arm_qpos_after_sha256 = _float64_bytes_sha256(
+        np.asarray(scratch_data.qpos, dtype=np.float64)[non_arm_qpos_ids]
     )
-    if not np.array_equal(scratch_qvel, np.zeros_like(scratch_qvel)):
-        raise RuntimeError("gravity-bias scratch velocity must remain zero")
+    if non_arm_qpos_after_sha256 != expected_non_arm_qpos_sha256:
+        raise RuntimeError("gravity-bias scratch changed non-arm qpos")
+    live_qpos_unchanged = np.array_equal(
+        live_qpos_before, np.asarray(live_data.qpos, dtype=np.float64)
+    )
+    live_qvel_unchanged = np.array_equal(
+        live_qvel_before, np.asarray(live_data.qvel, dtype=np.float64)
+    )
+    if not (live_qpos_unchanged and live_qvel_unchanged):
+        raise RuntimeError("gravity-bias evaluation changed live state")
     qfrc_bias = np.asarray(
         scratch_data.qfrc_bias[arm_dof_ids], dtype=np.float64
     ).copy()
@@ -3446,6 +3933,18 @@ def _core_capture_gravity_bias_control(
     )
     saturation = np.not_equal(applied_control, unsaturated_control)
     return {
+        "scratch_is_distinct_from_live": True,
+        "live_qpos_unchanged": live_qpos_unchanged,
+        "live_qvel_unchanged": live_qvel_unchanged,
+        "expected_non_arm_qpos_sha256": expected_non_arm_qpos_sha256,
+        "observed_non_arm_qpos_before_sha256": (
+            non_arm_qpos_before_sha256
+        ),
+        "observed_non_arm_qpos_after_sha256": (
+            non_arm_qpos_after_sha256
+        ),
+        "all_scratch_qvel_zero_before": True,
+        "all_scratch_qvel_zero_after": True,
         "scratch_desired_arm_q_rad": [
             float(value) for value in scratch_data.qpos[arm_qpos_ids]
         ],
@@ -3471,7 +3970,11 @@ def _core_capture_gravity_bias_control(
     }
 
 
-@cache
+_CORE_CAPTURE_GRAVITY_BIAS_CONTROL_IMPLEMENTATION = (
+    _core_capture_gravity_bias_control
+)
+
+
 def core_capture_gravity_bias_feedforward_runtime_contract() -> dict[str, Any]:
     """Publish development-only gravity feedforward source bindings."""
 
@@ -3481,6 +3984,9 @@ def core_capture_gravity_bias_feedforward_runtime_contract() -> dict[str, Any]:
     ).hexdigest()
     actual_model_binding = actual_core_cam_model_binding_snapshot(model)
     dynamics_binding = actual_core_capture_gravity_bias_binding_snapshot(model)
+    identity_binding = _current_core_capture_gravity_bias_identity_snapshot(
+        model
+    )
     if not all(
         (
             actual_model_binding["compiled_model_xml_equivalent_matches"],
@@ -3488,6 +3994,7 @@ def core_capture_gravity_bias_feedforward_runtime_contract() -> dict[str, Any]:
                 "initialized_active_collision_geometry_matches"
             ],
             dynamics_binding["passed"],
+            identity_binding["passed"],
             observed_robot_xml_sha256 == CORE_CAPTURE_ROBOT_XML_SHA256,
         )
     ):
@@ -3498,7 +4005,7 @@ def core_capture_gravity_bias_feedforward_runtime_contract() -> dict[str, Any]:
         dynamics_binding["observed"]["arm_kp"],
         dynamics_binding["observed"]["arm_joint_gear"],
         dynamics_binding["observed"]["arm_ctrlrange"],
-        dynamics_binding["observed"]["arm_forcerange_n"],
+        dynamics_binding["observed"]["arm_forcerange_nm"],
         strict=True,
     ):
         actuator_records.append(
@@ -3507,7 +4014,7 @@ def core_capture_gravity_bias_feedforward_runtime_contract() -> dict[str, Any]:
                 "kp": kp,
                 "gear": gear,
                 "ctrlrange_rad": ctrlrange,
-                "forcerange_n": forcerange,
+                "forcerange_nm": forcerange,
             }
         )
     return {
@@ -3516,13 +4023,18 @@ def core_capture_gravity_bias_feedforward_runtime_contract() -> dict[str, Any]:
             "development_only_capture_route_gravity_bias_position_feedforward"
         ),
         "contract_identity_digest_preimage": copy.deepcopy(
-            CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_PREIMAGE
+            identity_binding["observed_identity_preimage"]
         ),
         "contract_identity_sha256": (
             CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_SHA256
         ),
         "formula": copy.deepcopy(CORE_CAPTURE_GRAVITY_BIAS_FORMULA),
         "formula_sha256": CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256,
+        "identity_revalidation": identity_binding,
+        "source_ast_audit": copy.deepcopy(identity_binding["source_audit"]),
+        "guard_thresholds": copy.deepcopy(
+            CORE_CAPTURE_GRAVITY_BIAS_GUARD_THRESHOLDS
+        ),
         "source_binding": {
             "robot_xml": {
                 "path": str(ROBOT_XML.relative_to(REPO_ROOT)),
@@ -3611,6 +4123,31 @@ def _forward_scratch_arm_configuration(
     mujoco.mj_forward(model, data)
 
 
+_CORE_CAPTURE_GRAVITY_BIAS_FORWARD_IMPLEMENTATION = (
+    _forward_scratch_arm_configuration
+)
+
+
+def _forward_scratch_generalized_configuration(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    target_qpos: np.ndarray,
+) -> None:
+    """Replay one lossless full-qpos telemetry row on private scratch."""
+
+    target = np.asarray(target_qpos, dtype=np.float64)
+    if target.shape != (model.nq,) or not np.all(np.isfinite(target)):
+        raise ValueError("full scratch replay qpos must be finite model.nq")
+    generalized_velocity = np.empty(model.nv, dtype=np.float64)
+    mujoco.mj_differentiatePos(
+        model, generalized_velocity, 1.0, data.qpos, target
+    )
+    mujoco.mj_integratePos(
+        model, data.qpos, generalized_velocity, 1.0
+    )
+    mujoco.mj_forward(model, data)
+
+
 def _small_rotation_angle(rotation: np.ndarray) -> float:
     sine_vector = 0.5 * np.asarray(
         [
@@ -3622,6 +4159,37 @@ def _small_rotation_angle(rotation: np.ndarray) -> float:
     )
     cosine = (float(np.trace(rotation)) - 1.0) / 2.0
     return float(math.atan2(float(np.linalg.norm(sine_vector)), cosine))
+
+
+def _core_capture_arm_fk_from_data(data: mujoco.MjData) -> dict[str, float]:
+    """Compute capture-frame arm FK from one already-forwarded MjData."""
+
+    dock = data.body("dock_gripper")
+    mating = data.site("robot_mating_face")
+    dock_rotation = np.asarray(dock.xmat, dtype=np.float64).reshape(3, 3)
+    local_position_mm = dock_rotation.T @ (
+        np.asarray(mating.xpos, dtype=np.float64)
+        - np.asarray(dock.xpos, dtype=np.float64)
+    ) * 1000.0
+    mating_rotation = np.asarray(
+        mating.xmat, dtype=np.float64
+    ).reshape(3, 3)
+    relative_rotation = dock_rotation.T @ mating_rotation
+    orientation_error_rad = math.acos(
+        float(
+            np.clip(
+                (float(np.trace(relative_rotation)) - 1.0) / 2.0,
+                -1.0,
+                1.0,
+            )
+        )
+    )
+    return {
+        "preseat_mm": -float(local_position_mm[2]),
+        "source_x_mm": float(local_position_mm[0]),
+        "transverse_y_mm": float(local_position_mm[1]),
+        "orientation_error_rad": orientation_error_rad,
+    }
 
 
 def _core_capture_route_dense_fk_evidence(
@@ -3884,8 +4452,18 @@ def _move_action_command_kinematics(
     }
 
 
-@cache
 def _positive_lock_cam_capture_route_contract_cached() -> dict[str, Any]:
+    route_identity_preimage = _current_core_capture_route_identity_preimage()
+    route_identity_sha256 = _canonical_json_sha256(
+        route_identity_preimage
+    )
+    if (
+        route_identity_sha256
+        != CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_SHA256
+        or route_identity_preimage
+        != CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_DIGEST_PREIMAGE
+    ):
+        raise RuntimeError("core capture route identity drifted")
     model = build_model()
     initialized_data = mujoco.MjData(model)
     initialize(model, initialized_data)
@@ -4119,7 +4697,7 @@ def _positive_lock_cam_capture_route_contract_cached() -> dict[str, Any]:
             CORE_CAPTURE_ROUTE_STATE_BYTES_SHA256
         ),
         "contract_identity_digest_preimage": copy.deepcopy(
-            CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_DIGEST_PREIMAGE
+            route_identity_preimage
         ),
         "contract_identity_sha256": (
             CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_SHA256
@@ -4377,11 +4955,54 @@ class MatchaWorkflowController:
         self.arm_actuator_ids = np.asarray(
             [model.actuator(name).id for name in ARM_ACTUATORS], dtype=int
         )
+        self.non_arm_qpos_ids = np.asarray(
+            sorted(set(range(model.nq)) - set(self.arm_qpos_ids.tolist())),
+            dtype=int,
+        )
         self.core_capture_gravity_bias_init_binding = (
             actual_core_capture_gravity_bias_binding_snapshot(model)
         )
+        self.core_capture_gravity_bias_identity_init_binding = (
+            _current_core_capture_gravity_bias_identity_snapshot(model)
+        )
+        self._core_capture_gravity_bias_control_function = (
+            _CORE_CAPTURE_GRAVITY_BIAS_CONTROL_IMPLEMENTATION
+        )
         self.core_capture_gravity_bias_scratch_data = mujoco.MjData(model)
         initialize(model, self.core_capture_gravity_bias_scratch_data)
+        _forward_scratch_arm_configuration(
+            model,
+            self.core_capture_gravity_bias_scratch_data,
+            self.arm_qpos_ids,
+            np.asarray(
+                self.core_capture_gravity_bias_scratch_data.qpos,
+                dtype=np.float64,
+            )[self.arm_qpos_ids],
+        )
+        if self.core_capture_gravity_bias_scratch_data is data:
+            raise RuntimeError("gravity-bias scratch must not alias live data")
+        if not np.array_equal(
+            np.asarray(
+                self.core_capture_gravity_bias_scratch_data.qvel,
+                dtype=np.float64,
+            ),
+            np.zeros(model.nv, dtype=np.float64),
+        ):
+            raise RuntimeError("initialized gravity-bias scratch qvel nonzero")
+        self.core_capture_gravity_bias_non_arm_qpos_sha256 = (
+            _float64_bytes_sha256(
+                np.asarray(
+                    self.core_capture_gravity_bias_scratch_data.qpos,
+                    dtype=np.float64,
+                )[self.non_arm_qpos_ids]
+            )
+        )
+        self.core_capture_gravity_bias_telemetry_fk_data = mujoco.MjData(
+            model
+        )
+        initialize(
+            model, self.core_capture_gravity_bias_telemetry_fk_data
+        )
         self.geom_names = tuple(
             str(model.geom(geom_id).name) for geom_id in range(model.ngeom)
         )
@@ -4507,15 +5128,16 @@ class MatchaWorkflowController:
         # Frozen capture routes start from their immutable desired endpoint,
         # never from a gravity-biased actuator control or lagging live state.
         initial_action_name = self.actions[0].name
+        if initial_action_name in CORE_CAPTURE_ROUTE_DESIRED_START_Q:
+            initial_desired_start = CORE_CAPTURE_ROUTE_DESIRED_START_Q[
+                initial_action_name
+            ]
+        else:
+            initial_desired_start = tuple(
+                float(value) for value in data.ctrl[self.arm_actuator_ids]
+            )
         self.desired_action_start_q = np.asarray(
-            CORE_CAPTURE_ROUTE_DESIRED_START_Q.get(
-                initial_action_name,
-                tuple(
-                    float(value)
-                    for value in data.ctrl[self.arm_actuator_ids]
-                ),
-            ),
-            dtype=np.float64,
+            initial_desired_start, dtype=np.float64
         ).copy()
         self.completed = False
         self.success = False
@@ -4870,38 +5492,19 @@ class MatchaWorkflowController:
     def _core_cam_tab_live_kinematics(self) -> dict[str, float]:
         """Return live dock-frame capture state without mutating physics."""
 
-        dock = self.data.body("dock_gripper")
-        mating = self.data.site("robot_mating_face")
-        dock_rotation = np.asarray(dock.xmat, dtype=np.float64).reshape(3, 3)
-        local_position_mm = dock_rotation.T @ (
-            np.asarray(mating.xpos, dtype=np.float64)
-            - np.asarray(dock.xpos, dtype=np.float64)
-        ) * 1000.0
-        mating_rotation = np.asarray(
-            mating.xmat, dtype=np.float64
-        ).reshape(3, 3)
-        relative_rotation = dock_rotation.T @ mating_rotation
-        orientation_error_rad = math.acos(
-            float(
-                np.clip(
-                    (float(np.trace(relative_rotation)) - 1.0) / 2.0,
-                    -1.0,
-                    1.0,
-                )
-            )
-        )
+        arm_fk = _core_capture_arm_fk_from_data(self.data)
         slider_joint = self.model.joint("qc_positive_lock_slider_joint")
         slider_q_mm = (
             float(self.data.qpos[int(slider_joint.qposadr[0])]) * 1000.0
         )
-        preseat_mm = -float(local_position_mm[2])
-        source_x_mm = float(local_position_mm[0])
+        preseat_mm = float(arm_fk["preseat_mm"])
+        source_x_mm = float(arm_fk["source_x_mm"])
         nonnegative_preseat_mm = max(0.0, preseat_mm)
         return {
             "preseat_mm": preseat_mm,
             "source_x_mm": source_x_mm,
-            "transverse_y_mm": float(local_position_mm[1]),
-            "orientation_error_rad": orientation_error_rad,
+            "transverse_y_mm": float(arm_fk["transverse_y_mm"]),
+            "orientation_error_rad": float(arm_fk["orientation_error_rad"]),
             "slider_q_mm": slider_q_mm,
             "source_q_max_mm": _core_cam_tab_source_q_max_mm(
                 nonnegative_preseat_mm, source_x_mm
@@ -5801,7 +6404,7 @@ class MatchaWorkflowController:
         desired_q = np.asarray(
             command["desired_arm_q_rad"], dtype=np.float64
         )
-        actuator_force = np.asarray(
+        actuator_torque = np.asarray(
             self.data.actuator_force[self.arm_actuator_ids],
             dtype=np.float64,
         )
@@ -5811,9 +6414,9 @@ class MatchaWorkflowController:
         )
         force_limits = np.max(np.abs(force_range), axis=1)
         force_utilization = np.divide(
-            np.abs(actuator_force),
+            np.abs(actuator_torque),
             force_limits,
-            out=np.zeros_like(actuator_force),
+            out=np.zeros_like(actuator_torque),
             where=force_limits > 0.0,
         )
         ctrl_range = np.asarray(
@@ -5877,7 +6480,26 @@ class MatchaWorkflowController:
             }
             for contact_index in range(self.data.ncon)
         ]
-        live = self._core_cam_tab_live_kinematics()
+        cached_live = self._core_cam_tab_live_kinematics()
+        live_full_qpos = np.asarray(
+            self.data.qpos, dtype=np.float64
+        ).copy()
+        live_full_qvel = np.asarray(
+            self.data.qvel, dtype=np.float64
+        ).copy()
+        _forward_scratch_generalized_configuration(
+            self.model,
+            self.core_capture_gravity_bias_telemetry_fk_data,
+            live_full_qpos,
+        )
+        replayed_arm_fk = _core_capture_arm_fk_from_data(
+            self.core_capture_gravity_bias_telemetry_fk_data
+        )
+        slider_q_mm = float(cached_live["slider_q_mm"])
+        replayed_source_q_max_mm = _core_cam_tab_source_q_max_mm(
+            max(0.0, float(replayed_arm_fk["preseat_mm"])),
+            float(replayed_arm_fk["source_x_mm"]),
+        )
         expected_preseat_mm, expected_x_mm = (
             _core_capture_expected_p_x_mm(
                 action.name,
@@ -5902,6 +6524,30 @@ class MatchaWorkflowController:
             "scratch_desired_arm_q_rad": list(
                 command["scratch_desired_arm_q_rad"]
             ),
+            "scratch_is_distinct_from_live": bool(
+                command["scratch_is_distinct_from_live"]
+            ),
+            "live_qpos_unchanged_during_bias_evaluation": bool(
+                command["live_qpos_unchanged"]
+            ),
+            "live_qvel_unchanged_during_bias_evaluation": bool(
+                command["live_qvel_unchanged"]
+            ),
+            "expected_non_arm_qpos_sha256": command[
+                "expected_non_arm_qpos_sha256"
+            ],
+            "observed_non_arm_qpos_before_sha256": command[
+                "observed_non_arm_qpos_before_sha256"
+            ],
+            "observed_non_arm_qpos_after_sha256": command[
+                "observed_non_arm_qpos_after_sha256"
+            ],
+            "all_scratch_qvel_zero_before": bool(
+                command["all_scratch_qvel_zero_before"]
+            ),
+            "all_scratch_qvel_zero_after": bool(
+                command["all_scratch_qvel_zero_after"]
+            ),
             "scratch_arm_qvel_rad_s": list(
                 command["scratch_arm_qvel_rad_s"]
             ),
@@ -5922,35 +6568,63 @@ class MatchaWorkflowController:
             "any_saturation": bool(command["any_saturation"]),
             "live_arm_q_rad": [float(value) for value in live_q],
             "live_arm_qvel_rad_s": [float(value) for value in live_qvel],
+            "live_full_qpos": [
+                float(value) for value in live_full_qpos
+            ],
+            "live_full_qvel": [
+                float(value) for value in live_full_qvel
+            ],
             "tracking_error_to_desired_rad": [
                 float(value) for value in live_q - desired_q
             ],
-            "actuator_force_n": [
-                float(value) for value in actuator_force
+            "actuator_torque_nm": [
+                float(value) for value in actuator_torque
             ],
-            "actuator_force_utilization": [
+            "actuator_torque_utilization": [
                 float(value) for value in force_utilization
             ],
             "ctrl_range_utilization": [
                 float(value) for value in ctrl_range_utilization
             ],
             "fk": {
+                "sampling_semantics": (
+                    "fresh_private_scratch_mj_forward_at_recorded_post_step_qpos"
+                ),
                 "expected_preseat_mm": expected_preseat_mm,
-                "preseat_mm": float(live["preseat_mm"]),
+                "preseat_mm": float(replayed_arm_fk["preseat_mm"]),
                 "preseat_error_mm": (
-                    float(live["preseat_mm"]) - expected_preseat_mm
+                    float(replayed_arm_fk["preseat_mm"])
+                    - expected_preseat_mm
                 ),
                 "expected_source_x_mm": expected_x_mm,
-                "source_x_mm": float(live["source_x_mm"]),
+                "source_x_mm": float(replayed_arm_fk["source_x_mm"]),
                 "source_x_error_mm": (
-                    float(live["source_x_mm"]) - expected_x_mm
+                    float(replayed_arm_fk["source_x_mm"])
+                    - expected_x_mm
                 ),
-                "transverse_y_mm": float(live["transverse_y_mm"]),
+                "transverse_y_mm": float(
+                    replayed_arm_fk["transverse_y_mm"]
+                ),
                 "orientation_error_rad": float(
-                    live["orientation_error_rad"]
+                    replayed_arm_fk["orientation_error_rad"]
                 ),
-                "slider_q_mm": float(live["slider_q_mm"]),
-                "source_q_max_mm": float(live["source_q_max_mm"]),
+                "slider_q_mm": slider_q_mm,
+                "source_q_max_mm": replayed_source_q_max_mm,
+            },
+            "cached_post_mj_step_transform_fk": {
+                "sampling_semantics": (
+                    "live_cached_transforms_after_mj_step_not_qpos_replay_authority"
+                ),
+                "preseat_mm": float(cached_live["preseat_mm"]),
+                "source_x_mm": float(cached_live["source_x_mm"]),
+                "transverse_y_mm": float(cached_live["transverse_y_mm"]),
+                "orientation_error_rad": float(
+                    cached_live["orientation_error_rad"]
+                ),
+                "slider_q_mm": slider_q_mm,
+                "source_q_max_mm": float(
+                    cached_live["source_q_max_mm"]
+                ),
             },
             "raw_two_tab_by_five_cam_contact_counts": pair_counts,
             "raw_live_contact_count": int(self.data.ncon),
@@ -5965,10 +6639,17 @@ class MatchaWorkflowController:
                 and np.all(np.isfinite(live_q))
                 and np.all(np.isfinite(live_qvel))
                 and np.all(np.isfinite(applied_ctrl))
-                and np.all(np.isfinite(actuator_force))
+                and np.all(np.isfinite(actuator_torque))
                 and np.all(np.isfinite(force_utilization))
                 and np.all(np.isfinite(ctrl_range_utilization))
-                and all(math.isfinite(float(value)) for value in live.values())
+                and all(
+                    math.isfinite(float(value))
+                    for value in cached_live.values()
+                )
+                and all(
+                    math.isfinite(float(value))
+                    for value in replayed_arm_fk.values()
+                )
             ),
         }
         self.core_capture_gravity_bias_samples.append(sample)
@@ -6939,6 +7620,22 @@ class MatchaWorkflowController:
             {"event": "abort", "reason": reason, "sim_time_s": float(self.data.time)}
         )
 
+    def _abort_before_control_write(self, reason: str) -> None:
+        """Fail closed before a candidate control value touches live data."""
+
+        if self.abort_reason is not None:
+            return
+        self.abort_reason = reason
+        self.motion_stopped = True
+        self.journal.append(
+            {
+                "event": "abort",
+                "reason": reason,
+                "sim_time_s": float(self.data.time),
+                "before_control_write": True,
+            }
+        )
+
     def _integrate(self) -> None:
         action = self.current_action
         if action is None:
@@ -7074,12 +7771,14 @@ class MatchaWorkflowController:
                 float(value) for value in self.data.ctrl[self.arm_actuator_ids]
             )
         )
+        if next_action.name in CORE_CAPTURE_ROUTE_DESIRED_START_Q:
+            next_desired_start = CORE_CAPTURE_ROUTE_DESIRED_START_Q[
+                next_action.name
+            ]
+        else:
+            next_desired_start = completed_desired_endpoint
         self.desired_action_start_q = np.asarray(
-            CORE_CAPTURE_ROUTE_DESIRED_START_Q.get(
-                next_action.name,
-                completed_desired_endpoint,
-            ),
-            dtype=np.float64,
+            next_desired_start, dtype=np.float64
         ).copy()
         self.journal.append(
             {
@@ -7147,21 +7846,52 @@ class MatchaWorkflowController:
             self._abort("move_missing_target")
             return
         target = np.asarray(action.target_q, dtype=float)
-        desired_q, smooth = _move_action_desired_q(
+        desired_q, smooth = _CORE_CAPTURE_MOVE_ACTION_DESIRED_Q_IMPLEMENTATION(
             action,
             self.desired_action_start_q,
             elapsed_s,
         )
         self.current_move_command_smooth = float(smooth)
         if action.name in CORE_CAPTURE_ROUTE_ACTION_NAMES:
-            gravity_bias = _core_capture_gravity_bias_control(
-                self.model,
-                self.core_capture_gravity_bias_scratch_data,
-                self.arm_qpos_ids,
-                self.arm_dof_ids,
-                self.arm_actuator_ids,
-                desired_q,
-            )
+            if not bool(
+                self.core_capture_gravity_bias_identity_init_binding[
+                    "passed"
+                ]
+            ):
+                self._abort_before_control_write(
+                    "gravity_bias_identity_invalid_at_controller_init"
+                )
+                return
+            if (
+                self._core_capture_gravity_bias_control_function
+                is not _CORE_CAPTURE_GRAVITY_BIAS_CONTROL_IMPLEMENTATION
+                or _core_capture_gravity_bias_control
+                is not _CORE_CAPTURE_GRAVITY_BIAS_CONTROL_IMPLEMENTATION
+            ):
+                self._abort_before_control_write(
+                    "gravity_bias_control_function_binding_drift"
+                )
+                return
+            try:
+                gravity_bias = (
+                    self._core_capture_gravity_bias_control_function(
+                        self.model,
+                        self.core_capture_gravity_bias_scratch_data,
+                        self.data,
+                        self.arm_qpos_ids,
+                        self.non_arm_qpos_ids,
+                        self.arm_dof_ids,
+                        self.arm_actuator_ids,
+                        desired_q,
+                        CORE_CAPTURE_GRAVITY_BIAS_NON_ARM_QPOS_SHA256,
+                    )
+                )
+            except RuntimeError:
+                self.current_core_capture_gravity_bias_command = None
+                self._abort_before_control_write(
+                    "gravity_bias_scratch_isolation_violation"
+                )
+                return
             applied_control = np.asarray(
                 gravity_bias["applied_control_rad"], dtype=np.float64
             )
@@ -7379,6 +8109,21 @@ class MatchaWorkflowController:
         if elapsed_s > action.timeout_s:
             self._abort(f"action_timeout:{action.name}")
             return
+        if (
+            action.name in CORE_CAPTURE_ROUTE_ACTION_NAMES
+            and (
+                type(self)._command_move
+                is not _CORE_CAPTURE_COMMAND_MOVE_IMPLEMENTATION
+                or _move_action_desired_q
+                is not _CORE_CAPTURE_MOVE_ACTION_DESIRED_Q_IMPLEMENTATION
+                or _forward_scratch_arm_configuration
+                is not _CORE_CAPTURE_GRAVITY_BIAS_FORWARD_IMPLEMENTATION
+            )
+        ):
+            self._abort_before_control_write(
+                "gravity_bias_transitive_function_binding_drift"
+            )
+            return
         if action.kind == "move":
             self._command_move(action, elapsed_s)
         elif action.kind == "capture":
@@ -7496,8 +8241,14 @@ class MatchaWorkflowController:
         initial_binding = copy.deepcopy(
             self.core_capture_gravity_bias_init_binding
         )
+        initial_identity_binding = copy.deepcopy(
+            self.core_capture_gravity_bias_identity_init_binding
+        )
         evidence_binding = (
             actual_core_capture_gravity_bias_binding_snapshot(self.model)
+        )
+        evidence_identity_binding = (
+            _current_core_capture_gravity_bias_identity_snapshot(self.model)
         )
         dynamics_unchanged = bool(
             initial_binding["observed"] == evidence_binding["observed"]
@@ -7507,6 +8258,27 @@ class MatchaWorkflowController:
             and initial_binding["passed"]
             and evidence_binding["passed"]
             and dynamics_unchanged
+        )
+        identity_unchanged = bool(
+            initial_identity_binding["observed_identity_preimage"]
+            == evidence_identity_binding["observed_identity_preimage"]
+            and initial_identity_binding["observed_identity_sha256"]
+            == evidence_identity_binding["observed_identity_sha256"]
+        )
+        control_function_binding_matches = bool(
+            self._core_capture_gravity_bias_control_function
+            is _CORE_CAPTURE_GRAVITY_BIAS_CONTROL_IMPLEMENTATION
+            and _core_capture_gravity_bias_control
+            is _CORE_CAPTURE_GRAVITY_BIAS_CONTROL_IMPLEMENTATION
+        )
+        identity_binding_passed = bool(
+            initial_identity_binding["passed"]
+            and evidence_identity_binding["passed"]
+            and identity_unchanged
+            and control_function_binding_matches
+        )
+        guard_thresholds = (
+            _current_core_capture_gravity_bias_guard_thresholds()
         )
         samples = copy.deepcopy(self.core_capture_gravity_bias_samples)
         sample_phase_counts = {
@@ -7531,7 +8303,11 @@ class MatchaWorkflowController:
                     int(sample["physics_substep_count"])
                     * float(self.model.opt.timestep),
                     rel_tol=0.0,
-                    abs_tol=1.0e-10,
+                    abs_tol=float(
+                        guard_thresholds[
+                            "state_time_anchor_absolute_tolerance_s"
+                        ]
+                    ),
                 )
                 for sample in samples
             )
@@ -7543,7 +8319,11 @@ class MatchaWorkflowController:
                     - float(previous["sim_time_s"]),
                     float(self.model.opt.timestep),
                     rel_tol=0.0,
-                    abs_tol=1.0e-12,
+                    abs_tol=float(
+                        guard_thresholds[
+                            "adjacent_state_time_absolute_tolerance_s"
+                        ]
+                    ),
                 )
                 for previous, current in zip(samples, samples[1:])
             )
@@ -7565,10 +8345,30 @@ class MatchaWorkflowController:
         )
         sample_formula_passes: list[bool] = []
         sample_model_replay_passes: list[bool] = []
+        sample_runtime_isolation_passes: list[bool] = []
+        sample_telemetry_replay_passes: list[bool] = []
+        recomputed_telemetry: list[dict[str, Any]] = []
         raw_contact_count_closure_passes: list[bool] = []
         desired_route_passes: list[bool] = []
         gravity_bias_replay_data = mujoco.MjData(self.model)
         initialize(self.model, gravity_bias_replay_data)
+        _forward_scratch_arm_configuration(
+            self.model,
+            gravity_bias_replay_data,
+            self.arm_qpos_ids,
+            np.asarray(
+                gravity_bias_replay_data.qpos, dtype=np.float64
+            )[self.arm_qpos_ids],
+        )
+        gravity_bias_replay_live_data = mujoco.MjData(self.model)
+        initialize(self.model, gravity_bias_replay_live_data)
+        telemetry_fk_data = mujoco.MjData(self.model)
+        initialize(self.model, telemetry_fk_data)
+        replay_non_arm_qpos_sha256 = _float64_bytes_sha256(
+            np.asarray(
+                gravity_bias_replay_data.qpos, dtype=np.float64
+            )[self.non_arm_qpos_ids]
+        )
         for sample in samples:
             desired = np.asarray(
                 sample["desired_arm_q_rad"], dtype=np.float64
@@ -7607,13 +8407,18 @@ class MatchaWorkflowController:
             expected_saturation = np.not_equal(
                 expected_applied, expected_unsaturated
             )
-            independent_replay = _core_capture_gravity_bias_control(
+            independent_replay = (
+                self._core_capture_gravity_bias_control_function(
                 self.model,
                 gravity_bias_replay_data,
+                gravity_bias_replay_live_data,
                 self.arm_qpos_ids,
+                self.non_arm_qpos_ids,
                 self.arm_dof_ids,
                 self.arm_actuator_ids,
                 desired,
+                CORE_CAPTURE_GRAVITY_BIAS_NON_ARM_QPOS_SHA256,
+                )
             )
             sample_model_replay_passes.append(
                 bool(
@@ -7637,6 +8442,39 @@ class MatchaWorkflowController:
                     == independent_replay["saturated_by_joint"]
                     and bool(sample["any_saturation"])
                     is bool(independent_replay["any_saturation"])
+                    and sample["scratch_is_distinct_from_live"]
+                    is independent_replay["scratch_is_distinct_from_live"]
+                    and sample[
+                        "live_qpos_unchanged_during_bias_evaluation"
+                    ]
+                    is independent_replay["live_qpos_unchanged"]
+                    and sample[
+                        "live_qvel_unchanged_during_bias_evaluation"
+                    ]
+                    is independent_replay["live_qvel_unchanged"]
+                    and sample["all_scratch_qvel_zero_before"]
+                    is independent_replay["all_scratch_qvel_zero_before"]
+                    and sample["all_scratch_qvel_zero_after"]
+                    is independent_replay["all_scratch_qvel_zero_after"]
+                )
+            )
+            sample_runtime_isolation_passes.append(
+                bool(
+                    sample["scratch_is_distinct_from_live"]
+                    and sample[
+                        "live_qpos_unchanged_during_bias_evaluation"
+                    ]
+                    and sample[
+                        "live_qvel_unchanged_during_bias_evaluation"
+                    ]
+                    and sample["all_scratch_qvel_zero_before"]
+                    and sample["all_scratch_qvel_zero_after"]
+                    and sample["expected_non_arm_qpos_sha256"]
+                    == CORE_CAPTURE_GRAVITY_BIAS_NON_ARM_QPOS_SHA256
+                    and sample["observed_non_arm_qpos_before_sha256"]
+                    == CORE_CAPTURE_GRAVITY_BIAS_NON_ARM_QPOS_SHA256
+                    and sample["observed_non_arm_qpos_after_sha256"]
+                    == CORE_CAPTURE_GRAVITY_BIAS_NON_ARM_QPOS_SHA256
                 )
             )
             sample_formula_passes.append(
@@ -7654,6 +8492,172 @@ class MatchaWorkflowController:
                     is bool(np.any(expected_saturation))
                     and bool(sample["finite"])
                 )
+            )
+            live_q = np.asarray(
+                sample["live_arm_q_rad"], dtype=np.float64
+            )
+            live_qvel = np.asarray(
+                sample["live_arm_qvel_rad_s"], dtype=np.float64
+            )
+            live_full_qpos = np.asarray(
+                sample["live_full_qpos"], dtype=np.float64
+            )
+            live_full_qvel = np.asarray(
+                sample["live_full_qvel"], dtype=np.float64
+            )
+            recomputed_tracking = live_q - desired
+            actuator_torque = np.asarray(
+                sample["actuator_torque_nm"], dtype=np.float64
+            )
+            force_range = np.asarray(
+                self.model.actuator_forcerange[self.arm_actuator_ids],
+                dtype=np.float64,
+            )
+            force_limits = np.max(np.abs(force_range), axis=1)
+            recomputed_torque_utilization = np.divide(
+                np.abs(actuator_torque),
+                force_limits,
+                out=np.zeros_like(actuator_torque),
+                where=force_limits > 0.0,
+            )
+            ctrl_midpoint = np.mean(control_range, axis=1)
+            ctrl_half_range = 0.5 * (
+                control_range[:, 1] - control_range[:, 0]
+            )
+            recomputed_ctrl_utilization = np.divide(
+                np.abs(applied - ctrl_midpoint),
+                ctrl_half_range,
+                out=np.zeros_like(applied),
+                where=ctrl_half_range > 0.0,
+            )
+            _forward_scratch_generalized_configuration(
+                self.model,
+                telemetry_fk_data,
+                live_full_qpos,
+            )
+            replayed_fk = _core_capture_arm_fk_from_data(telemetry_fk_data)
+            expected_preseat_mm, expected_source_x_mm = (
+                _core_capture_expected_p_x_mm(
+                    str(sample["action"]),
+                    float(sample["command_smooth_fraction"]),
+                )
+            )
+            slider_q_mm = float(sample["fk"]["slider_q_mm"])
+            source_q_max_mm = _core_cam_tab_source_q_max_mm(
+                max(0.0, float(replayed_fk["preseat_mm"])),
+                float(replayed_fk["source_x_mm"]),
+            )
+            replayed_fk_record = {
+                "expected_preseat_mm": expected_preseat_mm,
+                "preseat_mm": float(replayed_fk["preseat_mm"]),
+                "preseat_error_mm": (
+                    float(replayed_fk["preseat_mm"])
+                    - expected_preseat_mm
+                ),
+                "expected_source_x_mm": expected_source_x_mm,
+                "source_x_mm": float(replayed_fk["source_x_mm"]),
+                "source_x_error_mm": (
+                    float(replayed_fk["source_x_mm"])
+                    - expected_source_x_mm
+                ),
+                "transverse_y_mm": float(replayed_fk["transverse_y_mm"]),
+                "orientation_error_rad": float(
+                    replayed_fk["orientation_error_rad"]
+                ),
+                "slider_q_mm": slider_q_mm,
+                "source_q_max_mm": source_q_max_mm,
+            }
+            derived_finite = bool(
+                _numeric_tree_all_finite(
+                    {
+                        "desired": desired.tolist(),
+                        "live_q": live_q.tolist(),
+                        "live_qvel": live_qvel.tolist(),
+                        "live_full_qpos": live_full_qpos.tolist(),
+                        "live_full_qvel": live_full_qvel.tolist(),
+                        "bias": bias.tolist(),
+                        "kp": kp.tolist(),
+                        "gear": gear.tolist(),
+                        "offset": offset.tolist(),
+                        "unsaturated": unsaturated.tolist(),
+                        "applied": applied.tolist(),
+                        "actuator_torque_nm": actuator_torque.tolist(),
+                        "torque_utilization": (
+                            recomputed_torque_utilization.tolist()
+                        ),
+                        "ctrl_utilization": (
+                            recomputed_ctrl_utilization.tolist()
+                        ),
+                        "fk": replayed_fk_record,
+                    }
+                )
+            )
+            telemetry_passed = bool(
+                live_full_qpos.shape == (self.model.nq,)
+                and live_full_qvel.shape == (self.model.nv,)
+                and np.array_equal(
+                    live_q, live_full_qpos[self.arm_qpos_ids]
+                )
+                and np.array_equal(
+                    live_qvel, live_full_qvel[self.arm_dof_ids]
+                )
+                and np.array_equal(
+                    np.asarray(
+                        sample["tracking_error_to_desired_rad"],
+                        dtype=np.float64,
+                    ),
+                    recomputed_tracking,
+                )
+                and np.array_equal(
+                    np.asarray(
+                        sample["actuator_torque_utilization"],
+                        dtype=np.float64,
+                    ),
+                    recomputed_torque_utilization,
+                )
+                and np.array_equal(
+                    np.asarray(
+                        sample["ctrl_range_utilization"],
+                        dtype=np.float64,
+                    ),
+                    recomputed_ctrl_utilization,
+                )
+                and sample["fk"].get("sampling_semantics")
+                == (
+                    "fresh_private_scratch_mj_forward_at_recorded_post_step_qpos"
+                )
+                and all(
+                    math.isclose(
+                        float(sample["fk"][key]),
+                        float(replayed_fk_record[key]),
+                        rel_tol=0.0,
+                        abs_tol=1.0e-12,
+                    )
+                    for key in replayed_fk_record
+                )
+                and bool(sample["finite"]) is derived_finite
+            )
+            sample_telemetry_replay_passes.append(telemetry_passed)
+            recomputed_telemetry.append(
+                {
+                    "physics_substep_count": int(
+                        sample["physics_substep_count"]
+                    ),
+                    "action": str(sample["action"]),
+                    "tracking_error_to_desired_rad": [
+                        float(value) for value in recomputed_tracking
+                    ],
+                    "actuator_torque_utilization": [
+                        float(value)
+                        for value in recomputed_torque_utilization
+                    ],
+                    "ctrl_range_utilization": [
+                        float(value) for value in recomputed_ctrl_utilization
+                    ],
+                    "fk": replayed_fk_record,
+                    "finite": derived_finite,
+                    "passed": telemetry_passed,
+                }
             )
             raw_contacts = sample["raw_all_contact_geom_pairs"]
             raw_indices_valid = bool(
@@ -7705,6 +8709,9 @@ class MatchaWorkflowController:
                 for record in raw_contacts
                 if any(name in cam_names for name in record["geom_pair"])
             }
+            recomputed_telemetry[-1]["raw_all_cam_contact_count"] = len(
+                independently_all_cam_indices
+            )
             raw_contact_count_closure_passes.append(
                 bool(
                     raw_indices_valid
@@ -7749,6 +8756,12 @@ class MatchaWorkflowController:
         )
         all_model_replay_passed = bool(
             samples and all(sample_model_replay_passes)
+        )
+        all_runtime_isolation_passed = bool(
+            samples and all(sample_runtime_isolation_passes)
+        )
+        all_telemetry_replay_passed = bool(
+            samples and all(sample_telemetry_replay_passes)
         )
         raw_contact_count_closure_passed = bool(
             samples and all(raw_contact_count_closure_passes)
@@ -7808,66 +8821,94 @@ class MatchaWorkflowController:
                 )
             )
         )
-        free_space_samples = [
-            sample
-            for sample in samples
-            if sample["action"] in CORE_CAM_TAB_FREE_SPACE_ACTIONS
+        free_space_telemetry = [
+            record
+            for record in recomputed_telemetry
+            if record["action"] in CORE_CAM_TAB_FREE_SPACE_ACTIONS
         ]
         align_axial_max_q_error_rad = max(
             (
                 abs(float(value))
-                for sample in free_space_samples
-                for value in sample["tracking_error_to_desired_rad"]
+                for record in free_space_telemetry
+                for value in record["tracking_error_to_desired_rad"]
             ),
             default=math.inf,
         )
         align_axial_max_preseat_error_mm = max(
             (
-                abs(float(sample["fk"]["preseat_error_mm"]))
-                for sample in free_space_samples
+                abs(float(record["fk"]["preseat_error_mm"]))
+                for record in free_space_telemetry
             ),
             default=math.inf,
         )
         align_axial_max_x_error_mm = max(
             (
-                abs(float(sample["fk"]["source_x_error_mm"]))
-                for sample in free_space_samples
+                abs(float(record["fk"]["source_x_error_mm"]))
+                for record in free_space_telemetry
             ),
             default=math.inf,
         )
         align_axial_max_y_mm = max(
             (
-                abs(float(sample["fk"]["transverse_y_mm"]))
-                for sample in free_space_samples
+                abs(float(record["fk"]["transverse_y_mm"]))
+                for record in free_space_telemetry
             ),
             default=math.inf,
         )
         align_axial_max_orientation_error_rad = max(
             (
-                float(sample["fk"]["orientation_error_rad"])
-                for sample in free_space_samples
+                float(record["fk"]["orientation_error_rad"])
+                for record in free_space_telemetry
             ),
             default=math.inf,
         )
         align_axial_max_cam_contact_count = max(
             (
-                int(sample["raw_all_cam_contact_count"])
-                for sample in free_space_samples
+                int(record["raw_all_cam_contact_count"])
+                for record in free_space_telemetry
             ),
             default=-1,
         )
         align_and_axial_tracking_thresholds_passed = bool(
-            free_space_samples
+            free_space_telemetry
             and align_axial_max_q_error_rad
-            <= CORE_CAPTURE_ROUTE_ENDPOINT_Q_ERROR_RAD
-            and align_axial_max_preseat_error_mm <= 0.050
+            <= float(
+                guard_thresholds["free_space_maximum_abs_q_error_rad"]
+            )
+            and align_axial_max_preseat_error_mm
+            <= float(
+                guard_thresholds[
+                    "free_space_maximum_abs_preseat_error_mm"
+                ]
+            )
             and align_axial_max_x_error_mm
-            <= CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
-            and align_axial_max_y_mm <= 0.010
+            <= float(
+                guard_thresholds[
+                    "free_space_maximum_abs_source_x_error_mm"
+                ]
+            )
+            and align_axial_max_y_mm
+            <= float(
+                guard_thresholds[
+                    "free_space_maximum_abs_transverse_y_mm"
+                ]
+            )
             and align_axial_max_orientation_error_rad
-            <= CORE_CAPTURE_ROUTE_ENDPOINT_ORIENTATION_ERROR_RAD
-            and align_axial_max_cam_contact_count == 0
-            and all(bool(sample["finite"]) for sample in free_space_samples)
+            <= float(
+                guard_thresholds[
+                    "free_space_maximum_orientation_error_rad"
+                ]
+            )
+            and align_axial_max_cam_contact_count
+            == int(
+                guard_thresholds[
+                    "free_space_maximum_raw_cam_contact_count"
+                ]
+            )
+            and all(
+                bool(record["finite"] and record["passed"])
+                for record in free_space_telemetry
+            )
         )
         align_and_axial_free_space_closed = bool(
             all(
@@ -7877,10 +8918,13 @@ class MatchaWorkflowController:
             )
             and all_formula_replay_passed
             and all_model_replay_passed
+            and all_runtime_isolation_passed
+            and all_telemetry_replay_passed
             and raw_contact_count_closure_passed
             and immutable_desired_route_replayed
             and not any_saturation
             and dynamics_binding_passed
+            and identity_binding_passed
             and align_and_axial_tracking_thresholds_passed
         )
         align_and_axial_endpoints_completed = all(
@@ -7902,18 +8946,22 @@ class MatchaWorkflowController:
             ),
             None,
         )
-        prohibited_operation_counts = {
-            "direct_live_qpos_write_count": 0,
-            "direct_live_qvel_write_count": 0,
-            "qfrc_constraint_read_count": 0,
-            "contact_force_read_count": 0,
-            "mj_inverse_call_count": 0,
-        }
-        prohibited_operations_verified = all(
-            count == 0 for count in prohibited_operation_counts.values()
+        source_ast_audit = copy.deepcopy(
+            evidence_identity_binding["source_audit"]
+        )
+        prohibited_operation_counts = copy.deepcopy(
+            source_ast_audit["prohibited_operation_counts"]
+        )
+        prohibited_operations_verified = bool(
+            source_ast_audit["passed"]
+            and all(
+                count == 0
+                for count in prohibited_operation_counts.values()
+            )
         )
         passed = bool(
             dynamics_binding_passed
+            and identity_binding_passed
             and phase_counts_consistent
             and state_contiguous
             and all_phases_observed
@@ -7923,6 +8971,8 @@ class MatchaWorkflowController:
             and final_sample_coverage_anchored
             and all_formula_replay_passed
             and all_model_replay_passed
+            and all_runtime_isolation_passed
+            and all_telemetry_replay_passed
             and raw_contact_count_closure_passed
             and immutable_desired_route_replayed
             and align_and_axial_free_space_closed
@@ -7937,18 +8987,18 @@ class MatchaWorkflowController:
         ]
         tracking_values = [
             abs(float(value))
-            for sample in samples
-            for value in sample["tracking_error_to_desired_rad"]
+            for record in recomputed_telemetry
+            for value in record["tracking_error_to_desired_rad"]
         ]
-        force_utilizations = [
+        torque_utilizations = [
             float(value)
-            for sample in samples
-            for value in sample["actuator_force_utilization"]
+            for record in recomputed_telemetry
+            for value in record["actuator_torque_utilization"]
         ]
         ctrl_utilizations = [
             float(value)
-            for sample in samples
-            for value in sample["ctrl_range_utilization"]
+            for record in recomputed_telemetry
+            for value in record["ctrl_range_utilization"]
         ]
         return {
             "schema_version": "1.0",
@@ -7961,6 +9011,15 @@ class MatchaWorkflowController:
             "contract_identity_sha256": (
                 CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_SHA256
             ),
+            "identity_binding": {
+                "controller_init": initial_identity_binding,
+                "evidence_recompute": evidence_identity_binding,
+                "unchanged_since_controller_init": identity_unchanged,
+                "control_function_binding_matches": (
+                    control_function_binding_matches
+                ),
+                "passed": identity_binding_passed,
+            },
             "model_binding": copy.deepcopy(actual_model_binding),
             "dynamics_binding": {
                 "controller_init": initial_binding,
@@ -7977,6 +9036,10 @@ class MatchaWorkflowController:
             "frozen_action_roster_matches": frozen_action_roster_matches,
             "raw_samples": samples,
             "raw_samples_sha256": _canonical_json_sha256(samples),
+            "recomputed_telemetry": recomputed_telemetry,
+            "recomputed_telemetry_sha256": _canonical_json_sha256(
+                recomputed_telemetry
+            ),
             "raw_sample_count": len(samples),
             "first_physics_substep_count": (
                 int(samples[0]["physics_substep_count"])
@@ -8005,10 +9068,20 @@ class MatchaWorkflowController:
             "sample_phase_order_is_valid_prefix": (
                 sample_phase_order_is_valid_prefix
             ),
-            "every_physics_substep_recorded": phase_counts_consistent,
+            "every_physics_substep_recorded": bool(
+                phase_counts_consistent
+                and state_contiguous
+                and final_sample_coverage_anchored
+            ),
             "all_formula_replay_passed": all_formula_replay_passed,
             "all_samples_replayed_from_actual_model": (
                 all_model_replay_passed
+            ),
+            "all_runtime_scratch_isolation_passed": (
+                all_runtime_isolation_passed
+            ),
+            "all_telemetry_recomputed_from_raw_fields_and_fresh_fk": (
+                all_telemetry_replay_passed
             ),
             "raw_contact_count_closure_passed": (
                 raw_contact_count_closure_passed
@@ -8026,8 +9099,8 @@ class MatchaWorkflowController:
             "maximum_abs_tracking_error_to_desired_rad": max(
                 tracking_values, default=None
             ),
-            "maximum_actuator_force_utilization": max(
-                force_utilizations, default=None
+            "maximum_actuator_torque_utilization": max(
+                torque_utilizations, default=None
             ),
             "maximum_ctrl_range_utilization": max(
                 ctrl_utilizations, default=None
@@ -8051,44 +9124,58 @@ class MatchaWorkflowController:
             "align_and_axial_tracking_thresholds": {
                 "observed_maximum_abs_q_error_to_desired_rad": (
                     align_axial_max_q_error_rad
-                    if free_space_samples
+                    if free_space_telemetry
                     else None
                 ),
                 "maximum_abs_q_error_to_desired_rad": (
-                    CORE_CAPTURE_ROUTE_ENDPOINT_Q_ERROR_RAD
+                    guard_thresholds[
+                        "free_space_maximum_abs_q_error_rad"
+                    ]
                 ),
                 "observed_maximum_abs_preseat_error_mm": (
                     align_axial_max_preseat_error_mm
-                    if free_space_samples
+                    if free_space_telemetry
                     else None
                 ),
-                "maximum_abs_preseat_error_mm": 0.050,
+                "maximum_abs_preseat_error_mm": guard_thresholds[
+                    "free_space_maximum_abs_preseat_error_mm"
+                ],
                 "observed_maximum_abs_source_x_error_mm": (
                     align_axial_max_x_error_mm
-                    if free_space_samples
+                    if free_space_telemetry
                     else None
                 ),
                 "maximum_abs_source_x_error_mm": (
-                    CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
+                    guard_thresholds[
+                        "free_space_maximum_abs_source_x_error_mm"
+                    ]
                 ),
                 "observed_maximum_abs_transverse_y_mm": (
-                    align_axial_max_y_mm if free_space_samples else None
+                    align_axial_max_y_mm
+                    if free_space_telemetry
+                    else None
                 ),
-                "maximum_abs_transverse_y_mm": 0.010,
+                "maximum_abs_transverse_y_mm": guard_thresholds[
+                    "free_space_maximum_abs_transverse_y_mm"
+                ],
                 "observed_maximum_orientation_error_rad": (
                     align_axial_max_orientation_error_rad
-                    if free_space_samples
+                    if free_space_telemetry
                     else None
                 ),
                 "maximum_orientation_error_rad": (
-                    CORE_CAPTURE_ROUTE_ENDPOINT_ORIENTATION_ERROR_RAD
+                    guard_thresholds[
+                        "free_space_maximum_orientation_error_rad"
+                    ]
                 ),
                 "observed_maximum_raw_cam_contact_count": (
                     align_axial_max_cam_contact_count
-                    if free_space_samples
+                    if free_space_telemetry
                     else None
                 ),
-                "maximum_raw_cam_contact_count": 0,
+                "maximum_raw_cam_contact_count": guard_thresholds[
+                    "free_space_maximum_raw_cam_contact_count"
+                ],
                 "passed": align_and_axial_tracking_thresholds_passed,
             },
             "first_cam_contact_record": first_cam_contact_record,
@@ -8096,6 +9183,7 @@ class MatchaWorkflowController:
                 first_rejected_cam_contact_record
             ),
             "prohibited_operation_counts": prohibited_operation_counts,
+            "source_ast_allowlist_audit": source_ast_audit,
             "prohibited_operations_verified": (
                 prohibited_operations_verified
             ),
@@ -8736,6 +9824,11 @@ class MatchaWorkflowController:
             "physical_lock_intentionally_unclaimed": True,
             "release_ready": False,
         }
+
+
+_CORE_CAPTURE_COMMAND_MOVE_IMPLEMENTATION = (
+    MatchaWorkflowController._command_move
+)
 
 
 def run_headless_scenario(
