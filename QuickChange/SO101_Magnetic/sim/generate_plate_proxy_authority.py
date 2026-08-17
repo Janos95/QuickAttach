@@ -890,7 +890,6 @@ def _cells_near_triangle_patches(
             "selected_cell_count": 0,
             "passed": True,
         }
-    started = time.monotonic()
     cells = np.asarray(unresolved_mm, dtype=np.float64)
     patches = np.asarray(selected_patches, dtype=np.float64)
     if cells.ndim != 3 or cells.shape[1:] != (2, 3):
@@ -916,7 +915,6 @@ def _cells_near_triangle_patches(
             if np.any(~selected)
             else None
         ),
-        "wall_seconds_observed": time.monotonic() - started,
         "passed": True,
     }
     return selected, record
@@ -1190,7 +1188,7 @@ def build_adaptive_subset_boxes(
         selected_count = int(np.count_nonzero(selected_mask))
         _progress(
             f"finite seed neighbourhood: selected_cells={selected_count} "
-            f"selector={neighbourhood['wall_seconds_observed']:.3f}s"
+            f"selector_complete=true"
         )
         if selected_count == 0:
             raise RuntimeError("finite red seed patches selected no octree cells")
@@ -1271,7 +1269,7 @@ def build_adaptive_subset_boxes(
         selected_count = int(np.count_nonzero(selected_mask))
         _progress(
             f"adaptive pass {pass_index} neighbourhood: selected_cells="
-            f"{selected_count} selector={neighbourhood['wall_seconds_observed']:.3f}s"
+            f"{selected_count} selector_complete=true"
         )
         if selected_count == 0:
             raise RuntimeError("surface refinement patches selected no octree cells")
@@ -1417,7 +1415,6 @@ def build_adaptive_subset_boxes(
             "maximum_targeted_pass_count_including_seed_prepass": 7,
             "max_proxy_boxes_after_merge": parameters.max_proxy_boxes_after_merge,
         },
-        "wall_seconds_observed": time.monotonic() - started,
         "passed": True,
     }
     return boxes_mm, {"octree": octree, "exact_subset": subset}, unresolved_mm
@@ -1777,7 +1774,6 @@ def build_component_record(
 ) -> dict[str, Any]:
     params = parameters or OctreeParameters()
     params.validate()
-    started = time.monotonic()
     source_triangles, tessellation = load_absolute_step_mesh(spec)
     boxes_mm, construction, _ = build_adaptive_subset_boxes(source_triangles, params)
     source_to_proxy = _certificate_from_surface_scan(
@@ -1843,7 +1839,6 @@ def build_component_record(
         "bidirectional_boundary_certificate": boundary,
         "known_undercoverage_regression_witnesses": known_witnesses,
         "functional_void_results": voids,
-        "wall_seconds_observed": time.monotonic() - started,
     }
     record["passed"] = bool(
         record["exact_subset_certificate"]["passed"]

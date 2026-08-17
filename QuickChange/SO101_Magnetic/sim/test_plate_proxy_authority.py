@@ -156,6 +156,14 @@ class PlateProxyConstructionKernelTests(unittest.TestCase):
         recomputed = validator.recompute_exact_subset(source, boxes, parameters)
         self.assertTrue(recomputed["passed"])
         self.assertLess(len(boxes), result["exact_subset"]["accepted_cell_count_before_merge"])
+        repeated_boxes, repeated_result, _ = generator.build_adaptive_subset_boxes(
+            source, parameters
+        )
+        np.testing.assert_array_equal(repeated_boxes, boxes)
+        self.assertEqual(
+            generator._canonical_bytes(repeated_result),
+            generator._canonical_bytes(result),
+        )
 
     def test_piece_inventory_is_hash_closed_and_derived_values_recomputed(self) -> None:
         boxes = np.asarray(
