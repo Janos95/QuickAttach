@@ -4127,10 +4127,12 @@ class MatchaWorkflowController:
         mujoco.mj_contactForce(self.model, self.data, contact_index, force)
         penetration_mm = max(0.0, -float(contact.dist) * 1000.0)
         force_finite = bool(np.all(np.isfinite(force)))
+        dock_hold_active = self._equality_active("dock_gripper_hold")
+        attach_equality_active = self._equality_active("attach_gripper")
         phase_state_valid = bool(
             action.name in CORE_CAM_TAB_CAPTURE_ACTIONS
-            and self._equality_active("dock_gripper_hold")
-            and not self._equality_active("attach_gripper")
+            and dock_hold_active
+            and not attach_equality_active
             and abs(
                 source_x_mm - float(live["expected_source_x_mm"])
             )
@@ -4169,6 +4171,8 @@ class MatchaWorkflowController:
             "source_x_error_mm": (
                 source_x_mm - float(live["expected_source_x_mm"])
             ),
+            "dock_hold_active": dock_hold_active,
+            "attach_equality_active": attach_equality_active,
             "contact_dist_mm": float(contact.dist) * 1000.0,
             "penetration_mm": penetration_mm,
             "contact_position_world_m": [
