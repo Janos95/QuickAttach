@@ -83,6 +83,10 @@ def import_file(path: Path, module_name: str, description: str) -> ModuleType:
     # Dataclasses and several annotation resolvers consult sys.modules while
     # the class body is executing; mirror normal import semantics here.
     sys.modules[module_name] = module
+    module_directory = str(path.parent)
+    inserted_path = module_directory not in sys.path
+    if inserted_path:
+        sys.path.insert(0, module_directory)
     try:
         spec.loader.exec_module(module)
     except ModuleNotFoundError as error:
@@ -93,6 +97,9 @@ def import_file(path: Path, module_name: str, description: str) -> ModuleType:
     except Exception:
         sys.modules.pop(module_name, None)
         raise
+    finally:
+        if inserted_path:
+            sys.path.remove(module_directory)
     return module
 
 
@@ -455,6 +462,65 @@ class ControllerSourceSafetyTests(unittest.TestCase):
                         violations.append(f"{function.name}:{node.lineno} writes {field}")
         self.assertEqual(violations, [], "\n".join(violations))
 
+    def test_capture_path_cannot_claim_a_returned_physical_lock(self) -> None:
+        violations: list[str] = []
+        forbidden_phase_roots = {
+            "_command_capture",
+            "_command_lock_verify",
+            "_command_release_verify",
+        }
+        for class_node in self.controller_classes:
+            methods = {
+                node.name: node
+                for node in class_node.body
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            }
+            self.assertTrue(forbidden_phase_roots.issubset(methods), methods)
+            calls = {
+                method_name: {
+                    called
+                    for node in ast.walk(method)
+                    if isinstance(node, ast.Call)
+                    and (called := called_name(node)) in methods
+                }
+                for method_name, method in methods.items()
+            }
+            setters: dict[str, list[int]] = {}
+            for method_name, method in methods.items():
+                for node in ast.walk(method):
+                    if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+                        continue
+                    targets = (
+                        list(node.targets)
+                        if isinstance(node, ast.Assign)
+                        else [node.target]
+                    )
+                    value = node.value
+                    for target in targets:
+                        if (
+                            isinstance(target, ast.Attribute)
+                            and target.attr == "physical_lock_confirmed"
+                            and isinstance(value, ast.Constant)
+                            and value.value is True
+                        ):
+                            setters.setdefault(method_name, []).append(node.lineno)
+            for root in sorted(forbidden_phase_roots):
+                reachable = {root}
+                pending = [root]
+                while pending:
+                    current = pending.pop()
+                    for called in calls[current] - reachable:
+                        reachable.add(called)
+                        pending.append(called)
+                for setter in sorted(reachable.intersection(setters)):
+                    for line in setters[setter]:
+                        violations.append(f"{root}->{setter}:{line}")
+        self.assertEqual(
+            violations,
+            [],
+            "pre-withdrawal phases cannot confirm the spring lock while the dock cam holds it open",
+        )
+
 
 class RenderedCollisionInventoryTests(unittest.TestCase):
     @classmethod
@@ -776,8 +842,430 @@ class SimCadPlacementContractTests(unittest.TestCase):
                     )
         self.assertNotEqual(observed_bounds["gripper"], observed_bounds["spoon"])
 
+    def test_core_keeper_contract_is_exact_and_excludes_the_air_gap_stop(self) -> None:
+        self.assertGreaterEqual(
+            float(getattr(self.demo, "MINIMUM_SOURCE_AXIS_WITHDRAWAL_MM", -math.inf)),
+            15.0,
+            "the core cam still overlaps the slider below the audited 15 mm withdrawal",
+        )
+        contract = getattr(self.demo, "CORE_KEEPER_CONTACT_CONTRACT", None)
+        self.assertIsInstance(contract, (tuple, list))
+        self.assertEqual(len(contract), 5)
+        expected = {
+            ("stock_tool_plate", "left_lower_rail"): {
+                "runtime_pair": [
+                    "matcha_col_gripper_plate_electrical_wing_edge__mating_land__keeper_land",
+                    "dock_gripper_keeper_left_lower_collision",
+                ],
+                "expected_local_normal_subspace": "dock_xz_plane",
+                "source_witness": {
+                    "kind": "line_tangency",
+                    "frame": "dock_gripper",
+                    "line_axis": "y",
+                    "fixed_coordinates_mm": {"x": -36.0, "z": 0.0},
+                    "line_axis_bounds_mm": [-12.0, 12.0],
+                    "point_tolerance_mm": 0.020,
+                },
+            },
+            ("stock_tool_plate", "left_upper_rail"): {
+                "runtime_pair": [
+                    "matcha_col_gripper_plate_electrical_wing_edge__mating_land__keeper_land",
+                    "dock_gripper_keeper_left_upper_collision",
+                ],
+                "expected_local_normal_axis": "z",
+                "source_witness": {
+                    "kind": "planar_face_tangency",
+                    "frame": "dock_gripper",
+                    "normal_axis": "z",
+                    "plane_coordinate_mm": 9.5,
+                    "tangential_bounds_mm": {
+                        "x": [-36.0, -33.0],
+                        "y": [-12.0, 12.0],
+                    },
+                    "point_tolerance_mm": 0.020,
+                },
+            },
+            ("stock_tool_plate", "right_lower_rail"): {
+                "runtime_pair": [
+                    "matcha_col_gripper_plate_xpos__mating_land__locator_land__dock_stop_land",
+                    "dock_gripper_keeper_right_lower_collision",
+                ],
+                "expected_local_normal_subspace": "dock_xz_plane",
+                "source_witness": {
+                    "kind": "line_tangency",
+                    "frame": "dock_gripper",
+                    "line_axis": "y",
+                    "fixed_coordinates_mm": {"x": 28.0, "z": 0.0},
+                    "line_axis_bounds_mm": [-21.0, 21.0],
+                    "point_tolerance_mm": 0.020,
+                },
+            },
+            ("stock_tool_plate", "right_upper_rail"): {
+                "runtime_pair": [
+                    "matcha_col_gripper_plate_xpos__mating_land__locator_land__dock_stop_land",
+                    "dock_gripper_keeper_right_upper_collision",
+                ],
+                "expected_local_normal_axis": "z",
+                "source_witness": {
+                    "kind": "planar_face_tangency",
+                    "frame": "dock_gripper",
+                    "normal_axis": "z",
+                    "plane_coordinate_mm": 9.5,
+                    "tangential_bounds_mm": {
+                        "x": [25.0, 28.0],
+                        "y": [-25.0, 25.0],
+                    },
+                    "source_boundary_constraint": {
+                        "kind": "rounded_rectangle",
+                        "half_width_mm": 28.0,
+                        "half_height_mm": 25.0,
+                        "corner_radius_mm": 4.0,
+                    },
+                    "point_tolerance_mm": 0.020,
+                },
+            },
+            ("robot_plate", "left_lower_rail"): {
+                "runtime_pair": [
+                    "qc_col_robot_plate_electrical_wing_edge__keeper_land",
+                    "dock_gripper_keeper_left_lower_collision",
+                ],
+                "expected_local_normal_axis": "x",
+                "source_witness": {
+                    "kind": "planar_face_tangency",
+                    "frame": "dock_gripper",
+                    "normal_axis": "x",
+                    "plane_coordinate_mm": -36.0,
+                    "tangential_bounds_mm": {
+                        "y": [-12.0, 12.0],
+                        "z": [-3.0, 0.0],
+                    },
+                    "point_tolerance_mm": 0.020,
+                },
+            },
+        }
+        self.assertEqual(
+            set(expected), set(self.clearance.INTENDED_ZERO_VOLUME_CONTACT_PAIRS)
+        )
+        observed: dict[tuple[str, str], dict[str, Any]] = {}
+        for record in contract:
+            self.assertIsInstance(record, dict)
+            source_pair = tuple(str(item) for item in record["source_pair"])
+            runtime_pair = tuple(str(item) for item in record["runtime_pair"])
+            self.assertEqual(len(source_pair), 2)
+            self.assertEqual(len(runtime_pair), 2)
+            self.assertNotIn(source_pair, observed)
+            self.assertFalse(
+                any(name.startswith("dock_gripper_qc_col_dock_stop") for name in runtime_pair),
+                record,
+            )
+            normal_fields = {
+                key: record[key]
+                for key in (
+                    "expected_local_normal_axis",
+                    "expected_local_normal_subspace",
+                )
+                if key in record
+            }
+            self.assertEqual(len(normal_fields), 1, record)
+            observed[source_pair] = {
+                "runtime_pair": list(runtime_pair),
+                **normal_fields,
+                "source_witness": record.get("source_witness"),
+            }
+        self.assertEqual(observed, expected)
+        xml_geoms = {
+            str(geom.get("name")): geom for geom in self.xml_root.iter("geom") if geom.get("name")
+        }
+        for expected_record in expected.values():
+            for name in expected_record["runtime_pair"]:
+                self.assertIn(name, xml_geoms)
+                geom = xml_geoms[name]
+                self.assertTrue(
+                    int(geom.get("contype", "0"))
+                    or int(geom.get("conaffinity", "0")),
+                    name,
+                )
+
+    def test_matcha_docks_retain_stop_contact_but_core_uses_only_keepers(
+        self,
+    ) -> None:
+        model = self.demo.build_model()
+        data = self.demo.mujoco.MjData(model)
+        self.demo.initialize(model, data)
+        controller = self.demo.MatchaWorkflowController(model, data)
+
+        valid_stop_contacts: dict[str, int] = {
+            "gripper": 0,
+            "spoon": 0,
+            "whisk": 0,
+        }
+        for contact_index in range(data.ncon):
+            contact = data.contact[contact_index]
+            for tool in valid_stop_contacts:
+                if controller._dock_stop_contact_is_valid(contact, tool):
+                    valid_stop_contacts[tool] += 1
+
+        self.assertEqual(
+            valid_stop_contacts["gripper"],
+            0,
+            "the core dock stop has a designed air gap and is not a seating witness",
+        )
+        self.assertFalse(controller._dock_stop_is_seated("gripper"))
+        for tool in ("spoon", "whisk"):
+            self.assertGreater(valid_stop_contacts[tool], 0, tool)
+            self.assertTrue(controller._dock_stop_is_seated(tool), tool)
+
 
 class BoundedDynamicSmokeTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.demo = import_file(
+            MATCHA_DEMO,
+            "matcha_demo_bounded_dynamic_validation",
+            "matcha workflow simulator",
+        )
+
+    def assert_points_on_source_witness(
+        self,
+        points: Any,
+        witness: dict[str, Any],
+        description: Any,
+    ) -> None:
+        self.assertIsInstance(points, list, description)
+        tolerance = float(witness["point_tolerance_mm"])
+        axis_index = {"x": 0, "y": 1, "z": 2}
+        for raw_point in points:
+            self.assertEqual(len(raw_point), 3, description)
+            point = np.asarray(raw_point, dtype=np.float64)
+            self.assertTrue(np.all(np.isfinite(point)), description)
+            if witness["kind"] == "line_tangency":
+                line_axis = str(witness["line_axis"])
+                for axis, coordinate in witness["fixed_coordinates_mm"].items():
+                    self.assertLessEqual(
+                        abs(float(point[axis_index[axis]]) - float(coordinate)),
+                        tolerance,
+                        description,
+                    )
+                line_coordinate = float(point[axis_index[line_axis]])
+                lower, upper = (
+                    float(value) for value in witness["line_axis_bounds_mm"]
+                )
+                self.assertGreaterEqual(line_coordinate, lower - tolerance, description)
+                self.assertLessEqual(line_coordinate, upper + tolerance, description)
+            elif witness["kind"] == "planar_face_tangency":
+                normal_axis = str(witness["normal_axis"])
+                self.assertLessEqual(
+                    abs(
+                        float(point[axis_index[normal_axis]])
+                        - float(witness["plane_coordinate_mm"])
+                    ),
+                    tolerance,
+                    description,
+                )
+                for axis, bounds in witness["tangential_bounds_mm"].items():
+                    coordinate = float(point[axis_index[axis]])
+                    lower, upper = (float(value) for value in bounds)
+                    self.assertGreaterEqual(coordinate, lower - tolerance, description)
+                    self.assertLessEqual(coordinate, upper + tolerance, description)
+                boundary = witness.get("source_boundary_constraint")
+                if boundary is not None:
+                    self.assertEqual(boundary.get("kind"), "rounded_rectangle")
+                    half_width = float(boundary["half_width_mm"])
+                    half_height = float(boundary["half_height_mm"])
+                    radius = float(boundary["corner_radius_mm"])
+                    dx = max(abs(float(point[0])) - (half_width - radius), 0.0)
+                    dy = max(abs(float(point[1])) - (half_height - radius), 0.0)
+                    self.assertLessEqual(math.hypot(dx, dy), radius + tolerance)
+            else:
+                self.fail(f"unknown keeper source witness: {witness}")
+
+    def assert_core_keeper_report(self, result: dict[str, Any]) -> None:
+        report = result.get("core_keeper_contact_report")
+        self.assertIsInstance(report, dict, result)
+        self.assertIs(report.get("passed"), True, report)
+        self.assertEqual(report.get("phase"), "pre_attach_seated_keeper_capture")
+        self.assertIs(report.get("dock_hold_active"), True, report)
+        self.assertIs(report.get("attach_equality_active"), False, report)
+        self.assertEqual(
+            report.get("pogo_signals"), sorted(self.demo.qc.SIGNALS), report
+        )
+        self.assertEqual(int(report.get("observed_tool_id", -1)), 6, report)
+        self.assertEqual(int(report.get("expected_tool_id", -1)), 6, report)
+        self.assertIs(report.get("tool_identity_verified"), True, report)
+        self.assertEqual(int(report.get("stop_contact_count", -1)), 0, report)
+
+        position_error_mm = float(report.get("pose_position_error_mm", math.inf))
+        angle_error_deg = float(report.get("pose_angle_error_deg", math.inf))
+        self.assertTrue(math.isfinite(position_error_mm), report)
+        self.assertTrue(math.isfinite(angle_error_deg), report)
+        self.assertLessEqual(
+            position_error_mm,
+            1000.0 * float(self.demo.CAPTURE_POSITION_TOLERANCE_M),
+            report,
+        )
+        self.assertLessEqual(
+            angle_error_deg,
+            math.degrees(float(self.demo.CAPTURE_ORIENTATION_TOLERANCE_RAD)),
+            report,
+        )
+
+        contract = {
+            tuple(str(value) for value in item["source_pair"]): item
+            for item in self.demo.CORE_KEEPER_CONTACT_CONTRACT
+        }
+        records = report.get("records")
+        self.assertIsInstance(records, list, report)
+        self.assertEqual(len(records), len(contract), report)
+        observed: dict[tuple[str, str], dict[str, Any]] = {}
+        for record in records:
+            self.assertIsInstance(record, dict)
+            source_pair = tuple(str(value) for value in record["source_pair"])
+            self.assertIn(source_pair, contract, record)
+            self.assertNotIn(source_pair, observed, record)
+            expected = contract[source_pair]
+            self.assertEqual(record.get("runtime_pair"), expected["runtime_pair"])
+            self.assertEqual(record.get("source_witness"), expected["source_witness"])
+            normal_fields = (
+                "expected_local_normal_axis",
+                "expected_local_normal_subspace",
+            )
+            for field in normal_fields:
+                self.assertEqual(record.get(field), expected.get(field), record)
+            self.assertIs(record.get("passed"), True, record)
+            contact_count = int(record.get("contact_count", -1))
+            self.assertGreaterEqual(contact_count, 0, record)
+            signed_distance_mm = float(record.get("signed_distance_mm", math.inf))
+            penetration_mm = float(record.get("max_penetration_mm", math.inf))
+            self.assertTrue(math.isfinite(signed_distance_mm), record)
+            self.assertGreaterEqual(
+                signed_distance_mm,
+                -float(self.demo.CORE_KEEPER_MAX_PENETRATION_MM),
+                record,
+            )
+            self.assertLessEqual(
+                signed_distance_mm,
+                float(self.demo.CORE_KEEPER_MAX_SEPARATION_MM),
+                record,
+            )
+            self.assertLessEqual(
+                penetration_mm,
+                float(self.demo.CORE_KEEPER_MAX_PENETRATION_MM),
+                record,
+            )
+            witness_method = record.get("witness_method")
+            self.assertIn(
+                witness_method,
+                {
+                    "live_mujoco_contact",
+                    "live_mujoco_signed_geom_distance_and_source_semantics",
+                },
+                record,
+            )
+            closest_points = record.get("closest_points_dock_local_mm")
+            self.assertIsInstance(closest_points, list, record)
+            self.assertEqual(len(closest_points), 2, record)
+            self.assert_points_on_source_witness(
+                closest_points, expected["source_witness"], record
+            )
+            contact_points = record.get("contact_points_dock_local_mm")
+            self.assertIsInstance(contact_points, list, record)
+            self.assertEqual(len(contact_points), contact_count, record)
+            self.assert_points_on_source_witness(
+                contact_points, expected["source_witness"], record
+            )
+            maximum_point_error_mm = float(
+                record.get("maximum_contact_point_source_witness_error_mm", math.inf)
+            )
+            self.assertLessEqual(
+                maximum_point_error_mm,
+                float(expected["source_witness"]["point_tolerance_mm"]),
+                record,
+            )
+            if expected.get("expected_local_normal_axis") is not None:
+                alignment = float(
+                    record.get("minimum_normal_alignment", -math.inf)
+                )
+                self.assertGreaterEqual(
+                    alignment,
+                    float(self.demo.CORE_KEEPER_MIN_NORMAL_ALIGNMENT),
+                    record,
+                )
+                self.assertGreater(contact_count, 0, record)
+                self.assertEqual(witness_method, "live_mujoco_contact", record)
+            else:
+                self.assertEqual(
+                    expected.get("expected_local_normal_subspace"),
+                    "dock_xz_plane",
+                    expected,
+                )
+                if contact_count:
+                    subspace_alignment = float(
+                        record.get(
+                            "minimum_normal_subspace_alignment", -math.inf
+                        )
+                    )
+                    self.assertGreaterEqual(
+                        subspace_alignment,
+                        float(self.demo.CORE_KEEPER_MIN_NORMAL_ALIGNMENT),
+                        record,
+                    )
+            observed[source_pair] = record
+        self.assertEqual(set(observed), set(contract), report)
+
+    def assert_lock_sequence(self, result: dict[str, Any]) -> None:
+        expected_events = (
+            "physical_capture_complete",
+            "dock_hold_released",
+            "source_axis_withdrawal_complete",
+            "slider_return_verified",
+            "physical_lock_confirmed",
+        )
+        journal = result.get("journal")
+        self.assertIsInstance(journal, list, result)
+        matching: dict[str, dict[str, Any]] = {}
+        event_positions: list[int] = []
+        for event_name in expected_events:
+            matches = [
+                (index, record)
+                for index, record in enumerate(journal)
+                if isinstance(record, dict) and record.get("event") == event_name
+            ]
+            self.assertEqual(len(matches), 1, (event_name, journal))
+            index, record = matches[0]
+            event_positions.append(index)
+            matching[event_name] = record
+        self.assertEqual(event_positions, sorted(event_positions), journal)
+
+        self.assertIs(
+            matching["physical_capture_complete"].get("physical_lock_confirmed"),
+            False,
+            matching["physical_capture_complete"],
+        )
+        self.assertIs(
+            matching["dock_hold_released"].get("dock_hold_active"),
+            False,
+            matching["dock_hold_released"],
+        )
+        withdrawal = matching["source_axis_withdrawal_complete"]
+        minimum_withdrawal_mm = float(self.demo.MINIMUM_SOURCE_AXIS_WITHDRAWAL_MM)
+        self.assertGreaterEqual(minimum_withdrawal_mm, 15.0)
+        self.assertGreaterEqual(
+            float(withdrawal.get("withdrawal_mm", -math.inf)),
+            minimum_withdrawal_mm,
+            withdrawal,
+        )
+        self.assertGreaterEqual(
+            float(withdrawal.get("axis_alignment", -math.inf)), 0.999, withdrawal
+        )
+        slider = matching["slider_return_verified"]
+        self.assertIs(slider.get("cam_clear"), True, slider)
+        self.assertIs(slider.get("returned"), True, slider)
+        self.assertIs(
+            matching["physical_lock_confirmed"].get("physical_lock_confirmed"),
+            True,
+            matching["physical_lock_confirmed"],
+        )
+
     def test_real_substep_capture_lock_and_release_is_collision_safe(self) -> None:
         require_path(MATCHA_DEMO, "matcha workflow simulator")
         result_process = subprocess.run(
@@ -805,6 +1293,24 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
         self.assertEqual(int(result.get("forbidden_contact_count", -1)), 0, result)
         self.assertEqual(float(result.get("max_forbidden_penetration_m", -1.0)), 0.0)
         self.assertIsNone(result.get("first_forbidden_pair"), result)
+        route = result.get("route_alignment")
+        self.assertIsInstance(route, dict, result)
+        self.assertIs(route.get("passed"), True, route)
+        self.assertLessEqual(
+            float(route.get("declared_static_max_lateral_deviation_m", math.inf)),
+            float(self.demo.CAM_RELIEF_CORRIDOR_M),
+            route,
+        )
+        self.assertLessEqual(
+            float(route.get("measured_max_lateral_deviation_m", math.inf)),
+            float(self.demo.CAM_RELIEF_CORRIDOR_M),
+            route,
+        )
+        self.assertLessEqual(
+            float(route.get("measured_max_orientation_error_rad", math.inf)),
+            float(self.demo.CAPTURE_ORIENTATION_TOLERANCE_RAD),
+            route,
+        )
         self.assertEqual(result.get("attached_tool"), "gripper", result)
         self.assertIs(result.get("bus_connected"), True, result)
         self.assertIs(result.get("handshake_achieved"), True, result)
@@ -817,6 +1323,18 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
         self.assertIs(result.get("four_signal_bus_live"), True, result)
         self.assertIs(result.get("dock_hold_active"), False, result)
         self.assertIs(result.get("attach_equality_active"), True, result)
+        self.assertEqual(
+            result.get("lock_confirmation_phase"),
+            "after_dock_release_source_axis_withdrawal_and_slider_return",
+            result,
+        )
+        self.assertEqual(
+            float(result.get("minimum_source_axis_withdrawal_mm", math.nan)),
+            float(self.demo.MINIMUM_SOURCE_AXIS_WITHDRAWAL_MM),
+            result,
+        )
+        self.assert_core_keeper_report(result)
+        self.assert_lock_sequence(result)
         self.assertIs(result.get("finite_actuator_force"), True, result)
         utilization = result.get("max_actuator_utilization")
         self.assertIsInstance(utilization, dict, result)

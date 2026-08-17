@@ -285,6 +285,19 @@ def add_robot_quick_change_interface(wrist_output: ET.Element) -> ET.Element:
             contype="64",
             conaffinity="31",
         )
+    # The source electrical wing reaches the core dock's left lower keeper.
+    # This narrow edge strip lies outside the PCB pocket and is an exact
+    # source-material subset; it supplies the fifth published seated tangency.
+    _add_box_from_bounds(
+        frame,
+        name="qc_col_robot_plate_electrical_wing_edge__keeper_land",
+        bounds=((-0.036, -0.035125), (-0.012, 0.012), (0.0, 0.0095)),
+        rgba="0.93 0.62 0.04 0.28",
+        contype="64",
+        conaffinity="31",
+        solref="0.0005 1",
+        solimp="0.99 0.9999 0.00001",
+    )
     # Shoulder-stud wells are represented by the mating lands around the two
     # retained studs; the actual stud heads remain separately active.
     for side, y_value in (("left", -0.010), ("right", 0.010)):
@@ -443,7 +456,9 @@ def _add_target_with_bore(body: ET.Element, tool: str, side: str, y_value: float
     return names
 
 
-def add_tool_quick_change_interface(body: ET.Element, tool: str) -> list[str]:
+def add_tool_quick_change_interface(
+    body: ET.Element, asset: ET.Element, tool: str
+) -> list[str]:
     """Install one complete tool-side interface with semantic collision names."""
 
     names: list[str] = []
@@ -453,8 +468,6 @@ def add_tool_quick_change_interface(body: ET.Element, tool: str) -> list[str]:
     # explicit five-box square-well partition.  Only pieces reaching the
     # +Y datum carry the dock_stop_land semantic.
     plate_pieces = (
-        ("xneg", -0.016, 0.0, 0.012, 0.025, False),
-        ("xpos", 0.016, 0.0, 0.012, 0.025, False),
         ("center_yneg", 0.0, -0.0195, 0.004, 0.0055, False),
         ("center_middle", 0.0, 0.0, 0.004, 0.006, False),
         ("center_ypos", 0.0, 0.0195, 0.004, 0.0055, True),
@@ -471,8 +484,92 @@ def add_tool_quick_change_interface(body: ET.Element, tool: str) -> list[str]:
             pos=(x_value, y_value, 0.00475),
             size=(x_half, y_half, 0.00475),
             rgba="0.08 0.35 0.9 0.34",
+            solref="0.0005 1",
+            solimp="0.99 0.9999 0.00001",
         )
         names.append(plate_name)
+    outer_semantics = "__mating_land__locator_land__dock_stop_land"
+    if tool == "gripper":
+        # The core keeper witness reaches the released R4 mm right corner.  A
+        # box would create false contact at (x=+/-28,y=+/-25) mm, outside the
+        # rounded source boundary.  Sixteen chords per quarter keep the
+        # inscribed curve's sagitta below 4.82 um inside the 20 um witness
+        # budget.  Matcha rack tools retain their analytic stop boxes below.
+        arc_steps = 16
+        right_outline: list[tuple[float, float]] = [
+            (0.004, -0.025),
+            (0.024, -0.025),
+        ]
+        right_outline.extend(
+            (
+                0.024
+                + 0.004
+                * math.cos(-math.pi / 2.0 + index * math.pi / (2 * arc_steps)),
+                -0.021
+                + 0.004
+                * math.sin(-math.pi / 2.0 + index * math.pi / (2 * arc_steps)),
+            )
+            for index in range(1, arc_steps + 1)
+        )
+        right_outline.append((0.028, 0.021))
+        right_outline.extend(
+            (
+                0.024 + 0.004 * math.cos(index * math.pi / (2 * arc_steps)),
+                0.021 + 0.004 * math.sin(index * math.pi / (2 * arc_steps)),
+            )
+            for index in range(1, arc_steps + 1)
+        )
+        right_outline.append((0.004, 0.025))
+        left_outline = [(-x_value, -y_value) for x_value, y_value in right_outline]
+        for suffix, outline in (("xneg", left_outline), ("xpos", right_outline)):
+            plate_name = f"matcha_col_{tool}_plate_{suffix}{outer_semantics}"
+            mesh_name = _add_convex_prism_mesh(
+                asset,
+                name=f"matcha_{tool}_plate_{suffix}_rounded_source_mesh",
+                polygon_xy=tuple(outline),
+                z_bounds=(0.0, 0.0095),
+            )
+            _geom(
+                body,
+                name=plate_name,
+                geom_type="mesh",
+                size=None,
+                mesh=mesh_name,
+                rgba="0.08 0.35 0.9 0.34",
+                solref="0.0005 1",
+                solimp="0.99 0.9999 0.00001",
+            )
+            names.append(plate_name)
+    else:
+        for suffix, x_value in (("xneg", -0.016), ("xpos", 0.016)):
+            plate_name = f"matcha_col_{tool}_plate_{suffix}{outer_semantics}"
+            _geom(
+                body,
+                name=plate_name,
+                geom_type="box",
+                pos=(x_value, 0.0, 0.00475),
+                size=(0.012, 0.025, 0.00475),
+                rgba="0.08 0.35 0.9 0.34",
+                solref="0.0005 1",
+                solimp="0.99 0.9999 0.00001",
+            )
+            names.append(plate_name)
+    # Exact source-material edge outside the recessed contact-board pocket.
+    # On the stock-gripper adapter it bears on both left keeper rails; the
+    # same source feature is present on every generic tool plate.
+    wing_name = (
+        f"matcha_col_{tool}_plate_electrical_wing_edge"
+        "__mating_land__keeper_land"
+    )
+    _add_box_from_bounds(
+        body,
+        name=wing_name,
+        bounds=((-0.036, -0.035125), (-0.012, 0.012), (0.0, 0.0095)),
+        rgba="0.08 0.35 0.9 0.34",
+        solref="0.0005 1",
+        solimp="0.99 0.9999 0.00001",
+    )
+    names.append(wing_name)
     for signal in SIGNALS:
         pad_name = f"{tool}_pad_{signal}_collision"
         _geom(
@@ -646,18 +743,48 @@ def add_supported_dock(
         cam_z_bounds = MATCHA_DOCK_CAM_Z_BOUNDS_M
     else:
         raise ValueError(f"unsupported dock source contract for {tool!r}")
-    # The guide cheeks constrain the plate across local Y.  Keeping the long
-    # local-X service corridor open is essential: the spoon handle and whisk
-    # payload leave the rack through that corridor.
-    for side, y_rail in (("left", -0.033), ("right", 0.033)):
-        _geom(
-            dock,
-            name=f"dock_{tool}_rail_{side}_collision",
-            geom_type="box",
-            pos=(0.0, y_rail, 0.010),
-            size=(0.034, 0.003, 0.010),
-            rgba=rgba,
-        )
+    if tool == "gripper":
+        # Exact core-dock keeper solids.  At the seated pose the stock plate
+        # has four zero-volume tangencies (two lower X lands, two upper Z
+        # lands); the robot electrical wing adds the fifth left-lower contact.
+        keeper_bounds = {
+            "left_lower": ((-0.043, -0.036), (-0.040, 0.036), (-0.003, 0.0)),
+            "left_upper": ((-0.041, -0.033), (-0.040, 0.036), (0.0095, 0.0125)),
+            "right_lower": ((0.028, 0.035), (-0.040, 0.036), (-0.003, 0.0)),
+            "right_upper": ((0.025, 0.033), (-0.040, 0.036), (0.0095, 0.0125)),
+        }
+        for keeper_name, bounds in keeper_bounds.items():
+            _add_box_from_bounds(
+                dock,
+                name=f"dock_gripper_keeper_{keeper_name}_collision",
+                bounds=bounds,
+                rgba=rgba,
+                solref="0.0005 1",
+                solimp="0.99 0.9999 0.00001",
+            )
+        for side, bounds in (
+            ("left", ((-0.045, -0.041), (-0.040, 0.036), (-0.003, 0.0125))),
+            ("right", ((0.033, 0.037), (-0.040, 0.036), (-0.003, 0.0125))),
+        ):
+            _add_box_from_bounds(
+                dock,
+                name=f"dock_gripper_wall_{side}_collision",
+                bounds=bounds,
+                rgba=rgba,
+            )
+    else:
+        # The recovered spoon/whisk guide cheeks remain isolated from the core
+        # witness; their source-faithful rack replacement belongs with the
+        # pending CAD-derived payload/rack checkpoint.
+        for side, y_rail in (("left", -0.033), ("right", 0.033)):
+            _geom(
+                dock,
+                name=f"dock_{tool}_rail_{side}_collision",
+                geom_type="box",
+                pos=(0.0, y_rail, 0.010),
+                size=(0.034, 0.003, 0.010),
+                rgba=rgba,
+            )
     cam_mesh_name = _add_convex_prism_mesh(
         asset,
         name=f"dock_{tool}_positive_lock_cam_source_mesh",

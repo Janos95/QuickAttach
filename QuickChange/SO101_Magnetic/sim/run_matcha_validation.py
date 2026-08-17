@@ -51,6 +51,10 @@ DEVELOPMENT_TESTS = (
         "test_module_helpers_cannot_hide_post_initialize_state_writes",
     ),
     qualified(
+        "ControllerSourceSafetyTests",
+        "test_capture_path_cannot_claim_a_returned_physical_lock",
+    ),
+    qualified(
         "RenderedCollisionInventoryTests",
         "test_every_rendered_rigid_body_has_direct_active_collision_geometry",
     ),
@@ -77,6 +81,14 @@ DEVELOPMENT_TESTS = (
     qualified(
         "SimCadPlacementContractTests",
         "test_each_dock_stop_matches_its_exact_source_bounds_and_core_holes",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
+        "test_core_keeper_contract_is_exact_and_excludes_the_air_gap_stop",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
+        "test_matcha_docks_retain_stop_contact_but_core_uses_only_keepers",
     ),
     qualified(
         "BoundedDynamicSmokeTests",
