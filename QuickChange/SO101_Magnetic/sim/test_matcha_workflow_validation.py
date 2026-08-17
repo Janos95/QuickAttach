@@ -1217,6 +1217,72 @@ def _independent_core_capture_x_mm(preseat_mm: float) -> float:
     return 0.20 * (preseat_mm - 3.2) / (6.4 - 3.2)
 
 
+def _independent_initialized_active_geometry_sha256(
+    model: Any,
+    data: Any,
+    mujoco: ModuleType,
+) -> str:
+    """Rebuild the initialized collision fingerprint without production code."""
+
+    records: list[dict[str, Any]] = []
+    for geom_id in range(model.ngeom):
+        if not (
+            int(model.geom_contype[geom_id])
+            or int(model.geom_conaffinity[geom_id])
+        ):
+            continue
+        record: dict[str, Any] = {
+            "geom_id": geom_id,
+            "name": str(model.geom(geom_id).name),
+            "body": str(model.body(int(model.geom_bodyid[geom_id])).name),
+            "type": int(model.geom_type[geom_id]),
+            "group": int(model.geom_group[geom_id]),
+            "contype": int(model.geom_contype[geom_id]),
+            "conaffinity": int(model.geom_conaffinity[geom_id]),
+            "pos_float_hex": [
+                float(value).hex() for value in model.geom_pos[geom_id]
+            ],
+            "quat_float_hex": [
+                float(value).hex() for value in model.geom_quat[geom_id]
+            ],
+            "size_float_hex": [
+                float(value).hex() for value in model.geom_size[geom_id]
+            ],
+            "initialized_world_pos_float_hex": [
+                float(value).hex() for value in data.geom_xpos[geom_id]
+            ],
+            "initialized_world_xmat_float_hex": [
+                float(value).hex() for value in data.geom_xmat[geom_id]
+            ],
+        }
+        if int(model.geom_type[geom_id]) == int(mujoco.mjtGeom.mjGEOM_MESH):
+            mesh_id = int(model.geom_dataid[geom_id])
+            vertex_start = int(model.mesh_vertadr[mesh_id])
+            vertex_count = int(model.mesh_vertnum[mesh_id])
+            face_start = int(model.mesh_faceadr[mesh_id])
+            face_count = int(model.mesh_facenum[mesh_id])
+            vertices = np.ascontiguousarray(
+                model.mesh_vert[vertex_start : vertex_start + vertex_count]
+            )
+            faces = np.ascontiguousarray(
+                model.mesh_face[face_start : face_start + face_count]
+            )
+            record["mesh"] = {
+                "vertex_count": vertex_count,
+                "face_count": face_count,
+                "vertex_dtype": vertices.dtype.str,
+                "face_dtype": faces.dtype.str,
+                "vertex_bytes_sha256": hashlib.sha256(
+                    vertices.tobytes()
+                ).hexdigest(),
+                "face_bytes_sha256": hashlib.sha256(
+                    faces.tobytes()
+                ).hexdigest(),
+            }
+        records.append(record)
+    return canonical_json_sha256(records)
+
+
 def core_capture_route_contract_errors(
     record: Any,
     cad: ModuleType,
@@ -3978,7 +4044,9 @@ class CoreCaptureRouteRuntimeAuthorityTests(unittest.TestCase):
             contract["model_binding"][
                 "initialized_active_collision_geometry_sha256"
             ],
-            demo.initialized_active_collision_geometry_sha256(model, data),
+            _independent_initialized_active_geometry_sha256(
+                model, data, mujoco
+            ),
         )
 
         actual_actions = demo._core_capture_move_actions()
@@ -3994,6 +4062,79 @@ class CoreCaptureRouteRuntimeAuthorityTests(unittest.TestCase):
             "gripper_capture_coupled_recenter": decoded_states[243]["q_rad"],
             "gripper_capture_centered_final": decoded_states[259]["q_rad"],
         }
+        expected_full_q_rosters = {
+            "gripper_capture_lateral_align": [
+                starts["gripper_capture_lateral_align"],
+                decoded_states[0]["q_rad"],
+            ],
+            "gripper_capture_axial_open_side": [
+                state["q_rad"] for state in decoded_states[0:244]
+            ],
+            "gripper_capture_coupled_recenter": [
+                state["q_rad"] for state in decoded_states[243:260]
+            ],
+            "gripper_capture_centered_final": [
+                state["q_rad"] for state in decoded_states[259:276]
+            ],
+        }
+
+        def actual_route_errors(actions: tuple[Any, ...]) -> list[str]:
+            errors: list[str] = []
+            if [action.name for action in actions] != list(
+                CORE_CAPTURE_ROUTE_ACTIONS
+            ):
+                return ["action_roster"]
+            for action in actions:
+                actual_full_roster = [
+                    list(starts[action.name]),
+                    *[list(waypoint) for waypoint in action.joint_waypoints],
+                ]
+                expected_roster = expected_full_q_rosters[action.name]
+                if actual_full_roster != expected_roster:
+                    errors.append(f"{action.name}:full_q_roster")
+                observed_sha = canonical_json_sha256(actual_full_roster)
+                expected_sha = CORE_CAPTURE_ROUTE_ACTIONS[action.name][
+                    "q_sha256"
+                ]
+                if observed_sha != expected_sha:
+                    errors.append(f"{action.name}:q_sha256")
+                if list(action.target_q or ()) != expected_roster[-1]:
+                    errors.append(f"{action.name}:target_q")
+            return errors
+
+        self.assertEqual(actual_route_errors(actual_actions), [])
+        default_data = mujoco.MjData(model)
+        demo.initialize(model, default_data)
+        default_controller = demo.MatchaWorkflowController(model, default_data)
+        self.assertEqual(
+            tuple(default_controller.actions[:4]), actual_actions
+        )
+        self.assertEqual(
+            actual_route_errors(tuple(default_controller.actions[:4])), []
+        )
+
+        # Direct regression for the prior false-green: changing one interior
+        # axial waypoint by 1e-8 rad must fail even when downstream command
+        # evidence is regenerated from that same mutated production action.
+        bad_waypoints = [
+            list(waypoint) for waypoint in actual_actions[1].joint_waypoints
+        ]
+        bad_waypoints[100][1] += 1.0e-8
+        axial = actual_actions[1]
+        bad_axial = demo.WorkflowAction(
+            name=axial.name,
+            kind=axial.kind,
+            tool=axial.tool,
+            target_q=axial.target_q,
+            joint_waypoints=tuple(tuple(row) for row in bad_waypoints),
+            duration_s=axial.duration_s,
+            timeout_s=axial.timeout_s,
+        )
+        bad_actions = list(actual_actions)
+        bad_actions[1] = bad_axial
+        self.assertNotEqual(actual_route_errors(tuple(bad_actions)), [])
+
+        expected_command_schedules: dict[str, tuple[np.ndarray, np.ndarray]] = {}
         for action, published in zip(
             actual_actions, contract["actions"], strict=True
         ):
@@ -4026,6 +4167,7 @@ class CoreCaptureRouteRuntimeAuthorityTests(unittest.TestCase):
                 sample_hasher.update(struct.pack("<Id", sample_index, float(time_s)))
                 sample_hasher.update(np.asarray(command, dtype="<f8").tobytes())
             command_array = np.asarray(commands)
+            expected_command_schedules[action.name] = (times, command_array)
             velocity = np.diff(command_array, axis=0) / 0.005
             acceleration = np.diff(velocity, axis=0) / 0.005
             observed_speed = float(np.max(np.abs(velocity)))
@@ -4048,6 +4190,52 @@ class CoreCaptureRouteRuntimeAuthorityTests(unittest.TestCase):
             self.assertLessEqual(
                 observed_acceleration, expected["acceleration_bound"]
             )
+
+        def runtime_command_errors() -> list[str]:
+            errors: list[str] = []
+            for action in actual_actions:
+                command_data = mujoco.MjData(model)
+                demo.initialize(model, command_data)
+                controller = demo.MatchaWorkflowController(
+                    model, command_data, actions=(action,)
+                )
+                controller.action_start_q = np.asarray(
+                    starts[action.name], dtype=np.float64
+                )
+                controller._integrate = lambda: None
+                times, expected_commands = expected_command_schedules[action.name]
+                observed_commands: list[np.ndarray] = []
+                for time_s in times:
+                    controller._command_move(action, float(time_s))
+                    observed_commands.append(
+                        np.asarray(
+                            command_data.ctrl[controller.arm_actuator_ids],
+                            dtype=np.float64,
+                        ).copy()
+                    )
+                observed_array = np.asarray(observed_commands)
+                if not np.array_equal(observed_array, expected_commands):
+                    errors.append(f"{action.name}:runtime_command_schedule")
+            return errors
+
+        self.assertEqual(runtime_command_errors(), [])
+
+        def bad_linear_command(
+            controller: Any, action: Any, elapsed_s: float
+        ) -> None:
+            alpha = min(1.0, max(0.0, elapsed_s / action.duration_s))
+            start = np.asarray(controller.action_start_q, dtype=np.float64)
+            target = np.asarray(action.target_q, dtype=np.float64)
+            controller.data.ctrl[controller.arm_actuator_ids] = (
+                start + alpha * (target - start)
+            )
+
+        with mock.patch.object(
+            demo.MatchaWorkflowController,
+            "_command_move",
+            bad_linear_command,
+        ):
+            self.assertNotEqual(runtime_command_errors(), [])
 
         arm_qpos = np.asarray(
             [model.joint(name).qposadr[0] for name in demo.ARM_JOINTS], dtype=int
