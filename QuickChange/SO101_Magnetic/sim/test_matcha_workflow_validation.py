@@ -19,6 +19,7 @@ import math
 import struct
 import subprocess
 import sys
+import textwrap
 import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -495,10 +496,12 @@ class ControllerSourceSafetyTests(unittest.TestCase):
     def test_capture_path_cannot_claim_a_returned_physical_lock(self) -> None:
         violations: list[str] = []
         forbidden_phase_roots = {
+            "_command_axial_disengage",
             "_command_capture",
             "_command_lock_verify",
             "_command_move",
             "_command_release_verify",
+            "_command_slider_return",
         }
 
         def target_is_physical_lock(target: ast.AST) -> bool:
@@ -793,6 +796,249 @@ class SimCadPlacementContractTests(unittest.TestCase):
             [float(value) for value in element.get(name, default).split()],
             dtype=np.float64,
         )
+
+    def test_contact_semantic_caches_equal_compiled_predicates_and_audit_each_step(
+        self,
+    ) -> None:
+        """Permit immutable lookup caching without weakening contact coverage."""
+
+        data = self.demo.mujoco.MjData(self.model)
+        self.demo.initialize(self.model, data)
+        controller = self.demo.MatchaWorkflowController(
+            self.model,
+            data,
+            actions=self.demo._recovery_controller_actions(),
+        )
+        compiled_names = tuple(
+            str(self.model.geom(geom_id).name)
+            for geom_id in range(self.model.ngeom)
+        )
+        self.assertIsInstance(controller.geom_names, tuple)
+        self.assertEqual(controller.geom_names, compiled_names)
+
+        expected_robot_lands = frozenset(
+            {
+                "qc_col_robot_plate_core__mating_land",
+                "qc_col_robot_plate_cam_relief_part_01",
+                *(
+                    name
+                    for name in compiled_names
+                    if name.startswith(
+                        "qc_col_robot_plate_upper_well_partition_"
+                    )
+                    and name.endswith("__mating_land")
+                ),
+            }
+        )
+        self.assertIsInstance(controller.robot_mating_land_names, frozenset)
+        self.assertEqual(controller.robot_mating_land_names, expected_robot_lands)
+
+        expected_stops = {
+            tool: frozenset(
+                name
+                for name in compiled_names
+                if self.demo.qc.is_dock_stop_collision_name(tool, name)
+            )
+            for tool in self.demo.ALL_TOOL_IDS
+        }
+        self.assertEqual(controller.dock_stop_names_by_tool, expected_stops)
+        self.assertTrue(
+            all(
+                isinstance(names, frozenset)
+                for names in controller.dock_stop_names_by_tool.values()
+            )
+        )
+
+        expected_pogo_pairs = {
+            frozenset(
+                {
+                    f"qc_col_pogo_{signal}",
+                    f"{tool}_pad_{signal}_collision",
+                }
+            ): (tool, signal)
+            for tool in self.demo.ALL_TOOL_IDS
+            for signal in self.demo.qc.SIGNALS
+        }
+        self.assertEqual(controller.pogo_pair_contract, expected_pogo_pairs)
+        expected_support_pairs = {
+            frozenset(
+                {
+                    f"dock_{tool}_support_anchor_collision",
+                    f"dock_{tool}_support_collision",
+                }
+            )
+            for tool in self.demo.ALL_TOOL_IDS
+        }
+        expected_support_pairs.update(
+            frozenset(
+                {f"dock_{tool}_support_collision", "matcha_floor_collision"}
+            )
+            for tool in self.demo.ALL_TOOL_IDS
+        )
+        self.assertEqual(controller.support_contact_pairs, expected_support_pairs)
+        self.assertIsInstance(controller.support_contact_pairs, frozenset)
+        self.assertEqual(
+            controller.slider_tab_geom_ids,
+            tuple(
+                geom_id
+                for geom_id, name in enumerate(compiled_names)
+                if name.startswith("qc_col_lock_slider_tab_part_")
+            ),
+        )
+        self.assertEqual(
+            controller.dock_gripper_cam_geom_id,
+            int(self.model.geom("dock_gripper_cam_collision").id),
+        )
+
+        integrate_tree = ast.parse(
+            textwrap.dedent(
+                inspect.getsource(self.demo.MatchaWorkflowController._integrate)
+            )
+        )
+        integration_loops = []
+        for loop in (node for node in ast.walk(integrate_tree) if isinstance(node, ast.For)):
+            calls = [
+                (called_name(call), call.lineno)
+                for call in ast.walk(loop)
+                if isinstance(call, ast.Call)
+            ]
+            names = {name for name, _ in calls}
+            if {"mj_step", "_audit_contacts"}.issubset(names):
+                integration_loops.append(calls)
+        self.assertEqual(len(integration_loops), 1)
+        integration_calls = integration_loops[0]
+        step_line = min(line for name, line in integration_calls if name == "mj_step")
+        audit_line = min(
+            line for name, line in integration_calls if name == "_audit_contacts"
+        )
+        self.assertLess(step_line, audit_line)
+
+        audit_tree = ast.parse(
+            textwrap.dedent(
+                inspect.getsource(self.demo.MatchaWorkflowController._audit_contacts)
+            )
+        )
+        contact_loops = [
+            node
+            for node in ast.walk(audit_tree)
+            if isinstance(node, ast.For)
+            and isinstance(node.iter, ast.Call)
+            and called_name(node.iter) == "range"
+            and "self.data.ncon" in ast.unparse(node.iter)
+        ]
+        self.assertEqual(len(contact_loops), 1)
+        self.assertIn("self.data.contact[contact_index]", ast.unparse(contact_loops[0]))
+
+        forbidden_cache_mutations: list[str] = []
+        cache_fields = {
+            "geom_names",
+            "robot_mating_land_names",
+            "dock_stop_names_by_tool",
+            "pogo_pair_contract",
+            "support_contact_pairs",
+            "slider_tab_geom_ids",
+            "dock_gripper_cam_geom_id",
+        }
+        class_source = textwrap.dedent(
+            inspect.getsource(self.demo.MatchaWorkflowController)
+        )
+        class_tree = ast.parse(class_source)
+        for method in (
+            node
+            for node in ast.walk(class_tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name != "__init__"
+        ):
+            for node in ast.walk(method):
+                if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+                    targets = (
+                        node.targets if isinstance(node, ast.Assign) else [node.target]
+                    )
+                    for target in targets:
+                        if (
+                            isinstance(target, ast.Attribute)
+                            and isinstance(target.value, ast.Name)
+                            and target.value.id == "self"
+                            and target.attr in cache_fields
+                        ):
+                            forbidden_cache_mutations.append(
+                                f"{method.name}:{node.lineno}:{target.attr}"
+                            )
+                if (
+                    isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Attribute)
+                    and isinstance(node.func.value, ast.Attribute)
+                    and isinstance(node.func.value.value, ast.Name)
+                    and node.func.value.value.id == "self"
+                    and node.func.value.attr in cache_fields
+                    and node.func.attr
+                    in {"add", "clear", "discard", "pop", "remove", "setdefault", "update"}
+                ):
+                    forbidden_cache_mutations.append(
+                        f"{method.name}:{node.lineno}:{node.func.value.attr}.{node.func.attr}"
+                    )
+        self.assertEqual(forbidden_cache_mutations, [])
+        self.assertNotIn("nominal_contact_pairs", class_source)
+        self.assertNotIn("learned_contact", class_source)
+
+        audit_calls = 0
+        original_audit = controller._audit_contacts
+
+        def counted_audit() -> None:
+            nonlocal audit_calls
+            audit_calls += 1
+            original_audit()
+
+        controller._audit_contacts = counted_audit
+        before = int(controller.physics_substep_count)
+        controller.step()
+        advanced = int(controller.physics_substep_count) - before
+        self.assertEqual(advanced, int(self.demo.PHYSICS_SUBSTEPS_PER_CONTROLLER_STEP))
+        self.assertEqual(audit_calls, advanced)
+
+    def test_ordered_lock_actions_are_bounded_and_rack_exit_stays_separate(
+        self,
+    ) -> None:
+        actions = self.demo._recovery_controller_actions()
+        expected = (
+            ("gripper_to_capture", "move"),
+            ("gripper_physical_capture", "capture"),
+            ("gripper_lock_verify", "lock_verify"),
+            ("gripper_dock_release_verify", "release_verify"),
+            ("gripper_lock_cam_disengagement", "axial_disengage"),
+            ("gripper_slider_return_verify", "slider_return"),
+            ("gripper_physical_lock_confirm", "physical_lock_confirm"),
+        )
+        self.assertEqual(
+            tuple((action.name, action.kind) for action in actions), expected
+        )
+        self.assertTrue(all(math.isfinite(action.timeout_s) for action in actions))
+        self.assertTrue(all(action.timeout_s > 0.0 for action in actions))
+        self.assertTrue(all(action.duration_s >= 0.0 for action in actions))
+        self.assertTrue(
+            all(action.timeout_s >= action.duration_s for action in actions)
+        )
+        self.assertLessEqual(math.fsum(action.timeout_s for action in actions), 15.0)
+        disengagement = actions[4]
+        np.testing.assert_allclose(
+            np.asarray(disengagement.target_q, dtype=float),
+            np.asarray(self.demo.CORE_LOCK_DISENGAGEMENT_TARGET_Q, dtype=float),
+            rtol=0.0,
+            atol=0.0,
+        )
+        self.assertEqual(
+            disengagement.joint_waypoints,
+            self.demo._core_lock_disengagement_waypoints(),
+        )
+        with self.assertRaisesRegex(ValueError, "rack exit"):
+            self.demo._recovery_controller_actions(include_rack_exit=True)
+
+        data = self.demo.mujoco.MjData(self.model)
+        self.demo.initialize(self.model, data)
+        controller = self.demo.MatchaWorkflowController(
+            self.model, data, actions=actions
+        )
+        self.assertIs(controller.result().get("release_ready"), False)
 
     @staticmethod
     def _binary_stl_vertices(payload: bytes) -> np.ndarray:
@@ -2965,52 +3211,186 @@ class SimCadPlacementContractTests(unittest.TestCase):
             locked_rotation, np.eye(3), rtol=0.0, atol=1.0e-12
         )
 
-    def test_withdrawal_threshold_is_exactly_safe_against_source_cam(self) -> None:
+    def test_axial_lock_release_stroke_clears_full_source_assembly(self) -> None:
+        """Certify phase-A lock release without laundering it into rack exit."""
+
         cad = self.clearance.CAD
-        threshold_mm = float(self.demo.MINIMUM_SOURCE_AXIS_WITHDRAWAL_MM)
-        self.assertGreaterEqual(threshold_mm, 15.0)
+        self.assertEqual(
+            self.demo.CORE_LOCK_RELEASE_SOURCE_AXIS,
+            "dock_local_negative_z",
+        )
+        np.testing.assert_allclose(
+            np.asarray(self.demo.CORE_LOCK_RELEASE_AXIS_DOCK_LOCAL, dtype=float),
+            [0.0, 0.0, -1.0],
+            rtol=0.0,
+            atol=0.0,
+        )
+        target_mm = float(self.demo.CORE_LOCK_RELEASE_STROKE_MM)
+        minimum_mm = float(self.demo.CORE_LOCK_RELEASE_MIN_STROKE_MM)
+        maximum_mm = float(self.demo.MAXIMUM_SOURCE_AXIS_WITHDRAWAL_MM)
+        self.assertEqual(
+            float(self.demo.MINIMUM_SOURCE_AXIS_WITHDRAWAL_MM), minimum_mm
+        )
+        self.assertAlmostEqual(target_mm, 1.20, places=12)
+        self.assertAlmostEqual(minimum_mm, 1.15, places=12)
+        self.assertAlmostEqual(maximum_mm, 1.20, places=12)
+        self.assertGreaterEqual(target_mm, minimum_mm)
+        self.assertLessEqual(target_mm, maximum_mm)
 
-        def locked_slider(withdrawal_mm: float) -> Any:
-            return (
-                cad.locking_slider()
-                .translate(
-                    (
-                        cad.SLIDER_TRAVEL,
-                        -withdrawal_mm,
-                        cad.SLIDER_Z - cad.PLATE_THICKNESS,
-                    )
+        components = self.clearance._tool_side_components()
+        expected_names = {
+            "stock_tool_plate",
+            "official_fixed_gripper_body",
+            "target_1",
+            "target_screw_1",
+            "target_nut_1",
+            "target_2",
+            "target_screw_2",
+            "target_nut_2",
+            "shoulder_stud_1",
+            "stud_nut_1",
+            "shoulder_stud_2",
+            "stud_nut_2",
+            "target_contact_board",
+            "target_pad_1",
+            "target_pad_2",
+            "target_pad_3",
+            "target_pad_4",
+        }
+        by_name = {component.name: component for component in components}
+        self.assertEqual(len(components), len(by_name))
+        self.assertEqual(set(by_name), expected_names)
+
+        dock = self.clearance._dock_authority()
+        full_dock = dock["full_dock"].val()
+        cam = dock["positive_lock_cam"].val()
+        rail_names = (
+            "left_lower_rail",
+            "right_lower_rail",
+            "left_upper_rail",
+            "right_upper_rail",
+        )
+        samples_mm = [round(0.1 * index, 10) for index in range(13)]
+        self.assertEqual(samples_mm[0], 0.0)
+        self.assertEqual(samples_mm[-1], target_mm)
+
+        stock_plate = by_name["stock_tool_plate"]
+        plate_bounds = self.clearance._bbox_tuple(stock_plate.shape.val())
+        left_lower_bounds = self.clearance._bbox_tuple(
+            dock["left_lower_rail"].val()
+        )
+        right_lower_bounds = self.clearance._bbox_tuple(
+            dock["right_lower_rail"].val()
+        )
+        self.assertAlmostEqual(plate_bounds[0][0], left_lower_bounds[0][1])
+        self.assertAlmostEqual(plate_bounds[0][1], right_lower_bounds[0][0])
+
+        endpoint_distances: dict[str, float] = {}
+        for stroke_mm in samples_mm:
+            translation = (0.0, 0.0, -stroke_mm)
+            for component in components:
+                placed = component.shape.translate(translation).val()
+                distance_mm = float(placed.distance(full_dock))
+                overlap_mm3 = (
+                    self.clearance._intersection_volume_mm3(placed, full_dock)
+                    if distance_mm <= self.clearance.NUMERIC_DISTANCE_TOLERANCE_MM
+                    else 0.0
                 )
-                .val()
-            )
+                self.assertLessEqual(
+                    overlap_mm3,
+                    self.clearance.OVERLAP_VOLUME_TOLERANCE_MM3,
+                    {
+                        "component": component.name,
+                        "stroke_mm": stroke_mm,
+                        "distance_mm": distance_mm,
+                        "overlap_mm3": overlap_mm3,
+                    },
+                )
+                if component.name != "stock_tool_plate":
+                    self.assertGreater(
+                        distance_mm,
+                        self.clearance.NUMERIC_DISTANCE_TOLERANCE_MM,
+                        {
+                            "component": component.name,
+                            "stroke_mm": stroke_mm,
+                            "unclassified_zero_distance_contact": True,
+                        },
+                    )
+                if stroke_mm == target_mm:
+                    endpoint_distances[component.name] = distance_mm
 
-        cam = cad.positive_lock_cam().val()
-        twelve_mm_slider = locked_slider(12.0)
-        twelve_mm_overlap = self.clearance._intersection_volume_mm3(
-            twelve_mm_slider, cam
+            placed_plate = stock_plate.shape.translate(translation).val()
+            for rail_name in rail_names:
+                rail = dock[rail_name].val()
+                distance_mm = float(placed_plate.distance(rail))
+                overlap_mm3 = self.clearance._intersection_volume_mm3(
+                    placed_plate, rail
+                )
+                self.assertLessEqual(
+                    overlap_mm3,
+                    self.clearance.OVERLAP_VOLUME_TOLERANCE_MM3,
+                    (rail_name, stroke_mm, overlap_mm3),
+                )
+                if rail_name.endswith("lower_rail"):
+                    # Persistent opposing X-face side guides; -Z is tangent
+                    # to their normals and must not create volume overlap.
+                    self.assertAlmostEqual(distance_mm, 0.0, delta=1.0e-9)
+                else:
+                    # The upper keepers touch only at the seated plane, then
+                    # separate monotonically by exactly the axial stroke.
+                    self.assertAlmostEqual(distance_mm, stroke_mm, delta=1.0e-9)
+
+        motion_bound_mm = 0.05
+        endpoint_plate = stock_plate.shape.translate((0.0, 0.0, -target_mm)).val()
+        plate_cam_distance_mm = float(endpoint_plate.distance(cam))
+        self.assertAlmostEqual(plate_cam_distance_mm, 0.75, delta=1.0e-9)
+        self.assertGreaterEqual(plate_cam_distance_mm - motion_bound_mm, 0.70)
+
+        self.assertGreaterEqual(
+            endpoint_distances["official_fixed_gripper_body"] - motion_bound_mm,
+            1.750703657,
         )
-        self.assertGreater(
-            twelve_mm_overlap,
-            self.clearance.OVERLAP_VOLUME_TOLERANCE_MM3,
-            "12 mm still leaves the locked slider inside the dock cam",
+        self.assertGreaterEqual(
+            endpoint_distances["target_contact_board"] - motion_bound_mm,
+            0.95,
         )
-        threshold_slider = locked_slider(threshold_mm)
-        threshold_distance = float(threshold_slider.distance(cam))
-        threshold_overlap = (
-            self.clearance._intersection_volume_mm3(threshold_slider, cam)
-            if threshold_distance <= self.clearance.NUMERIC_DISTANCE_TOLERANCE_MM
+        hardware_names = expected_names - {
+            "stock_tool_plate",
+            "official_fixed_gripper_body",
+            "target_contact_board",
+        }
+        self.assertGreaterEqual(
+            min(endpoint_distances[name] for name in hardware_names)
+            - motion_bound_mm,
+            2.95,
+        )
+
+        locked_slider = (
+            cad.locking_slider()
+            .translate(
+                (
+                    cad.SLIDER_TRAVEL,
+                    0.0,
+                    cad.SLIDER_Z - cad.PLATE_THICKNESS - target_mm,
+                )
+            )
+            .val()
+        )
+        slider_cam_distance_mm = float(locked_slider.distance(cam))
+        slider_cam_overlap_mm3 = (
+            self.clearance._intersection_volume_mm3(locked_slider, cam)
+            if slider_cam_distance_mm
+            <= self.clearance.NUMERIC_DISTANCE_TOLERANCE_MM
             else 0.0
         )
         self.assertLessEqual(
-            threshold_overlap, self.clearance.OVERLAP_VOLUME_TOLERANCE_MM3
+            slider_cam_overlap_mm3,
+            self.clearance.OVERLAP_VOLUME_TOLERANCE_MM3,
         )
+        self.assertAlmostEqual(slider_cam_distance_mm, 0.25, delta=1.0e-9)
         self.assertGreaterEqual(
-            threshold_distance,
-            self.clearance.MANUFACTURING_CLEARANCE_MM,
-            {
-                "withdrawal_mm": threshold_mm,
-                "distance_mm": threshold_distance,
-                "overlap_mm3": threshold_overlap,
-            },
+            slider_cam_distance_mm - motion_bound_mm,
+            float(self.demo.LOCK_CAM_MANUFACTURING_CLEARANCE_MM),
         )
 
 
@@ -3301,6 +3681,125 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
             observed[source_pair] = record
         self.assertEqual(set(observed), set(contract), report)
 
+    def assert_slider_return_trace(self, slider: dict[str, Any]) -> None:
+        """Recompute the bounded q/qdot return and settled dwell from samples."""
+
+        samples = slider.get("samples")
+        self.assertIsInstance(samples, list, slider)
+        self.assertTrue(samples, slider)
+        sample_array = np.asarray(samples, dtype="<f8")
+        self.assertEqual(sample_array.ndim, 2, slider)
+        self.assertEqual(sample_array.shape[1], 3, slider)
+        self.assertTrue(np.all(np.isfinite(sample_array)), slider)
+        substeps = sample_array[:, 0]
+        self.assertTrue(np.all(substeps == np.floor(substeps)), slider)
+        if len(substeps) > 1:
+            np.testing.assert_array_equal(np.diff(substeps), 1.0)
+        self.assertEqual(
+            int(slider.get("trajectory_sample_count", -1)), len(sample_array), slider
+        )
+        self.assertEqual(
+            int(slider.get("trajectory_first_physics_substep_count", -1)),
+            int(substeps[0]),
+            slider,
+        )
+        self.assertEqual(
+            int(slider.get("trajectory_last_physics_substep_count", -1)),
+            int(substeps[-1]),
+            slider,
+        )
+        self.assertEqual(
+            slider.get("trajectory_sha256_le_f64_substep_q_qdot"),
+            hashlib.sha256(sample_array.tobytes()).hexdigest(),
+            slider,
+        )
+
+        q_m = sample_array[:, 1]
+        qvel_m_s = sample_array[:, 2]
+        # This is stricter than checking only the first state in the locked
+        # band: the passive mechanism may neither tunnel below q=0 nor bounce
+        # beyond its declared limit during the complete real-step return.
+        self.assertGreaterEqual(float(np.min(q_m)), -0.000020, slider)
+        self.assertLessEqual(float(np.max(q_m)), 0.003050, slider)
+        self.assertAlmostEqual(
+            float(slider.get("trajectory_q_min_mm", math.inf)),
+            1000.0 * float(np.min(q_m)),
+            delta=1.0e-9,
+        )
+        self.assertAlmostEqual(
+            float(slider.get("trajectory_q_max_mm", math.inf)),
+            1000.0 * float(np.max(q_m)),
+            delta=1.0e-9,
+        )
+        self.assertAlmostEqual(
+            float(slider.get("trajectory_max_abs_qvel_mm_s", math.inf)),
+            1000.0 * float(np.max(np.abs(qvel_m_s))),
+            delta=1.0e-9,
+        )
+
+        timestep_s = float(slider.get("physics_timestep_s", math.nan))
+        self.assertTrue(math.isfinite(timestep_s), slider)
+        self.assertGreater(timestep_s, 0.0, slider)
+        required_dwell_s = float(self.demo.LOCKED_SLIDER_SETTLED_DWELL_S)
+        required_substeps = math.ceil(required_dwell_s / timestep_s)
+        declared_dwell_substeps = int(slider.get("settled_dwell_substeps", -1))
+        self.assertGreaterEqual(declared_dwell_substeps, required_substeps, slider)
+        self.assertGreaterEqual(len(sample_array), declared_dwell_substeps, slider)
+        dwell = sample_array[-declared_dwell_substeps:]
+        band_m = np.asarray(self.demo.LOCKED_SLIDER_POSITION_BAND_M, dtype=float)
+        speed_limit_m_s = float(self.demo.LOCKED_SLIDER_SPEED_LIMIT_M_S)
+        self.assertTrue(np.all(dwell[:, 1] >= band_m[0]), slider)
+        self.assertTrue(np.all(dwell[:, 1] <= band_m[1]), slider)
+        self.assertTrue(np.all(np.abs(dwell[:, 2]) <= speed_limit_m_s), slider)
+        self.assertAlmostEqual(
+            float(slider.get("settled_dwell_s", math.nan)),
+            declared_dwell_substeps * timestep_s,
+            delta=1.0e-12,
+        )
+        self.assertGreaterEqual(
+            float(slider.get("settled_dwell_s", 0.0)), required_dwell_s, slider
+        )
+        for key, expected in (
+            ("dwell_q_min_mm", 1000.0 * float(np.min(dwell[:, 1]))),
+            ("dwell_q_max_mm", 1000.0 * float(np.max(dwell[:, 1]))),
+            (
+                "dwell_max_abs_qvel_mm_s",
+                1000.0 * float(np.max(np.abs(dwell[:, 2]))),
+            ),
+        ):
+            self.assertAlmostEqual(
+                float(slider.get(key, math.inf)), expected, delta=1.0e-9
+            )
+        self.assertAlmostEqual(
+            float(slider.get("slider_joint_position_mm", math.inf)),
+            1000.0 * float(q_m[-1]),
+            delta=1.0e-9,
+        )
+        self.assertAlmostEqual(
+            float(slider.get("slider_joint_velocity_mm_s", math.inf)),
+            1000.0 * float(qvel_m_s[-1]),
+            delta=1.0e-9,
+        )
+        self.assertEqual(
+            int(slider.get("direct_state_writes_after_physical_capture", -1)), 0
+        )
+        self.assertEqual(int(slider.get("cam_tab_contact_count", -1)), 0, slider)
+        self.assertEqual(
+            int(slider.get("cam_tab_contact_count_during_settled_dwell", -1)),
+            0,
+            slider,
+        )
+        self.assertGreaterEqual(
+            float(slider.get("cam_tab_runtime_proxy_clearance_mm", -math.inf)),
+            0.0,
+            slider,
+        )
+        self.assertGreaterEqual(
+            float(slider.get("cam_tab_min_clearance_mm", -math.inf)),
+            0.0,
+            slider,
+        )
+
     def assert_lock_sequence(self, result: dict[str, Any]) -> None:
         expected_events = (
             "physical_capture_complete",
@@ -3334,21 +3833,60 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
         self.assertEqual(physics_indices, sorted(physics_indices), matching)
         self.assertEqual(len(physics_indices), len(set(physics_indices)), matching)
 
+        true_lock_records = [
+            (index, record)
+            for index, record in enumerate(journal)
+            if isinstance(record, dict)
+            and record.get("physical_lock_confirmed") is True
+        ]
+        self.assertEqual(len(true_lock_records), 1, journal)
+        true_lock_position, true_lock_record = true_lock_records[0]
+        self.assertEqual(
+            true_lock_record.get("event"), "physical_lock_confirmed", true_lock_record
+        )
+        self.assertEqual(true_lock_position, event_positions[-1], journal)
+
         for event_name in expected_events[:-1]:
             self.assertIs(
                 matching[event_name].get("physical_lock_confirmed"),
                 False,
                 matching[event_name],
             )
+        capture = matching["physical_capture_complete"]
+        self.assertIs(capture.get("dock_hold_active"), True, capture)
+        self.assertIs(capture.get("attach_equality_active"), True, capture)
+        self.assertEqual(capture.get("pogo_signals"), sorted(self.demo.qc.SIGNALS))
+        self.assertEqual(int(capture.get("observed_tool_id", -1)), 6, capture)
+        self.assertEqual(int(capture.get("expected_tool_id", -1)), 6, capture)
+        self.assertIs(capture.get("tool_identity_verified"), True, capture)
         self.assertIs(
             matching["dock_hold_released"].get("dock_hold_active"),
             False,
             matching["dock_hold_released"],
         )
+        self.assertIs(
+            matching["dock_hold_released"].get("attach_equality_active"),
+            True,
+            matching["dock_hold_released"],
+        )
         withdrawal = matching["source_axis_withdrawal_complete"]
         minimum_withdrawal_mm = float(self.demo.MINIMUM_SOURCE_AXIS_WITHDRAWAL_MM)
-        self.assertGreaterEqual(minimum_withdrawal_mm, 15.0)
-        capture = matching["physical_capture_complete"]
+        maximum_withdrawal_mm = float(self.demo.MAXIMUM_SOURCE_AXIS_WITHDRAWAL_MM)
+        self.assertAlmostEqual(minimum_withdrawal_mm, 1.15, places=12)
+        self.assertAlmostEqual(maximum_withdrawal_mm, 1.20, places=12)
+        self.assertEqual(
+            withdrawal.get("source_axis"),
+            "dock_local_negative_z",
+            withdrawal,
+        )
+        np.testing.assert_allclose(
+            np.asarray(withdrawal.get("source_axis_dock_local"), dtype=float),
+            [0.0, 0.0, -1.0],
+            rtol=0.0,
+            atol=0.0,
+        )
+        self.assertIs(withdrawal.get("dock_hold_active"), False, withdrawal)
+        self.assertIs(withdrawal.get("attach_equality_active"), True, withdrawal)
         pose_fields = (
             "robot_mating_position_world_m",
             "robot_mating_quat_wxyz",
@@ -3403,11 +3941,16 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
         displacement_local = withdrawal_local - capture_local
         displacement_norm = float(np.linalg.norm(displacement_local))
         self.assertGreater(displacement_norm, 0.0, withdrawal)
-        recomputed_withdrawal_mm = -1000.0 * float(displacement_local[1])
-        recomputed_axis_alignment = -float(displacement_local[1]) / displacement_norm
+        recomputed_withdrawal_mm = -1000.0 * float(displacement_local[2])
+        recomputed_axis_alignment = -float(displacement_local[2]) / displacement_norm
         self.assertGreaterEqual(
             recomputed_withdrawal_mm,
             minimum_withdrawal_mm,
+            withdrawal,
+        )
+        self.assertLessEqual(
+            recomputed_withdrawal_mm,
+            maximum_withdrawal_mm + 1.0e-6,
             withdrawal,
         )
         self.assertGreaterEqual(
@@ -3424,7 +3967,7 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
             delta=1.0e-9,
         )
         self.assertLessEqual(
-            1000.0 * float(np.linalg.norm(displacement_local[[0, 2]])),
+            1000.0 * float(np.linalg.norm(displacement_local[[0, 1]])),
             1000.0 * float(self.demo.CAM_RELIEF_CORRIDOR_M),
             withdrawal,
         )
@@ -3436,14 +3979,70 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
             float(self.demo.CAPTURE_ORIENTATION_TOLERANCE_RAD),
             withdrawal,
         )
+        self.assertAlmostEqual(
+            float(withdrawal.get("lateral_deviation_mm", math.inf)),
+            1000.0 * float(np.linalg.norm(displacement_local[[0, 1]])),
+            delta=1.0e-9,
+        )
+        self.assertAlmostEqual(
+            float(withdrawal.get("orientation_error_rad", math.inf)),
+            self.quaternion_angle(
+                capture["robot_mating_quat_wxyz"],
+                withdrawal["robot_mating_quat_wxyz"],
+            ),
+            delta=1.0e-9,
+        )
+        expected_guides = {
+            tuple(str(value) for value in contract["source_pair"]): contract
+            for contract in self.demo.CORE_KEEPER_CONTACT_CONTRACT
+            if contract["source_pair"][0] == "stock_tool_plate"
+        }
+        guide_records = withdrawal.get("guide_contact_records")
+        self.assertIsInstance(guide_records, list, withdrawal)
+        self.assertEqual(len(guide_records), len(expected_guides), withdrawal)
+        observed_guides: set[tuple[str, str]] = set()
+        for guide in guide_records:
+            self.assertIsInstance(guide, dict, withdrawal)
+            source_pair = tuple(str(value) for value in guide.get("source_pair", ()))
+            self.assertIn(source_pair, expected_guides, guide)
+            self.assertNotIn(source_pair, observed_guides, guide)
+            self.assertEqual(
+                guide.get("runtime_pair"), expected_guides[source_pair]["runtime_pair"]
+            )
+            self.assertIs(guide.get("passed"), True, guide)
+            self.assertIs(guide.get("all_normals_valid"), True, guide)
+            self.assertIs(guide.get("finite_force_verified"), True, guide)
+            self.assertGreaterEqual(int(guide.get("contact_sample_count", -1)), 0)
+            self.assertGreaterEqual(float(guide.get("max_normal_force_n", -1.0)), 0.0)
+            self.assertLessEqual(
+                float(guide.get("max_penetration_mm", math.inf)),
+                float(self.demo.CORE_KEEPER_MAX_PENETRATION_MM),
+                guide,
+            )
+            self.assertEqual(
+                guide.get("force_acceptance_semantics"),
+                "finite_measured_evidence_no_release_limit_declared",
+                guide,
+            )
+            observed_guides.add(source_pair)
+        self.assertEqual(observed_guides, set(expected_guides), withdrawal)
+
+        top_level_withdrawal = result.get("source_axis_withdrawal_evidence")
+        self.assertIsInstance(top_level_withdrawal, dict, result)
+        for key, value in top_level_withdrawal.items():
+            self.assertEqual(withdrawal.get(key), value, (key, withdrawal, result))
         slider = matching["slider_return_verified"]
+        self.assert_slider_return_trace(slider)
         self.assertIs(slider.get("cam_clear"), True, slider)
         self.assertIs(slider.get("returned"), True, slider)
         slider_position_mm = float(
             slider.get("slider_joint_position_mm", -math.inf)
         )
-        self.assertGreaterEqual(slider_position_mm, 2.95, slider)
-        self.assertLessEqual(slider_position_mm, 3.0 + 1.0e-6, slider)
+        slider_band_mm = 1000.0 * np.asarray(
+            self.demo.LOCKED_SLIDER_POSITION_BAND_M, dtype=float
+        )
+        self.assertGreaterEqual(slider_position_mm, slider_band_mm[0], slider)
+        self.assertLessEqual(slider_position_mm, slider_band_mm[1], slider)
         self.assertGreaterEqual(float(slider.get("settled_dwell_s", 0.0)), 0.050)
         slider_speed_mm_s = abs(
             float(slider.get("slider_joint_velocity_mm_s", math.inf))
@@ -3460,8 +4059,10 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
             .translate(
                 (
                     slider_position_mm,
-                    -recomputed_withdrawal_mm,
-                    cad.SLIDER_Z - cad.PLATE_THICKNESS,
+                    0.0,
+                    cad.SLIDER_Z
+                    - cad.PLATE_THICKNESS
+                    - recomputed_withdrawal_mm,
                 )
             )
             .val()
@@ -3489,8 +4090,42 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
             exact_cam_clearance_mm,
             delta=1.0e-6,
         )
+        continuous_cam_clearance_mm = exact_cam_clearance_mm - 0.05
+        self.assertAlmostEqual(
+            float(
+                slider.get(
+                    "cam_tab_continuous_clearance_lower_bound_mm", math.inf
+                )
+            ),
+            continuous_cam_clearance_mm,
+            delta=1.0e-6,
+        )
+        self.assertGreaterEqual(
+            continuous_cam_clearance_mm,
+            float(self.demo.LOCK_CAM_MANUFACTURING_CLEARANCE_MM),
+            slider,
+        )
+        self.assertEqual(
+            slider.get("cam_clearance_authority"),
+            "hash_pinned_exact_cad_axial_sweep_plus_0.05mm_motion_bound",
+            slider,
+        )
+        top_level_slider = result.get("slider_return_evidence")
+        self.assertIsInstance(top_level_slider, dict, result)
+        for key, value in top_level_slider.items():
+            self.assertEqual(slider.get(key), value, (key, slider, result))
         self.assertIs(
             matching["physical_lock_confirmed"].get("physical_lock_confirmed"),
+            True,
+            matching["physical_lock_confirmed"],
+        )
+        self.assertIs(
+            matching["physical_lock_confirmed"].get("dock_hold_active"),
+            False,
+            matching["physical_lock_confirmed"],
+        )
+        self.assertIs(
+            matching["physical_lock_confirmed"].get("attach_equality_active"),
             True,
             matching["physical_lock_confirmed"],
         )
@@ -3514,11 +4149,12 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
             text=True,
             capture_output=True,
             check=False,
-            timeout=30,
+            timeout=180,
         )
         self.assertEqual(result_process.returncode, 0, result_process.stderr)
         result = json.loads(result_process.stdout)
         self.assertEqual(result.get("milestone"), "capture_lock_and_dock_release")
+        self.assertIs(result.get("release_ready"), False, result)
         self.assertIs(result.get("completed"), True, result)
         self.assertIsNone(result.get("abort_reason"), result)
         self.assertIs(result.get("motion_stopped"), True, result)
@@ -3559,7 +4195,7 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
         self.assertIs(result.get("attach_equality_active"), True, result)
         self.assertEqual(
             result.get("lock_confirmation_phase"),
-            "after_dock_release_source_axis_withdrawal_and_slider_return",
+            "after_dock_release_axial_cam_disengagement_and_slider_return",
             result,
         )
         self.assertEqual(
@@ -3593,6 +4229,68 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
         self.assertIsInstance(startup, dict, result)
         self.assertIs(startup.get("passed"), True, startup)
         self.assertEqual(int(startup.get("penetration_count", -1)), 0, startup)
+
+        # Cheap deterministic negative controls exercise the independent
+        # oracle against internally plausible but unsafe evidence without
+        # paying for another full dynamics replay.
+        def cloned() -> dict[str, Any]:
+            return json.loads(json.dumps(result, allow_nan=False))
+
+        mutations: list[tuple[str, Any]] = []
+
+        early_lock = cloned()
+        next(
+            record
+            for record in early_lock["journal"]
+            if record.get("event") == "physical_capture_complete"
+        )["physical_lock_confirmed"] = True
+        mutations.append(("early physical-lock claim", early_lock))
+
+        fake_withdrawal = cloned()
+        next(
+            record
+            for record in fake_withdrawal["journal"]
+            if record.get("event") == "source_axis_withdrawal_complete"
+        )["withdrawal_mm"] += 0.25
+        mutations.append(("self-attested withdrawal", fake_withdrawal))
+
+        out_of_range_q = cloned()
+        slider_record = next(
+            record
+            for record in out_of_range_q["journal"]
+            if record.get("event") == "slider_return_verified"
+        )
+        slider_record["samples"][0][1] = 0.004
+        mutations.append(("out-of-range slider sample", out_of_range_q))
+
+        cam_contact = cloned()
+        next(
+            record
+            for record in cam_contact["journal"]
+            if record.get("event") == "slider_return_verified"
+        )["cam_tab_contact_count_during_settled_dwell"] = 1
+        mutations.append(("cam-tab dwell contact", cam_contact))
+
+        missing_bus_signal = cloned()
+        next(
+            record
+            for record in missing_bus_signal["journal"]
+            if record.get("event") == "physical_capture_complete"
+        )["pogo_signals"] = ["data", "ground", "power"]
+        mutations.append(("missing capture bus signal", missing_bus_signal))
+
+        wrong_equality_order = cloned()
+        next(
+            record
+            for record in wrong_equality_order["journal"]
+            if record.get("event") == "dock_hold_released"
+        )["attach_equality_active"] = False
+        mutations.append(("attach equality released early", wrong_equality_order))
+
+        for description, mutation in mutations:
+            with self.subTest(negative=description):
+                with self.assertRaises(AssertionError):
+                    self.assert_lock_sequence(mutation)
 
 
 def box_triangles(

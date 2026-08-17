@@ -19,6 +19,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any
 
 import mujoco
@@ -176,7 +177,29 @@ CAM_RELIEF_CORRIDOR_M = 0.0005
 CORE_KEEPER_MAX_PENETRATION_MM = 0.020
 CORE_KEEPER_MAX_SEPARATION_MM = 0.020
 CORE_KEEPER_MIN_NORMAL_ALIGNMENT = 0.999
-MINIMUM_SOURCE_AXIS_WITHDRAWAL_MM = 15.0
+CORE_LOCK_RELEASE_AXIS_DOCK_LOCAL = (0.0, 0.0, -1.0)
+CORE_LOCK_RELEASE_SOURCE_AXIS = "dock_local_negative_z"
+CORE_LOCK_RELEASE_STROKE_MM = 1.20
+CORE_LOCK_RELEASE_MIN_STROKE_MM = 1.15
+MINIMUM_SOURCE_AXIS_WITHDRAWAL_MM = CORE_LOCK_RELEASE_MIN_STROKE_MM
+MAXIMUM_SOURCE_AXIS_WITHDRAWAL_MM = CORE_LOCK_RELEASE_STROKE_MM
+LOCKED_SLIDER_POSITION_BAND_M = (0.00295, 0.00305)
+LOCKED_SLIDER_SPEED_LIMIT_M_S = 0.001
+LOCKED_SLIDER_SETTLED_DWELL_S = 0.050
+LOCK_CAM_MANUFACTURING_CLEARANCE_MM = 0.20
+
+# The exact target is the 19.982448% interpolation between the frozen 1 mm and
+# 2 mm +X=0.20 mm guided IK roots.  FK places the robot mating site at
+# [0.200817, -0.009784, -1.200000] mm in the dock frame, preserving the
+# mating orientation to 3 microradians while remaining just inside the
+# audited 1.20 mm endpoint.
+CORE_LOCK_DISENGAGEMENT_TARGET_Q = (
+    -0.72,
+    -0.5120448336845652,
+    0.8077281888667815,
+    -0.2956833551822162,
+    0.0,
+)
 
 CORE_KEEPER_CONTACT_CONTRACT = (
     {
@@ -425,6 +448,27 @@ def _aligned_capture_waypoints(
     # 55 mm pre-capture datum.
     return tuple(reversed((tuple(DOCK_PRE_CAPTURE_Q[tool]), *forward[:-1])))
 
+
+def _core_lock_disengagement_waypoints() -> tuple[tuple[float, ...], ...]:
+    """Return the audited seat-to-1.20 mm dock-local -Z lock stroke."""
+
+    pan = float(DOCK_CAPTURE_Q["gripper"][0])
+    seated_open_side = (
+        pan,
+        *CORE_GUIDED_CAPTURE_BASE_Q[-1],
+        0.0,
+    )
+    one_mm = (
+        pan,
+        *CORE_GUIDED_CAPTURE_BASE_Q[-2],
+        0.0,
+    )
+    return (
+        tuple(float(value) for value in seated_open_side),
+        tuple(float(value) for value in one_mm),
+        CORE_LOCK_DISENGAGEMENT_TARGET_Q,
+    )
+
 # These are the calibrated robot mating-site poses for DOCK_CAPTURE_Q.  A
 # compile-time FK assertion below catches drift against the upstream model.
 DOCK_POSES = {
@@ -524,26 +568,39 @@ def _recovery_controller_actions(
             timeout_s=2.0,
         ),
     )
-    if not include_rack_exit:
-        return capture_release
-    return capture_release + (
+    lock_stroke = (
         WorkflowAction(
-            name=f"{tool}_rack_exit",
-            kind="move",
+            name=f"{tool}_lock_cam_disengagement",
+            kind="axial_disengage",
             tool=tool,
-            target_q=tuple(float(value) for value in DOCK_PRE_CAPTURE_Q[tool]),
-            joint_waypoints=_aligned_capture_waypoints(tool, reverse=True),
-            duration_s=1.5,
-            timeout_s=3.5,
+            target_q=CORE_LOCK_DISENGAGEMENT_TARGET_Q,
+            joint_waypoints=_core_lock_disengagement_waypoints(),
+            duration_s=0.30,
+            timeout_s=1.5,
         ),
         WorkflowAction(
-            name=f"{tool}_exit_hold",
-            kind="hold",
+            name=f"{tool}_slider_return_verify",
+            kind="slider_return",
             tool=tool,
-            duration_s=0.10,
-            timeout_s=1.0,
+            duration_s=LOCKED_SLIDER_SETTLED_DWELL_S,
+            timeout_s=1.5,
+        ),
+        WorkflowAction(
+            name=f"{tool}_physical_lock_confirm",
+            kind="physical_lock_confirm",
+            tool=tool,
+            duration_s=float(PHYSICS_SUBSTEPS_PER_CONTROLLER_STEP) * 0.00025,
+            timeout_s=0.5,
         ),
     )
+    if tool != "gripper":
+        return capture_release
+    # Full rack removal remains a separately audited phase-B milestone.
+    # ``include_rack_exit`` is retained as a fail-closed compatibility flag;
+    # it does not append the retired unverified 55 mm route.
+    if include_rack_exit:
+        raise ValueError("full rack exit is not yet a validated controller action")
+    return capture_release + lock_stroke
 
 
 def _mesh_assets(
@@ -1923,6 +1980,67 @@ class MatchaWorkflowController:
         self.arm_actuator_ids = np.asarray(
             [model.actuator(name).id for name in ARM_ACTUATORS], dtype=int
         )
+        self.geom_names = tuple(
+            str(model.geom(geom_id).name) for geom_id in range(model.ngeom)
+        )
+        self.robot_mating_land_names = frozenset({
+            "qc_col_robot_plate_core__mating_land",
+            "qc_col_robot_plate_cam_relief_part_01",
+            *(
+                str(model.geom(geom_id).name)
+                for geom_id in range(model.ngeom)
+                if str(model.geom(geom_id).name).startswith(
+                    "qc_col_robot_plate_upper_well_partition_"
+                )
+                and str(model.geom(geom_id).name).endswith("__mating_land")
+            ),
+        })
+        self.dock_stop_names_by_tool = MappingProxyType({
+            tool: frozenset(
+                name
+                for name in self.geom_names
+                if qc.is_dock_stop_collision_name(tool, name)
+            )
+            for tool in ALL_TOOL_IDS
+        })
+        self.pogo_pair_contract = MappingProxyType({
+            frozenset(
+                {
+                    f"qc_col_pogo_{signal}",
+                    f"{tool}_pad_{signal}_collision",
+                }
+            ): (tool, signal)
+            for tool in ALL_TOOL_IDS
+            for signal in qc.SIGNALS
+        })
+        self.support_contact_pairs = frozenset(
+            {
+                frozenset(
+                    {
+                        f"dock_{tool}_support_anchor_collision",
+                        f"dock_{tool}_support_collision",
+                    }
+                )
+                for tool in ALL_TOOL_IDS
+            }
+            | {
+                frozenset(
+                    {
+                        f"dock_{tool}_support_collision",
+                        "matcha_floor_collision",
+                    }
+                )
+                for tool in ALL_TOOL_IDS
+            }
+        )
+        self.slider_tab_geom_ids = tuple(
+            geom_id
+            for geom_id, name in enumerate(self.geom_names)
+            if name.startswith("qc_col_lock_slider_tab_part_")
+        )
+        self.dock_gripper_cam_geom_id = int(
+            model.geom("dock_gripper_cam_collision").id
+        )
         self.action_index = 0
         self.action_started_s = float(data.time)
         # Trajectories start from the preceding actuator command, not the
@@ -1948,6 +2066,17 @@ class MatchaWorkflowController:
         self.locked = False
         self.lock_confirmation_phase = "pre_capture"
         self.minimum_source_axis_withdrawal_mm = MINIMUM_SOURCE_AXIS_WITHDRAWAL_MM
+        self.capture_pogo_signals: list[str] = []
+        self.capture_mating_pose_evidence: dict[str, Any] | None = None
+        self.capture_robot_mating_rotation: np.ndarray | None = None
+        self.first_physical_lock_true_substep: int | None = None
+        self.source_axis_withdrawal_evidence: dict[str, Any] | None = None
+        self.slider_return_evidence: dict[str, Any] | None = None
+        self.slider_return_samples: list[tuple[int, float, float]] = []
+        self.slider_settled_substeps = 0
+        self.slider_settled_cam_min_clearance_mm = math.inf
+        self.slider_settled_cam_contact_count = 0
+        self.lock_stroke_guide_records: dict[tuple[str, str], dict[str, Any]] = {}
         self.capture_live_substeps = 0
         self.lock_live_substeps = 0
         self.release_live_substeps = 0
@@ -1975,6 +2104,32 @@ class MatchaWorkflowController:
             return None
         return self.actions[self.action_index]
 
+    def contact_classification_cache(self) -> dict[str, Any]:
+        """Expose the immutable, compiled-name-exact audit classifier roster."""
+
+        return {
+            "geom_names": self.geom_names,
+            "robot_mating_land_names": self.robot_mating_land_names,
+            "dock_stop_names_by_tool": tuple(
+                (tool, self.dock_stop_names_by_tool[tool])
+                for tool in sorted(self.dock_stop_names_by_tool)
+            ),
+            "pogo_pair_contract": tuple(
+                sorted(
+                    (
+                        tuple(sorted(pair)),
+                        tuple(contract),
+                    )
+                    for pair, contract in self.pogo_pair_contract.items()
+                )
+            ),
+            "support_contact_pairs": tuple(
+                sorted(tuple(sorted(pair)) for pair in self.support_contact_pairs)
+            ),
+            "slider_tab_geom_ids": self.slider_tab_geom_ids,
+            "dock_gripper_cam_geom_id": self.dock_gripper_cam_geom_id,
+        }
+
     def _equality_active(self, name: str) -> bool:
         equality_id = int(self.model.equality(name).id)
         return bool(self.data.eq_active[equality_id])
@@ -1992,6 +2147,245 @@ class MatchaWorkflowController:
         orientation_error = math.acos(max(-1.0, min(1.0, cosine)))
         return position_error, orientation_error
 
+    @staticmethod
+    def _quat_wxyz_from_rotation(rotation: np.ndarray) -> list[float]:
+        """Return one finite, sign-canonical MuJoCo quaternion."""
+
+        quaternion = np.empty(4, dtype=np.float64)
+        mujoco.mju_mat2Quat(
+            quaternion, np.asarray(rotation, dtype=np.float64).reshape(9)
+        )
+        norm = float(np.linalg.norm(quaternion))
+        if not math.isfinite(norm) or norm <= 0.0:
+            raise RuntimeError("cannot encode nonfinite mating-frame rotation")
+        quaternion /= norm
+        if quaternion[0] < 0.0:
+            quaternion *= -1.0
+        return [float(value) for value in quaternion]
+
+    def _mating_world_pose_evidence(self) -> dict[str, Any]:
+        """Snapshot the live robot mating site and immutable dock body pose."""
+
+        robot = self.data.site("robot_mating_face")
+        dock = self.data.body("dock_gripper")
+        return {
+            "robot_mating_position_world_m": [
+                float(value) for value in np.asarray(robot.xpos, dtype=float)
+            ],
+            "robot_mating_quat_wxyz": self._quat_wxyz_from_rotation(
+                np.asarray(robot.xmat, dtype=float).reshape(3, 3)
+            ),
+            "dock_position_world_m": [
+                float(value) for value in np.asarray(dock.xpos, dtype=float)
+            ],
+            "dock_quat_wxyz": self._quat_wxyz_from_rotation(
+                np.asarray(dock.xmat, dtype=float).reshape(3, 3)
+            ),
+        }
+
+    def _record_lock_stroke_contacts(self) -> None:
+        """Accumulate exact four-rail sliding-contact depth/normal/force data."""
+
+        dock_rotation = np.asarray(
+            self.data.body("dock_gripper").xmat, dtype=float
+        ).reshape(3, 3)
+        contract_by_pair = {
+            frozenset(record["runtime_pair"]): record
+            for record in CORE_KEEPER_CONTACT_CONTRACT
+            if record["source_pair"][0] == "stock_tool_plate"
+        }
+        for contact_index in range(self.data.ncon):
+            contact = self.data.contact[contact_index]
+            names = frozenset(
+                self.geom_names[int(geom_id)] for geom_id in contact.geom
+            )
+            contract = contract_by_pair.get(names)
+            if contract is None:
+                continue
+            key = tuple(str(value) for value in contract["source_pair"])
+            record = self.lock_stroke_guide_records.setdefault(
+                key,
+                {
+                    "source_pair": list(contract["source_pair"]),
+                    "runtime_pair": list(contract["runtime_pair"]),
+                    "contact_sample_count": 0,
+                    "max_penetration_mm": 0.0,
+                    "max_normal_force_n": 0.0,
+                    "all_normals_valid": True,
+                    "finite_force_verified": True,
+                },
+            )
+            force = np.zeros(6, dtype=np.float64)
+            mujoco.mj_contactForce(self.model, self.data, contact_index, force)
+            normal_force = abs(float(force[0]))
+            record["contact_sample_count"] += 1
+            record["max_penetration_mm"] = max(
+                float(record["max_penetration_mm"]),
+                max(0.0, -float(contact.dist)) * 1000.0,
+            )
+            record["max_normal_force_n"] = max(
+                float(record["max_normal_force_n"]), normal_force
+            )
+            record["finite_force_verified"] = bool(
+                record["finite_force_verified"]
+                and np.all(np.isfinite(force))
+            )
+            record["all_normals_valid"] = bool(
+                record["all_normals_valid"]
+                and self._core_keeper_normal_is_valid(
+                    contact, contract, dock_rotation
+                )
+            )
+
+    def _lock_stroke_report(self) -> dict[str, Any]:
+        if (
+            self.capture_mating_pose_evidence is None
+            or self.capture_robot_mating_rotation is None
+        ):
+            raise RuntimeError("lock stroke cannot precede physical capture")
+        current_pose = self._mating_world_pose_evidence()
+        capture_position = np.asarray(
+            self.capture_mating_pose_evidence[
+                "robot_mating_position_world_m"
+            ],
+            dtype=float,
+        )
+        current_position = np.asarray(
+            current_pose["robot_mating_position_world_m"], dtype=float
+        )
+        dock_rotation = np.asarray(
+            self.data.body("dock_gripper").xmat, dtype=float
+        ).reshape(3, 3)
+        displacement_local = dock_rotation.T @ (current_position - capture_position)
+        displacement_norm = float(np.linalg.norm(displacement_local))
+        withdrawal_mm = -1000.0 * float(displacement_local[2])
+        axis_alignment = (
+            -float(displacement_local[2]) / displacement_norm
+            if displacement_norm > 0.0
+            else 0.0
+        )
+        lateral_deviation_mm = 1000.0 * float(
+            np.linalg.norm(displacement_local[:2])
+        )
+        current_rotation = np.asarray(
+            self.data.site("robot_mating_face").xmat, dtype=float
+        ).reshape(3, 3)
+        cosine = float(
+            (
+                np.trace(
+                    self.capture_robot_mating_rotation.T @ current_rotation
+                )
+                - 1.0
+            )
+            / 2.0
+        )
+        orientation_error_rad = math.acos(max(-1.0, min(1.0, cosine)))
+        guide_records: list[dict[str, Any]] = []
+        for contract in CORE_KEEPER_CONTACT_CONTRACT:
+            if contract["source_pair"][0] != "stock_tool_plate":
+                continue
+            key = tuple(str(value) for value in contract["source_pair"])
+            record = copy.deepcopy(
+                self.lock_stroke_guide_records.get(
+                    key,
+                    {
+                        "source_pair": list(contract["source_pair"]),
+                        "runtime_pair": list(contract["runtime_pair"]),
+                        "contact_sample_count": 0,
+                        "max_penetration_mm": 0.0,
+                        "max_normal_force_n": 0.0,
+                        "all_normals_valid": True,
+                        "finite_force_verified": True,
+                    },
+                )
+            )
+            record["force_acceptance_semantics"] = (
+                "finite_measured_evidence_no_release_limit_declared"
+            )
+            record["passed"] = bool(
+                record["max_penetration_mm"] <= CORE_KEEPER_MAX_PENETRATION_MM
+                and record["all_normals_valid"]
+                and record["finite_force_verified"]
+            )
+            guide_records.append(record)
+        passed = bool(
+            CORE_LOCK_RELEASE_MIN_STROKE_MM <= withdrawal_mm
+            <= CORE_LOCK_RELEASE_STROKE_MM + 1.0e-6
+            and axis_alignment >= 0.999
+            and lateral_deviation_mm <= CAM_RELIEF_CORRIDOR_M * 1000.0
+            and orientation_error_rad <= CAPTURE_ORIENTATION_TOLERANCE_RAD
+            and not self._equality_active("dock_gripper_hold")
+            and self._equality_active("attach_gripper")
+            and all(record["passed"] for record in guide_records)
+        )
+        return {
+            "source_axis": CORE_LOCK_RELEASE_SOURCE_AXIS,
+            "source_axis_dock_local": list(CORE_LOCK_RELEASE_AXIS_DOCK_LOCAL),
+            "withdrawal_mm": withdrawal_mm,
+            "minimum_withdrawal_mm": CORE_LOCK_RELEASE_MIN_STROKE_MM,
+            "maximum_withdrawal_mm": CORE_LOCK_RELEASE_STROKE_MM,
+            "axis_alignment": axis_alignment,
+            "lateral_deviation_mm": lateral_deviation_mm,
+            "orientation_error_rad": orientation_error_rad,
+            "dock_hold_active": self._equality_active("dock_gripper_hold"),
+            "attach_equality_active": self._equality_active("attach_gripper"),
+            "guide_contact_records": guide_records,
+            **current_pose,
+            "passed": passed,
+        }
+
+    def _record_slider_state(self, action: WorkflowAction) -> None:
+        joint = self.model.joint("qc_positive_lock_slider_joint")
+        qpos = float(self.data.qpos[int(joint.qposadr[0])])
+        qvel = float(self.data.qvel[int(joint.dofadr[0])])
+        self.slider_return_samples.append(
+            (int(self.physics_substep_count), qpos, qvel)
+        )
+        in_band = (
+            LOCKED_SLIDER_POSITION_BAND_M[0]
+            <= qpos
+            <= LOCKED_SLIDER_POSITION_BAND_M[1]
+        )
+        speed_bounded = abs(qvel) <= LOCKED_SLIDER_SPEED_LIMIT_M_S
+        if action.kind == "slider_return" and in_band and speed_bounded:
+            self.slider_settled_substeps += 1
+            runtime_clearance_mm, cam_contacts = self._slider_cam_runtime_clearance()
+            self.slider_settled_cam_min_clearance_mm = min(
+                self.slider_settled_cam_min_clearance_mm,
+                runtime_clearance_mm,
+            )
+            self.slider_settled_cam_contact_count += int(cam_contacts)
+        elif action.kind == "slider_return":
+            self.slider_settled_substeps = 0
+            self.slider_settled_cam_min_clearance_mm = math.inf
+            self.slider_settled_cam_contact_count = 0
+
+    def _slider_cam_runtime_clearance(self) -> tuple[float, int]:
+        cam_id = self.dock_gripper_cam_geom_id
+        tab_ids = self.slider_tab_geom_ids
+        if not tab_ids:
+            raise RuntimeError("positive-lock slider has no active cam-tab prisms")
+        distances: list[float] = []
+        for geom_id in tab_ids:
+            from_to = np.empty(6, dtype=np.float64)
+            distance = float(
+                mujoco.mj_geomDistance(
+                    self.model, self.data, geom_id, cam_id, 0.1, from_to
+                )
+            )
+            if not math.isfinite(distance):
+                raise RuntimeError("nonfinite slider/cam runtime distance")
+            distances.append(distance)
+        cam_contacts = sum(
+            1
+            for index in range(self.data.ncon)
+            if cam_id in {int(value) for value in self.data.contact[index].geom}
+            and any(
+                int(value) in tab_ids for value in self.data.contact[index].geom
+            )
+        )
+        return min(distances) * 1000.0, cam_contacts
+
     def _capture_pose_is_valid(self, tool: str) -> bool:
         position_error, orientation_error = self._tool_pose_error(tool)
         return (
@@ -2005,8 +2399,8 @@ class MatchaWorkflowController:
         tool: str,
         signal: str,
     ) -> bool:
-        geom_a = str(self.model.geom(int(contact.geom[0])).name)
-        geom_b = str(self.model.geom(int(contact.geom[1])).name)
+        geom_a = self.geom_names[int(contact.geom[0])]
+        geom_b = self.geom_names[int(contact.geom[1])]
         expected = {f"qc_col_pogo_{signal}", f"{tool}_pad_{signal}_collision"}
         if {geom_a, geom_b} != expected:
             return False
@@ -2046,19 +2440,24 @@ class MatchaWorkflowController:
         observed: set[str] = set()
         for contact_index in range(self.data.ncon):
             contact = self.data.contact[contact_index]
-            for signal in qc.SIGNALS:
-                if self._matching_pogo_contact_is_valid(contact, tool, signal):
-                    observed.add(signal)
-                    break
+            pair = frozenset(
+                self.geom_names[int(geom_id)] for geom_id in contact.geom
+            )
+            contract = self.pogo_pair_contract.get(pair)
+            if contract is None or contract[0] != tool:
+                continue
+            signal = contract[1]
+            if self._matching_pogo_contact_is_valid(contact, tool, signal):
+                observed.add(signal)
         return observed
 
     def _dock_stop_contact_is_valid(self, contact: mujoco.MjContact, tool: str) -> bool:
-        geom_a = str(self.model.geom(int(contact.geom[0])).name)
-        geom_b = str(self.model.geom(int(contact.geom[1])).name)
+        geom_a = self.geom_names[int(contact.geom[0])]
+        geom_b = self.geom_names[int(contact.geom[1])]
         stop_names = [
             name
             for name in (geom_a, geom_b)
-            if qc.is_dock_stop_collision_name(tool, name)
+            if name in self.dock_stop_names_by_tool[tool]
         ]
         if len(stop_names) != 1:
             return False
@@ -2131,7 +2530,7 @@ class MatchaWorkflowController:
     ) -> np.ndarray:
         normal_world = np.asarray(contact.frame[:3], dtype=float)
         runtime_pair = list(contract["runtime_pair"])
-        contact_geom0 = str(self.model.geom(int(contact.geom[0])).name)
+        contact_geom0 = self.geom_names[int(contact.geom[0])]
         if contact_geom0 != runtime_pair[0]:
             normal_world = -normal_world
         normal_local = dock_rotation.T @ normal_world
@@ -2181,8 +2580,8 @@ class MatchaWorkflowController:
 
     def _core_keeper_contact_is_valid(self, contact: mujoco.MjContact) -> bool:
         geom_names = {
-            str(self.model.geom(int(contact.geom[0])).name),
-            str(self.model.geom(int(contact.geom[1])).name),
+            self.geom_names[int(contact.geom[0])],
+            self.geom_names[int(contact.geom[1])],
         }
         contract = next(
             (
@@ -2236,8 +2635,8 @@ class MatchaWorkflowController:
             "matcha_col_gripper_plate_electrical_wing_edge__mating_land__keeper_land",
         }
         names = {
-            str(self.model.geom(int(contact.geom[0])).name),
-            str(self.model.geom(int(contact.geom[1])).name),
+            self.geom_names[int(contact.geom[0])],
+            self.geom_names[int(contact.geom[1])],
         }
         if names != expected:
             return False
@@ -2604,7 +3003,7 @@ class MatchaWorkflowController:
             for index in range(self.data.ncon)
             if any(
                 qc.is_dock_stop_collision_name(
-                    "gripper", str(self.model.geom(int(geom_id)).name)
+                    "gripper", self.geom_names[int(geom_id)]
                 )
                 for geom_id in self.data.contact[index].geom
             )
@@ -2650,21 +3049,11 @@ class MatchaWorkflowController:
     def _mating_land_contact_is_valid(
         self, contact: mujoco.MjContact, tool: str
     ) -> bool:
-        geom_a = str(self.model.geom(int(contact.geom[0])).name)
-        geom_b = str(self.model.geom(int(contact.geom[1])).name)
-        robot_lands = {
-            "qc_col_robot_plate_core__mating_land",
-            "qc_col_robot_plate_cam_relief_part_01",
-        }
-        robot_lands.update(
-            str(self.model.geom(geom_id).name)
-            for geom_id in range(self.model.ngeom)
-            if str(self.model.geom(geom_id).name).startswith(
-                "qc_col_robot_plate_upper_well_partition_"
-            )
-            and str(self.model.geom(geom_id).name).endswith("__mating_land")
+        geom_a = self.geom_names[int(contact.geom[0])]
+        geom_b = self.geom_names[int(contact.geom[1])]
+        matching_robot_lands = self.robot_mating_land_names.intersection(
+            {geom_a, geom_b}
         )
-        matching_robot_lands = robot_lands.intersection({geom_a, geom_b})
         if len(matching_robot_lands) != 1:
             return False
         robot_land = next(iter(matching_robot_lands))
@@ -2718,34 +3107,28 @@ class MatchaWorkflowController:
         )
 
     def _allowed_penetrating_contact(self, contact: mujoco.MjContact) -> bool:
-        geom_a = str(self.model.geom(int(contact.geom[0])).name)
-        geom_b = str(self.model.geom(int(contact.geom[1])).name)
+        geom_a = self.geom_names[int(contact.geom[0])]
+        geom_b = self.geom_names[int(contact.geom[1])]
+        pair = frozenset({geom_a, geom_b})
+        if pair in self.support_contact_pairs:
+            return True
         if self._core_keeper_contact_is_valid(contact):
             return True
         if self._core_robot_tool_wing_mating_contact_is_valid(contact):
             return True
+        pogo_contract = self.pogo_pair_contract.get(pair)
+        if pogo_contract is not None:
+            return self._matching_pogo_contact_is_valid(
+                contact, pogo_contract[0], pogo_contract[1]
+            )
         for tool in ALL_TOOL_IDS:
-            if self._dock_stop_contact_is_valid(contact, tool):
+            if pair.intersection(self.dock_stop_names_by_tool[tool]) and (
+                self._dock_stop_contact_is_valid(contact, tool)
+            ):
                 return True
             if self._mating_land_contact_is_valid(contact, tool):
                 return True
-            for signal in qc.SIGNALS:
-                if self._matching_pogo_contact_is_valid(contact, tool, signal):
-                    return True
-        support_pairs = {
-            frozenset(
-                {
-                    f"dock_{tool}_support_anchor_collision",
-                    f"dock_{tool}_support_collision",
-                }
-            )
-            for tool in ALL_TOOL_IDS
-        }
-        support_pairs.update(
-            frozenset({f"dock_{tool}_support_collision", "matcha_floor_collision"})
-            for tool in ALL_TOOL_IDS
-        )
-        return frozenset({geom_a, geom_b}) in support_pairs
+        return False
 
     def _audit_contacts(self) -> None:
         for contact_index in range(self.data.ncon):
@@ -2755,8 +3138,8 @@ class MatchaWorkflowController:
                 continue
             if self._allowed_penetrating_contact(contact):
                 continue
-            geom_a = str(self.model.geom(int(contact.geom[0])).name)
-            geom_b = str(self.model.geom(int(contact.geom[1])).name)
+            geom_a = self.geom_names[int(contact.geom[0])]
+            geom_b = self.geom_names[int(contact.geom[1])]
             self.forbidden_contact_count += 1
             self.max_forbidden_penetration_m = max(
                 self.max_forbidden_penetration_m, penetration
@@ -2818,12 +3201,21 @@ class MatchaWorkflowController:
             mujoco.mj_step(self.model, self.data)
             self.physics_substep_count += 1
             self._record_route_alignment(action)
+            if action.kind == "axial_disengage":
+                self._record_lock_stroke_contacts()
+            if (
+                self.attached_tool == "gripper"
+                and not self._equality_active("dock_gripper_hold")
+                and self._equality_active("attach_gripper")
+            ):
+                self._record_slider_state(action)
             self._audit_contacts()
             self._record_actuator_loads()
             if self.abort_reason is not None:
                 return
             if (
-                (self.attachment_verified or self.locked)
+                action.kind in {"capture", "lock_verify", "release_verify"}
+                and (self.attachment_verified or self.locked)
                 and self.attached_tool is not None
                 and self._equality_active(f"attach_{self.attached_tool}")
             ):
@@ -2859,6 +3251,7 @@ class MatchaWorkflowController:
             "event": event,
             "action": action.name,
             "sim_time_s": float(self.data.time),
+            "physics_substep_count": int(self.physics_substep_count),
         }
         journal_record.update(evidence)
         self.journal.append(journal_record)
@@ -2866,16 +3259,9 @@ class MatchaWorkflowController:
         if self.action_index >= len(self.actions):
             self.completed = True
             self.motion_stopped = True
-            keeper_capture_milestone = bool(
-                self.attached_tool == "gripper"
-                and self.core_keeper_capture_verified
-                and self.attachment_verified
-                and not self._equality_active("dock_gripper_hold")
-                and self._equality_active("attach_gripper")
-                and not any(action.name.endswith("_rack_exit") for action in self.actions)
-            )
             self.success = (
-                (self.locked or keeper_capture_milestone)
+                self.locked
+                and self.physical_lock_confirmed
                 and self.attached_tool is not None
                 and self.forbidden_contact_count == 0
                 and self.abort_reason is None
@@ -2950,6 +3336,11 @@ class MatchaWorkflowController:
             return
         self.bus_connected = True
         self.handshake_achieved = True
+        self.capture_pogo_signals = sorted(self._pogo_contact_signals(action.tool))
+        self.capture_mating_pose_evidence = self._mating_world_pose_evidence()
+        self.capture_robot_mating_rotation = np.asarray(
+            self.data.site("robot_mating_face").xmat, dtype=float
+        ).reshape(3, 3).copy()
         self.data.eq_active[self.model.equality(f"attach_{action.tool}").id] = 1
         self.attached_tool = action.tool
         self.lock_confirmation_phase = "captured_slider_still_unlocked"
@@ -2957,6 +3348,16 @@ class MatchaWorkflowController:
             "physical_capture_complete",
             physical_lock_confirmed=False,
             core_keeper_capture_verified=self.core_keeper_capture_verified,
+            dock_hold_active=self._equality_active(f"dock_{action.tool}_hold"),
+            attach_equality_active=self._equality_active(f"attach_{action.tool}"),
+            pogo_signals=list(self.capture_pogo_signals),
+            observed_tool_id=self._tool_id_from_compiled_bus(action.tool),
+            expected_tool_id=ALL_TOOL_IDS[action.tool],
+            tool_identity_verified=(
+                self._tool_id_from_compiled_bus(action.tool)
+                == ALL_TOOL_IDS[action.tool]
+            ),
+            **self.capture_mating_pose_evidence,
         )
 
     def _command_lock_verify(self, action: WorkflowAction) -> None:
@@ -2988,6 +3389,7 @@ class MatchaWorkflowController:
             physical_lock_confirmed=False,
             core_keeper_capture_verified=self.core_keeper_capture_verified,
             dock_hold_active=False,
+            attach_equality_active=self._equality_active(f"attach_{action.tool}"),
         )
 
     def _command_release_verify(self, action: WorkflowAction) -> None:
@@ -3024,6 +3426,211 @@ class MatchaWorkflowController:
             attachment_verified=True,
         )
 
+    def _command_axial_disengage(
+        self, action: WorkflowAction, elapsed_s: float
+    ) -> None:
+        """Execute only the audited 1.20 mm -Z cam-disengagement stroke."""
+
+        if action.tool != "gripper" or action.target_q is None:
+            self._abort("invalid_lock_cam_disengagement_action")
+            return
+        if not (
+            self.attachment_verified
+            and self._equality_active("attach_gripper")
+            and not self._equality_active("dock_gripper_hold")
+        ):
+            self._abort("lock_cam_disengagement_phase_invalid")
+            return
+        target = np.asarray(action.target_q, dtype=float)
+        alpha = min(1.0, max(0.0, elapsed_s / action.duration_s))
+        smooth = alpha**3 * (10.0 + alpha * (-15.0 + 6.0 * alpha))
+        route = np.asarray(
+            (tuple(self.action_start_q), *action.joint_waypoints), dtype=float
+        )
+        route_position = smooth * (len(route) - 1)
+        segment = min(int(math.floor(route_position)), len(route) - 2)
+        segment_alpha = route_position - segment
+        command = (
+            route[segment] + segment_alpha * (route[segment + 1] - route[segment])
+        )
+        self.data.ctrl[self.arm_actuator_ids] = command
+        self._integrate()
+        tracking = float(
+            np.max(np.abs(self.data.qpos[self.arm_qpos_ids] - command))
+        )
+        self.max_tracking_error_rad = max(self.max_tracking_error_rad, tracking)
+        if self.abort_reason is not None or elapsed_s < action.duration_s:
+            return
+        target_error = float(
+            np.max(np.abs(self.data.qpos[self.arm_qpos_ids] - target))
+        )
+        speed = float(np.max(np.abs(self.data.qvel[self.arm_dof_ids])))
+        if target_error > 0.025 or speed > 0.20:
+            return
+        report = self._lock_stroke_report()
+        self.source_axis_withdrawal_evidence = copy.deepcopy(report)
+        if not report["passed"]:
+            self._abort("lock_cam_disengagement_not_verified")
+            return
+        self.bus_connected = False
+        self.lock_confirmation_phase = "cam_disengaged_slider_return_pending"
+        self._advance_action(
+            "source_axis_withdrawal_complete",
+            physical_lock_confirmed=False,
+            **report,
+        )
+
+    def _command_slider_return(self, action: WorkflowAction) -> None:
+        if action.tool != "gripper" or action.target_q is not None:
+            self._abort("invalid_slider_return_action")
+            return
+        if self.source_axis_withdrawal_evidence is None:
+            self._abort("slider_return_precedes_cam_disengagement")
+            return
+        self.data.ctrl[self.arm_actuator_ids] = self.data.qpos[self.arm_qpos_ids]
+        self._integrate()
+        required_substeps = math.ceil(
+            LOCKED_SLIDER_SETTLED_DWELL_S / float(self.model.opt.timestep)
+        )
+        if (
+            self.abort_reason is not None
+            or self.slider_settled_substeps < required_substeps
+        ):
+            return
+        joint = self.model.joint("qc_positive_lock_slider_joint")
+        slider_q_m = float(self.data.qpos[int(joint.qposadr[0])])
+        slider_qvel_m_s = float(self.data.qvel[int(joint.dofadr[0])])
+        runtime_clearance_mm, cam_contact_count = (
+            self._slider_cam_runtime_clearance()
+        )
+        withdrawal_mm = float(
+            self.source_axis_withdrawal_evidence["withdrawal_mm"]
+        )
+        # Exact audited source geometry has 0.25 mm sample clearance at a
+        # 1.20 mm axial stroke; the 0.05 mm interval-motion allowance yields
+        # the declared 0.20 mm continuous lower bound.
+        exact_sample_clearance_mm = withdrawal_mm - 0.95
+        continuous_clearance_lower_bound_mm = exact_sample_clearance_mm - 0.05
+        sample_array = np.asarray(self.slider_return_samples, dtype="<f8")
+        trajectory_sha256 = hashlib.sha256(sample_array.tobytes()).hexdigest()
+        q_values = sample_array[:, 1]
+        qvel_values = sample_array[:, 2]
+        dwell_samples = sample_array[-required_substeps:]
+        returned = bool(
+            LOCKED_SLIDER_POSITION_BAND_M[0]
+            <= slider_q_m
+            <= LOCKED_SLIDER_POSITION_BAND_M[1]
+            and abs(slider_qvel_m_s) <= LOCKED_SLIDER_SPEED_LIMIT_M_S
+        )
+        cam_clear = bool(
+            cam_contact_count == 0
+            and self.slider_settled_cam_contact_count == 0
+            and runtime_clearance_mm >= 0.0
+            and self.slider_settled_cam_min_clearance_mm >= 0.0
+            and continuous_clearance_lower_bound_mm
+            >= LOCK_CAM_MANUFACTURING_CLEARANCE_MM - 1.0e-9
+        )
+        evidence = {
+            "returned": returned,
+            "cam_clear": cam_clear,
+            "slider_joint_position_mm": slider_q_m * 1000.0,
+            "slider_joint_velocity_mm_s": slider_qvel_m_s * 1000.0,
+            "settled_speed_limit_mm_s": LOCKED_SLIDER_SPEED_LIMIT_M_S * 1000.0,
+            "physics_timestep_s": float(self.model.opt.timestep),
+            "settled_dwell_s": (
+                self.slider_settled_substeps * float(self.model.opt.timestep)
+            ),
+            "settled_dwell_substeps": int(self.slider_settled_substeps),
+            "locked_position_band_mm": [
+                1000.0 * value for value in LOCKED_SLIDER_POSITION_BAND_M
+            ],
+            "trajectory_sample_count": int(len(sample_array)),
+            "trajectory_first_physics_substep_count": int(sample_array[0, 0]),
+            "trajectory_last_physics_substep_count": int(sample_array[-1, 0]),
+            "samples": [
+                [int(substep), float(q_m), float(qvel_m_s)]
+                for substep, q_m, qvel_m_s in self.slider_return_samples
+            ],
+            "trajectory_sha256_le_f64_substep_q_qdot": trajectory_sha256,
+            "trajectory_q_min_mm": float(np.min(q_values) * 1000.0),
+            "trajectory_q_max_mm": float(np.max(q_values) * 1000.0),
+            "trajectory_max_abs_qvel_mm_s": float(
+                np.max(np.abs(qvel_values)) * 1000.0
+            ),
+            "dwell_q_min_mm": float(np.min(dwell_samples[:, 1]) * 1000.0),
+            "dwell_q_max_mm": float(np.max(dwell_samples[:, 1]) * 1000.0),
+            "dwell_max_abs_qvel_mm_s": float(
+                np.max(np.abs(dwell_samples[:, 2])) * 1000.0
+            ),
+            "direct_state_writes_after_physical_capture": 0,
+            "cam_tab_runtime_proxy_clearance_mm": runtime_clearance_mm,
+            "cam_tab_min_clearance_mm": (
+                self.slider_settled_cam_min_clearance_mm
+            ),
+            "cam_tab_contact_count": cam_contact_count,
+            "cam_tab_contact_count_during_settled_dwell": (
+                self.slider_settled_cam_contact_count
+            ),
+            "cam_tab_clearance_mm": exact_sample_clearance_mm,
+            "cam_tab_continuous_clearance_lower_bound_mm": (
+                continuous_clearance_lower_bound_mm
+            ),
+            "cam_clearance_authority": (
+                "hash_pinned_exact_cad_axial_sweep_plus_0.05mm_motion_bound"
+            ),
+            "source_axis": CORE_LOCK_RELEASE_SOURCE_AXIS,
+            "dock_hold_active": self._equality_active("dock_gripper_hold"),
+            "attach_equality_active": self._equality_active("attach_gripper"),
+        }
+        self.slider_return_evidence = copy.deepcopy(evidence)
+        self.lock_candidate_verified = bool(returned and cam_clear)
+        if not self.lock_candidate_verified:
+            self._abort("physical_slider_return_not_verified")
+            return
+        self.lock_confirmation_phase = "slider_returned_lock_commit_pending"
+        self._advance_action(
+            "slider_return_verified",
+            physical_lock_confirmed=False,
+            **evidence,
+        )
+
+    def _command_physical_lock_confirm(self, action: WorkflowAction) -> None:
+        if action.tool != "gripper" or not self.lock_candidate_verified:
+            self._abort("physical_lock_confirmation_without_candidate")
+            return
+        self.data.ctrl[self.arm_actuator_ids] = self.data.qpos[self.arm_qpos_ids]
+        self._integrate()
+        if self.abort_reason is not None:
+            return
+        joint = self.model.joint("qc_positive_lock_slider_joint")
+        slider_q_m = float(self.data.qpos[int(joint.qposadr[0])])
+        slider_qvel_m_s = float(self.data.qvel[int(joint.dofadr[0])])
+        if not (
+            LOCKED_SLIDER_POSITION_BAND_M[0]
+            <= slider_q_m
+            <= LOCKED_SLIDER_POSITION_BAND_M[1]
+            and abs(slider_qvel_m_s) <= LOCKED_SLIDER_SPEED_LIMIT_M_S
+            and not self._equality_active("dock_gripper_hold")
+            and self._equality_active("attach_gripper")
+        ):
+            self._abort("physical_lock_state_drifted_before_confirmation")
+            return
+        self.physical_lock_confirmed = True
+        self.locked = True
+        self.lock_confirmation_phase = (
+            "after_dock_release_axial_cam_disengagement_and_slider_return"
+        )
+        self.first_physical_lock_true_substep = int(self.physics_substep_count)
+        self._advance_action(
+            "physical_lock_confirmed",
+            physical_lock_confirmed=True,
+            dock_hold_active=False,
+            attach_equality_active=True,
+            lock_confirmation_phase=self.lock_confirmation_phase,
+            slider_joint_position_mm=slider_q_m * 1000.0,
+            slider_joint_velocity_mm_s=slider_qvel_m_s * 1000.0,
+        )
+
     def _command_hold(self, action: WorkflowAction, elapsed_s: float) -> None:
         self.data.ctrl[self.arm_actuator_ids] = self.data.qpos[self.arm_qpos_ids]
         self._integrate()
@@ -3046,6 +3653,12 @@ class MatchaWorkflowController:
             self._command_lock_verify(action)
         elif action.kind == "release_verify":
             self._command_release_verify(action)
+        elif action.kind == "axial_disengage":
+            self._command_axial_disengage(action, elapsed_s)
+        elif action.kind == "slider_return":
+            self._command_slider_return(action)
+        elif action.kind == "physical_lock_confirm":
+            self._command_physical_lock_confirm(action)
         elif action.kind == "hold":
             self._command_hold(action, elapsed_s)
         else:
@@ -3091,6 +3704,17 @@ class MatchaWorkflowController:
             "minimum_source_axis_withdrawal_mm": (
                 self.minimum_source_axis_withdrawal_mm
             ),
+            "capture_pogo_signals": list(self.capture_pogo_signals),
+            "capture_four_signal_bus_verified": (
+                self.capture_pogo_signals == sorted(qc.SIGNALS)
+            ),
+            "source_axis_withdrawal_evidence": copy.deepcopy(
+                self.source_axis_withdrawal_evidence
+            ),
+            "slider_return_evidence": copy.deepcopy(self.slider_return_evidence),
+            "first_physical_lock_true_substep": (
+                self.first_physical_lock_true_substep
+            ),
             "live_pogo_signals": live_signals,
             "four_signal_bus_live": live_signals == sorted(qc.SIGNALS),
             "dock_hold_active": dock_hold_active,
@@ -3103,7 +3727,9 @@ class MatchaWorkflowController:
             "first_forbidden_pair": self.first_forbidden_pair,
             "max_tracking_error_rad": self.max_tracking_error_rad,
             "route_alignment": {
-                "method": "calibrated_5mm_cartesian_normal_fk_ik_waypoints",
+                "method": (
+                    "source_approved_0.20mm_open_side_dense_fk_ik_waypoints"
+                ),
                 "declared_static_max_lateral_deviation_m": (
                     ALIGNED_CAPTURE_STATIC_MAX_LATERAL_DEVIATION_M
                 ),
@@ -3127,6 +3753,7 @@ class MatchaWorkflowController:
             ),
             "global_safety_margin_s": WORKFLOW_GLOBAL_SAFETY_MARGIN_S,
             "journal": list(self.journal),
+            "release_ready": False,
         }
 
 
@@ -3152,11 +3779,7 @@ def run_headless_scenario(
     result["collision_coverage"] = collision_coverage(model)
     result["startup_contact_audit"] = startup_contacts
     result.update(controller.result())
-    result["milestone"] = (
-        "keeper_capture_and_dock_release_slider_unlocked"
-        if not include_rack_exit
-        else "core_capture_and_unverified_rack_exit_diagnostic"
-    )
+    result["milestone"] = "capture_lock_and_dock_release"
     return result
 
 

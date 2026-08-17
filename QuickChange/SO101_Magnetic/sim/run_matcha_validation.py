@@ -80,6 +80,14 @@ DEVELOPMENT_TESTS = (
     ),
     qualified(
         "SimCadPlacementContractTests",
+        "test_contact_semantic_caches_equal_compiled_predicates_and_audit_each_step",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
+        "test_ordered_lock_actions_are_bounded_and_rack_exit_stays_separate",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
         "test_each_dock_stop_matches_its_exact_source_bounds_and_core_holes",
     ),
     qualified(
@@ -144,7 +152,7 @@ DEVELOPMENT_TESTS = (
     ),
     qualified(
         "SimCadPlacementContractTests",
-        "test_withdrawal_threshold_is_exactly_safe_against_source_cam",
+        "test_axial_lock_release_stroke_clears_full_source_assembly",
     ),
     qualified(
         "BoundedDynamicSmokeTests",
