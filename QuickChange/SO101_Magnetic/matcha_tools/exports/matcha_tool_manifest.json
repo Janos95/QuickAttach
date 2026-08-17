@@ -68,7 +68,7 @@
   "interface_authority": {
     "construction": "unmodified tool_plate(stock_gripper=False)",
     "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-    "sha256": "9edbf4fa918dba20eeee869bc6788de0b63bb5a43983999576c515808f27bbbc"
+    "sha256": "136790d8e6efa455b8f6ff6275699807fb8f4c9f4e6bf299831c0b236068e0bc"
   },
   "rack": {
     "bay_names": [
