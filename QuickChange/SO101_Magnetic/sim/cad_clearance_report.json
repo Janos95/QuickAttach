@@ -1,35 +1,40 @@
 {
   "authorities": {
     "cad_generator": {
-      "bytes": 41594,
+      "bytes": 55780,
       "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-      "sha256": "67398a17cf6c4729475ffbd453e021a5d743a2dab89defc18e215bde998708fb"
+      "sha256": "7a1be4680e5ad98050040b09d269c900375f6bd96f292865c31336e2765c0db0"
     },
     "calibrated_robot_xml": {
       "bytes": 13921,
       "path": "Simulation/SO101/so101_new_calib.xml",
       "sha256": "d75253eb568e8a7214db9c631ab7bed4217f608a26f7276ebe9a7636cac82580"
     },
+    "core_cad_manifest": {
+      "bytes": 8415,
+      "path": "QuickChange/SO101_Magnetic/exports/core_cad_manifest.json",
+      "sha256": "fd4d46ce92f3b104f1847b17e3b8f26c868e2fe98c1f850ab1f8ca1c189b09dd"
+    },
     "core_exports": [
       {
-        "bytes": 355894,
+        "bytes": 378343,
         "path": "QuickChange/SO101_Magnetic/exports/so101_robot_plate.step",
-        "sha256": "79c1f2b18edcc4cfb3d8cae0e2d7abadd9866ca1d652acbff246d27704033012"
+        "sha256": "a23866fb45be3aff64c13296a27de86a6f50c5b81d422b8355a0d53741bfd44d"
       },
       {
         "bytes": 249124,
         "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_tool_plate.step",
-        "sha256": "a8a8af7e374c6cf9ef7761a391a9a03abadf7e374c54fc8b1b27f1206b13effe"
+        "sha256": "5c968d8e060e0f191b5d6eec67a0b195f8e708a043afe6a173c54b74b6a8f4ab"
       },
       {
         "bytes": 130486,
         "path": "QuickChange/SO101_Magnetic/exports/so101_passive_tool_dock.step",
-        "sha256": "35c82982317eb3041e080066364eb88f52cc798be4c5c5a4157c4c52b1de0863"
+        "sha256": "5dfe8ceee800063a188b2491578811f88e46ca0f4548120254d81b9ecf548a48"
       },
       {
-        "bytes": 3308038,
+        "bytes": 3324947,
         "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_retrofit_assembly.step",
-        "sha256": "f65e750db579aeb88e9fe9c629beaccbad841c58e5f87d9739f853df5a7d7e08"
+        "sha256": "286afe0afb4f19a2562c58610554172c594a5f05381ec0fd0c53e4883b815482"
       }
     ],
     "fixed_gripper_stl_crosscheck": {
@@ -48,14 +53,12 @@
       "sha256": "b7f9d59f7991f425fff784eab07f0bf65471903dd6d6177e7cb109bebcd02b35"
     },
     "validator": {
-      "bytes": 48313,
+      "bytes": 55478,
       "path": "QuickChange/SO101_Magnetic/sim/validate_cad_clearance.py",
-      "sha256": "818393d45b7e1d1300a7c66626f9fcaf2fcd61d762d6891c68c096b2612611e1"
+      "sha256": "b4a3b5aa39ad5787f342b10fa1a99c5f09cededa8147e4758f1e28fd32957265"
     }
   },
-  "blockers": [
-    "rack_sweep:robot_plate:nominal"
-  ],
+  "blockers": [],
   "cam_actuation_diagnostics": [
     {
       "distance_mm": 0.05000000000000071,
@@ -72,6 +75,66 @@
       "slider_state": "locked"
     }
   ],
+  "core_cad_manifest_validation": {
+    "errors": [],
+    "manifest": {
+      "bytes": 8415,
+      "path": "QuickChange/SO101_Magnetic/exports/core_cad_manifest.json",
+      "sha256": "fd4d46ce92f3b104f1847b17e3b8f26c868e2fe98c1f850ab1f8ca1c189b09dd"
+    },
+    "passed": true
+  },
+  "dock_stop_contract": {
+    "bounds_mm": {
+      "x": [
+        -45.0,
+        37.0
+      ],
+      "y": [
+        26.0,
+        32.0
+      ],
+      "z": [
+        -3.0,
+        12.5
+      ]
+    },
+    "center_mm": [
+      -4.0,
+      29.0,
+      4.75
+    ],
+    "dock": "core_stock_gripper",
+    "size_mm": [
+      82.0,
+      6.0,
+      15.5
+    ],
+    "through_holes": [
+      {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "diameter_mm": 4.4,
+        "x_mm": -25.0,
+        "y_start_mm": 25.9,
+        "z_mm": 4.75
+      },
+      {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "diameter_mm": 4.4,
+        "x_mm": 21.0,
+        "y_start_mm": 25.9,
+        "z_mm": 4.75
+      }
+    ]
+  },
   "intended_zero_volume_contact_pairs": [
     [
       "robot_plate",
@@ -204,6 +267,33 @@
       "reason": "jaw motion is disabled during docking; open-jaw rack clearance is outside this authority",
       "required_jaw_state": "closed_limit"
     },
+    "required_sim_stock_wrapper_transform": {
+      "composed_source_pos_m": [
+        0.0004875,
+        0.000218,
+        0.009551
+      ],
+      "composed_source_quat_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "composition": "world_wrapper * wrapper_child_geom = CAD tool-local STEP",
+      "position_residual_m": 0.0,
+      "rotation_residual_frobenius": 0.0,
+      "wrapper_body_pos_m": [
+        0.0004874999999999167,
+        -2.1399999999998135e-07,
+        0.010500706
+      ],
+      "wrapper_body_quat_wxyz": [
+        0.0,
+        -1.0,
+        -0.0,
+        -0.0
+      ]
+    },
     "robot_assembly_fixed_step_pos_mm": [
       0.4875,
       0.218,
@@ -215,10 +305,10 @@
       9.5
     ],
     "source_fragments": [
-      "cq.Vector(0, 0, PLATE_THICKNESS)",
-      "cq.Vector(0.4875, 0.218, 2 * PLATE_THICKNESS + 0.051)"
+      "cq.Vector(*STOCK_TOOL_PLATE_ASSEMBLY_POS_MM)",
+      "cq.Vector(*STOCK_FIXED_STEP_ASSEMBLY_POS_MM)"
     ],
-    "source_function_sha256": "912991aa79044497e935e0080161c67a4f4af5eb0e998906b9386fc397d688ba",
+    "source_function_sha256": "db056b7537f12783e8a0292fd30b5a5f0e24b2c5c9381f6022d385fd4d361b80",
     "stock_plate_source_vs_export_volume_delta_mm3": 2.1827872842550278e-10,
     "stock_plate_volume_tolerance_mm3": 1e-06,
     "tool_local_fixed_step_pos_mm": [
@@ -233,8 +323,8 @@
       0.0
     ]
   },
-  "passed": false,
-  "release_ready": false,
+  "passed": true,
+  "release_ready": true,
   "schema_version": "1.0",
   "stop_envelope": {
     "component_results": [
@@ -586,6 +676,8 @@
     "minimum_stud_to_cam_x_margin_mm": 1.0,
     "numeric_distance_tolerance_mm": 0.001,
     "overlap_volume_tolerance_mm3": 1e-06,
+    "robot_plate_cam_required_clearance_mm": 0.5,
+    "robot_plate_cam_sample_step_mm": 0.1,
     "stop_gap_range_mm": [
       0.5,
       1.5
@@ -594,8 +686,8 @@
   "units": "mm",
   "validation": {
     "all_source_hashes_present": true,
-    "failed_pair_result_count": 1,
-    "machine_json_canonical_sha256_without_this_field": "6ec3e08fe4955aa474c32bc73e1ffaeb893c69d89219ffa97167cb9b23816927",
+    "failed_pair_result_count": 0,
+    "machine_json_canonical_sha256_without_this_field": "5e14fb38b365e3d397e3c054a544ef2290d6d340ebaaf224e683a6aff98bcf56",
     "pair_result_count": 37
   },
   "withdrawal_sweep": {
@@ -605,7 +697,7 @@
       0.0
     ],
     "end_mm": 80.0,
-    "passed": false,
+    "passed": true,
     "results": [
       {
         "component": "stock_tool_plate",
@@ -620,6 +712,8 @@
         "minimum_sampled_distance_mm": 0.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "intended_stock_plate_keeper_tangency",
         "witness_withdrawal_mm": 0.0
       },
@@ -636,6 +730,8 @@
         "minimum_sampled_distance_mm": 0.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "intended_stock_plate_keeper_tangency",
         "witness_withdrawal_mm": 0.0
       },
@@ -652,6 +748,8 @@
         "minimum_sampled_distance_mm": 0.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "intended_stock_plate_keeper_tangency",
         "witness_withdrawal_mm": 0.0
       },
@@ -668,6 +766,8 @@
         "minimum_sampled_distance_mm": 0.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "intended_stock_plate_keeper_tangency",
         "witness_withdrawal_mm": 0.0
       },
@@ -684,6 +784,8 @@
         "minimum_sampled_distance_mm": 5.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -700,6 +802,8 @@
         "minimum_sampled_distance_mm": 5.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -716,6 +820,8 @@
         "minimum_sampled_distance_mm": 1.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -732,6 +838,8 @@
         "minimum_sampled_distance_mm": 1.9500000000000002,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -748,6 +856,8 @@
         "minimum_sampled_distance_mm": 0.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "intended_stock_plate_keeper_tangency",
         "witness_withdrawal_mm": 0.0
       },
@@ -764,6 +874,8 @@
         "minimum_sampled_distance_mm": 4.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -780,6 +892,8 @@
         "minimum_sampled_distance_mm": 9.5,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -796,6 +910,8 @@
         "minimum_sampled_distance_mm": 6.642476947645359,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -812,6 +928,8 @@
         "minimum_sampled_distance_mm": 5.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -828,6 +946,8 @@
         "minimum_sampled_distance_mm": 9.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -844,6 +964,8 @@
         "minimum_sampled_distance_mm": 2.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -851,15 +973,17 @@
         "component": "robot_plate",
         "component_role": "attached_robot_structure",
         "component_state": "nominal",
-        "continuous_certified_clearance_mm": -0.4499999999999993,
+        "continuous_certified_clearance_mm": 0.45000000000000356,
         "dock_component": "positive_lock_cam",
-        "initial_distance_mm": 0.05000000000000071,
-        "maximum_between_sample_motion_bound_mm": 0.5,
+        "initial_distance_mm": 0.5000000000000036,
+        "maximum_between_sample_motion_bound_mm": 0.05,
         "maximum_sampled_overlap_volume_mm3": 0.0,
         "method": "occt_brep_distance_with_near_witness_boolean",
-        "minimum_sampled_distance_mm": 0.05000000000000071,
-        "passed": false,
-        "sample_count": 81,
+        "minimum_sampled_distance_mm": 0.5000000000000036,
+        "passed": true,
+        "sample_count": 801,
+        "sample_step_mm": 0.1,
+        "sampled_positions_sha256": "25b4a8e40aa79fa772406a298c357504c40c6863188d80de3cf5bfed2d2608b0",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -876,6 +1000,8 @@
         "minimum_sampled_distance_mm": 3.0007036571183896,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -892,6 +1018,8 @@
         "minimum_sampled_distance_mm": 20.015886264026268,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -908,6 +1036,8 @@
         "minimum_sampled_distance_mm": 22.14158982548453,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -924,6 +1054,8 @@
         "minimum_sampled_distance_mm": 20.381197846482994,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -940,6 +1072,8 @@
         "minimum_sampled_distance_mm": 4.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -956,6 +1090,8 @@
         "minimum_sampled_distance_mm": 5.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -972,6 +1108,8 @@
         "minimum_sampled_distance_mm": 6.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -988,6 +1126,8 @@
         "minimum_sampled_distance_mm": 20.26079958935481,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -1004,6 +1144,8 @@
         "minimum_sampled_distance_mm": 18.68356018409136,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -1020,6 +1162,8 @@
         "minimum_sampled_distance_mm": 9.089829481348922,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -1036,6 +1180,8 @@
         "minimum_sampled_distance_mm": 9.521583647338355,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -1052,6 +1198,8 @@
         "minimum_sampled_distance_mm": 1.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -1068,6 +1216,8 @@
         "minimum_sampled_distance_mm": 3.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -1084,6 +1234,8 @@
         "minimum_sampled_distance_mm": 3.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -1100,6 +1252,8 @@
         "minimum_sampled_distance_mm": 3.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -1116,6 +1270,8 @@
         "minimum_sampled_distance_mm": 3.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -1132,6 +1288,8 @@
         "minimum_sampled_distance_mm": 19.920672753058202,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -1148,6 +1306,8 @@
         "minimum_sampled_distance_mm": 4.0,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -1164,6 +1324,8 @@
         "minimum_sampled_distance_mm": 4.004996878900157,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -1180,6 +1342,8 @@
         "minimum_sampled_distance_mm": 1.0198039027185568,
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       },
@@ -1193,7 +1357,7 @@
           "backend": "fcpw",
           "backend_version": "1.2.0",
           "clearance_authority": false,
-          "fixed_tessellation_sha256": "5954c7013c3a64bdb0cde4a53aeee430a4efc29a695da7699fa854e0e6da7eb8",
+          "fixed_tessellation_sha256": "1179c2a31bb311d170725eb2e8f4b1b1ea7831da6d5de947af3b397fdfa4f27b",
           "minimum_directional_witness_mm": 11.838366508483887,
           "minimum_fixed_vertices_to_moving_mesh_mm": 12.811931610107422,
           "minimum_moving_vertices_to_fixed_mesh_mm": 11.838366508483887,
@@ -1204,6 +1368,8 @@
         "method": "continuous_source_mesh_aabb_bound_plus_fcpw_witness",
         "passed": true,
         "sample_count": 81,
+        "sample_step_mm": 1.0,
+        "sampled_positions_sha256": "d5f73d0026e5bc53441c931ae1facdf5d5a505a53584cc97becc6051161c60a1",
         "semantics": "forbidden_component_continuous_clearance",
         "witness_withdrawal_mm": 0.0
       }

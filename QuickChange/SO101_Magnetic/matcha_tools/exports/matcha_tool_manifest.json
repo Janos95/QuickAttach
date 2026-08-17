@@ -63,12 +63,12 @@
   ],
   "generator": {
     "path": "generate_matcha_tool_cad.py",
-    "sha256": "72a8e3737b8ef4839cb416122217f9e335cd61288d77938d25293309b3c36eb6"
+    "sha256": "ba98dddf86ff4fda653295c44f6c679638169a719098c5a719233d893978dcea"
   },
   "interface_authority": {
     "construction": "unmodified tool_plate(stock_gripper=False)",
     "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-    "sha256": "67398a17cf6c4729475ffbd453e021a5d743a2dab89defc18e215bde998708fb"
+    "sha256": "7a1be4680e5ad98050040b09d269c900375f6bd96f292865c31336e2765c0db0"
   },
   "rack": {
     "bay_names": [
@@ -83,6 +83,64 @@
     "pcb_lower_rail_clearance_mm": 0.3,
     "rear_clearance_mm": 0.3,
     "stock_gripper_scope": "separate core quick-change dock; not part of this rack",
+    "stop_contracts": {
+      "spoon": {
+        "bay_x_mm": -48.0,
+        "bounds_mm": {
+          "x": [
+            -89.0,
+            -15.0
+          ],
+          "y": [
+            25.0,
+            31.0
+          ],
+          "z": [
+            -3.0,
+            12.5
+          ]
+        },
+        "center_mm": [
+          -52.0,
+          28.0,
+          4.75
+        ],
+        "dock": "matcha_spoon",
+        "size_mm": [
+          74.0,
+          6.0,
+          15.5
+        ]
+      },
+      "whisk": {
+        "bay_x_mm": 48.0,
+        "bounds_mm": {
+          "x": [
+            7.0,
+            81.0
+          ],
+          "y": [
+            25.0,
+            31.0
+          ],
+          "z": [
+            -3.0,
+            12.5
+          ]
+        },
+        "center_mm": [
+          44.0,
+          28.0,
+          4.75
+        ],
+        "dock": "matcha_whisk",
+        "size_mm": [
+          74.0,
+          6.0,
+          15.5
+        ]
+      }
+    },
     "wall_clearance_mm": 0.5
   },
   "schema_version": "1.0",

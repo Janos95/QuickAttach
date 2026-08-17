@@ -32,6 +32,10 @@ are recorded in the repository-root `THIRD_PARTY_NOTICES.md`.
   leaving the rack, the E-GUL4-10 return spring shifts a 1.6 mm stainless slider
   by 3 mm so 4.25 mm necks sit under the 6 mm stud heads. The printed roof, not
   the M2 guide screw, reacts separation load. Loss of power leaves it locked.
+- **Cam corridor:** the passive cam retains its full `x = 24.05 mm` unlock
+  datum. A narrow local recess in the fixed robot plate provides 0.50 mm exact
+  clearance through the complete rack-exit sweep without changing slider
+  travel, keyhole alignment, spring stroke, or the 2.95 mm locked engagement.
 - **Electrical interface:** four Mill-Max pins on 5 mm pitch: GND, +12 V,
   TTL_DATA, and a spare TOOL_ID line. GND protrudes 0.2 mm farther so it mates
   first and breaks last.
@@ -59,6 +63,40 @@ check.
 The MuJoCo model uses conditional welds for capture and lock state. It validates
 this state sequence and geometry; it does not predict magnetic fields, contact
 arcing, printed-part strength, fatigue, or wear.
+
+## CAD/simulation geometry contract
+
+`generate_cad.py` publishes the exact core dock-stop bounds, stock-gripper STEP
+mount, and robot-plate cam-relief bounds in both `design_parameters.json` and
+`exports/core_cad_manifest.json`. The stock dock stop is not interchangeable
+with the spoon/whisk stops: core bounds are `X[-45,37]`, `Y[26,32]`,
+`Z[-3,12.5]` mm, while the two-bay matcha package publishes its own per-bay
+contracts. Simulation builders must consume the matching contract rather than
+reuse one generic box for all docks.
+
+The calibrated stock-gripper wrapper pose is solved from the live child-geom
+transform and the released CAD datum. `sim/validate_cad_clearance.py` records
+that composed transform and rejects a nonzero composition residual. It also
+checks the complete 0–80 mm rack path, using a focused 0.10 mm grid for the cam
+corridor; the 0.50 mm sampled clearance yields a conservative 0.45 mm
+continuous certificate against the 0.20 mm manufacturing floor.
+
+Core exports are timestamp-canonicalized and hash-closed. To verify byte
+reproducibility in two temporary directories, run `generate_cad.py` twice with
+`--output-dir`; the canonical checked-in generation and exact report are:
+
+```bash
+XDG_CACHE_HOME=/tmp/cq-cache .venv/bin/python \
+  QuickChange/SO101_Magnetic/generate_cad.py
+XDG_CACHE_HOME=/tmp/cq-cache .venv/bin/python \
+  QuickChange/SO101_Magnetic/sim/validate_cad_clearance.py
+```
+
+`core_cad_manifest.json` excludes itself to avoid circular hashing, but records
+the generator, deterministic inventory digest, every contained artifact's
+repo-relative path/byte count/SHA-256, and all three geometry contracts. The
+clearance report separately pins the manifest file record and independently
+recomputes its contents.
 
 ## Full SO-101 detachable-gripper MuJoCo example
 

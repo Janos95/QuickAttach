@@ -18,6 +18,121 @@
     50.0,
     9.5
   ],
+  "collision_geometry_contract": {
+    "core_dock_stop": {
+      "dock": "core_stock_gripper",
+      "bounds_mm": {
+        "x": [
+          -45.0,
+          37.0
+        ],
+        "y": [
+          26.0,
+          32.0
+        ],
+        "z": [
+          -3.0,
+          12.5
+        ]
+      },
+      "center_mm": [
+        -4.0,
+        29.0,
+        4.75
+      ],
+      "size_mm": [
+        82.0,
+        6.0,
+        15.5
+      ],
+      "through_holes": [
+        {
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "x_mm": -25.0,
+          "y_start_mm": 25.9,
+          "z_mm": 4.75,
+          "diameter_mm": 4.4
+        },
+        {
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "x_mm": 21.0,
+          "y_start_mm": 25.9,
+          "z_mm": 4.75,
+          "diameter_mm": 4.4
+        }
+      ]
+    },
+    "stock_gripper_mount": {
+      "tool_plate_assembly_pos_mm": [
+        0.0,
+        0.0,
+        9.5
+      ],
+      "fixed_step_assembly_pos_mm": [
+        0.4875,
+        0.218,
+        19.051
+      ],
+      "fixed_step_tool_local_pos_mm": [
+        0.4875,
+        0.218,
+        9.551
+      ],
+      "fixed_step_tool_local_quat_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "positive_lock_cam": {
+      "polygon_xy_mm": [
+        [
+          28.0,
+          -16.0
+        ],
+        [
+          34.0,
+          -16.0
+        ],
+        [
+          34.0,
+          0.0
+        ],
+        [
+          24.05,
+          0.0
+        ]
+      ],
+      "z_range_mm": [
+        -4.15,
+        -1.9500000000000002
+      ],
+      "robot_plate_required_clearance_mm": 0.5,
+      "robot_plate_relief_bounds_native_mm": {
+        "x": [
+          23.55,
+          25.0
+        ],
+        "y": [
+          -16.5,
+          24.5
+        ],
+        "z": [
+          4.85,
+          8.05
+        ]
+      }
+    }
+  },
   "magnet": {
     "manufacturer": "Webcraft GmbH / supermagnete",
     "part_number": "CS-Q-12-12-04-N",
@@ -120,7 +235,7 @@
     "pogo_force_four_contacts_at_midstroke_N": 2.35
   },
   "estimated_solid_volumes_cm3": {
-    "robot_plate": 21.18,
+    "robot_plate": 21.13,
     "generic_tool_plate": 24.62,
     "stock_gripper_tool_plate": 25.12,
     "passive_dock": 21.76,

@@ -77,6 +77,12 @@ ledges are tangent to the coupling face; upper ledges act only on the plate's
 outer lands.  The passive lock cam stays below the tool face and acts on the
 robot-side slider.
 
+Each bay publishes its exact stop contract in the canonical manifest. In the
+bay-local frame the stop bounds are `X[-41,33]`, `Y[25,31]`,
+`Z[-3,12.5]` mm; the spoon and whisk records add their respective rack-X
+offsets. These are intentionally distinct from the separate core stock-gripper
+dock bounds and must remain distinct in simulation.
+
 The gripper is not a reserved matcha-rack bay.  Its existing core adapter,
 passive dock, retrofit assembly and moving-jaw mesh are hash-pinned in the
 matcha report as an external scope boundary.  The report makes no claim that
@@ -133,7 +139,7 @@ rack report pins that manifest and independently recomputes the full collision
 inventory.  It does not hash itself or create a circular manifest dependency.
 
 Generated STEP/STL assemblies, JSON ledgers, the single canonical hash-pinned
-`exports/matcha_tool_manifest.json`, and the
-exact rack-sweep report are intentionally produced only after this source
-checkpoint is reviewed.  Until those artifacts are green, this CAD is for
-simulation dry runs and fit coupons—not fabrication.
+`exports/matcha_tool_manifest.json`, and the exact rack-sweep report form one
+release package. Any source or contract change makes those artifacts stale;
+fabrication remains blocked until deterministic regeneration, manifest hash
+closure, and the exact rack report all pass together.

@@ -1,0 +1,270 @@
+{
+  "contracts": {
+    "core_dock_stop": {
+      "bounds_mm": {
+        "x": [
+          -45.0,
+          37.0
+        ],
+        "y": [
+          26.0,
+          32.0
+        ],
+        "z": [
+          -3.0,
+          12.5
+        ]
+      },
+      "center_mm": [
+        -4.0,
+        29.0,
+        4.75
+      ],
+      "dock": "core_stock_gripper",
+      "size_mm": [
+        82.0,
+        6.0,
+        15.5
+      ],
+      "through_holes": [
+        {
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "diameter_mm": 4.4,
+          "x_mm": -25.0,
+          "y_start_mm": 25.9,
+          "z_mm": 4.75
+        },
+        {
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "diameter_mm": 4.4,
+          "x_mm": 21.0,
+          "y_start_mm": 25.9,
+          "z_mm": 4.75
+        }
+      ]
+    },
+    "robot_plate_cam_relief": {
+      "bounds_native_mm": {
+        "x": [
+          23.55,
+          25.0
+        ],
+        "y": [
+          -16.5,
+          24.5
+        ],
+        "z": [
+          4.85,
+          8.05
+        ]
+      },
+      "cam_inner_x_mm": 24.05,
+      "required_clearance_mm": 0.5,
+      "slider_travel_mm": 3.0
+    },
+    "stock_gripper_mount": {
+      "fixed_step_assembly_pos_mm": [
+        0.4875,
+        0.218,
+        19.051
+      ],
+      "fixed_step_tool_local_pos_mm": [
+        0.4875,
+        0.218,
+        9.551
+      ],
+      "fixed_step_tool_local_quat_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "tool_plate_assembly_pos_mm": [
+        0.0,
+        0.0,
+        9.5
+      ]
+    }
+  },
+  "file_count": 27,
+  "files": [
+    {
+      "bytes": 2332,
+      "path": "QuickChange/SO101_Magnetic/exports/bill_of_materials.csv",
+      "role": "bill_of_materials",
+      "sha256": "d049abac30a46e681d8ae9a6c7fc064376984620c20e5dafb23e5197e4b828f3"
+    },
+    {
+      "bytes": 5604,
+      "path": "QuickChange/SO101_Magnetic/exports/design_parameters.json",
+      "role": "design_parameters",
+      "sha256": "dd27af35bfda441458d922fa831a4720bf5f8f220b3d87555ddf50e34e0c4e41"
+    },
+    {
+      "bytes": 347,
+      "path": "QuickChange/SO101_Magnetic/exports/electrical_pinout.csv",
+      "role": "electrical_pinout",
+      "sha256": "1f6f98ad47119e0d3a473fe3a50e43f877312bdab87e2f1a6524847aa00bc3e1"
+    },
+    {
+      "bytes": 515,
+      "path": "QuickChange/SO101_Magnetic/exports/engineering_check.json",
+      "role": "engineering_check",
+      "sha256": "d6e4de6f0bdb1fae1c49cf9afbdbb789c1d9601166e064fff1ea16c354db64d7"
+    },
+    {
+      "bytes": 23342,
+      "path": "QuickChange/SO101_Magnetic/exports/hardware_CS-Q-12-12-04-N.step",
+      "role": "exact_cad_step",
+      "sha256": "9b293cc2426fa098e9b4f588ce117f4fd607059891d8cfbfbba82f7690916286"
+    },
+    {
+      "bytes": 27468,
+      "path": "QuickChange/SO101_Magnetic/exports/hardware_DIN934_M3_lock_stud_nut.step",
+      "role": "exact_cad_step",
+      "sha256": "7f19e5abdb33083e7d179df78d5dc1a130140eadb74a3b22aa2d8f3c078266c7"
+    },
+    {
+      "bytes": 75578,
+      "path": "QuickChange/SO101_Magnetic/exports/hardware_E-GUL4-10_reference.step",
+      "role": "exact_cad_step",
+      "sha256": "d7e4d3279618aa584bc218e31ebaee3c3a7fdf1da62f2d8a847344dba9bc41f6"
+    },
+    {
+      "bytes": 19292,
+      "path": "QuickChange/SO101_Magnetic/exports/hardware_MC-12-12-03.step",
+      "role": "exact_cad_step",
+      "sha256": "e7606db542267ad7d105bfa173ac13df82db02e0602262eec3cc0c252f969a4f"
+    },
+    {
+      "bytes": 13596,
+      "path": "QuickChange/SO101_Magnetic/exports/hardware_McMaster_90318A720_shoulder_screw.step",
+      "role": "exact_cad_step",
+      "sha256": "1a302d3674952d881df75e25e47b64a60b23a72b66fde48c35a0924ca1df6990"
+    },
+    {
+      "bytes": 13640,
+      "path": "QuickChange/SO101_Magnetic/exports/hardware_Mill-Max_7983-1-15-20-75-14-11-0_reference.step",
+      "role": "exact_cad_step",
+      "sha256": "4f877bcd523d42d09d6c852ea802e32dfa550d4e4c67dab77c42e0978f5e12e1"
+    },
+    {
+      "bytes": 130486,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_passive_tool_dock.step",
+      "role": "exact_cad_step",
+      "sha256": "5dfe8ceee800063a188b2491578811f88e46ca0f4548120254d81b9ecf548a48"
+    },
+    {
+      "bytes": 48984,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_passive_tool_dock.stl",
+      "role": "tessellated_mesh_export",
+      "sha256": "65fa1597a9a908a8dc0f4fcd087d848c26b54411816c2db94588d459f9c17999"
+    },
+    {
+      "bytes": 99584,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_positive_lock_slider.step",
+      "role": "exact_cad_step",
+      "sha256": "0d0f77a772172963fdc3a63470ff936cfd52c4e4b96db78a1cdf6cc4f14eb7f1"
+    },
+    {
+      "bytes": 91884,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_positive_lock_slider.stl",
+      "role": "tessellated_mesh_export",
+      "sha256": "b73b52244741f97213eb86f6706cea2a417c731a1f6da47ec2604a36e0067685"
+    },
+    {
+      "bytes": 18823,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_positive_lock_slider_profile.dxf",
+      "role": "fabrication_profile_dxf",
+      "sha256": "1fa42f24121b8d4d8b663d7ffefe12e61d5aacada197108e55b54c622b9725af"
+    },
+    {
+      "bytes": 1026648,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_quick_change_assembly.step",
+      "role": "complete_assembly_step",
+      "sha256": "03d4204e85519cfb88ee4f230cb75d8242307004cc19efc93e1d2acd5504196e"
+    },
+    {
+      "bytes": 378343,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_robot_plate.step",
+      "role": "exact_cad_step",
+      "sha256": "a23866fb45be3aff64c13296a27de86a6f50c5b81d422b8355a0d53741bfd44d"
+    },
+    {
+      "bytes": 642484,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_robot_plate.stl",
+      "role": "tessellated_mesh_export",
+      "sha256": "ae7e415b7292a2e314b5d4f11c26f02b1dc1adbd45d21ae129ce2a0f9a137486"
+    },
+    {
+      "bytes": 3324947,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_retrofit_assembly.step",
+      "role": "complete_assembly_step",
+      "sha256": "286afe0afb4f19a2562c58610554172c594a5f05381ec0fd0c53e4883b815482"
+    },
+    {
+      "bytes": 249124,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_tool_plate.step",
+      "role": "exact_cad_step",
+      "sha256": "5c968d8e060e0f191b5d6eec67a0b195f8e708a043afe6a173c54b74b6a8f4ab"
+    },
+    {
+      "bytes": 298984,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_tool_plate.stl",
+      "role": "tessellated_mesh_export",
+      "sha256": "8dbdf0fb9c48b73abcf013be10cb20e88e3e9f3d8c6434c7804c6953c26bc8e0"
+    },
+    {
+      "bytes": 29920,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_tool_contact_board_reference.step",
+      "role": "exact_cad_step",
+      "sha256": "75f296b5abefde1431b0d86a8d039db64d5fda4b6ad3a500b0ead6b3f37fedec"
+    },
+    {
+      "bytes": 85484,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_tool_contact_board_reference.stl",
+      "role": "tessellated_mesh_export",
+      "sha256": "16dccaa4012093fe099266e4df97df38235ad62743dd3b831da01eaecf0b8b69"
+    },
+    {
+      "bytes": 255307,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_tool_plate.step",
+      "role": "exact_cad_step",
+      "sha256": "8d46163f1ee3558748c4e86eee50a896191b11700880a470b79a0bc32eede541"
+    },
+    {
+      "bytes": 320984,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_tool_plate.stl",
+      "role": "tessellated_mesh_export",
+      "sha256": "5e9bc7b54f86876860eab879720d8b0b22d8b0b6a92e5d454f70e5c01eca7a1e"
+    },
+    {
+      "bytes": 2384,
+      "path": "QuickChange/SO101_Magnetic/exports/tool_contact_board.kicad_pcb",
+      "role": "editable_pcb_source",
+      "sha256": "30f26a337f57db4f650a041a7d434111fe09c09e3c4a093816d64bd4a0b2fa39"
+    },
+    {
+      "bytes": 2178,
+      "path": "QuickChange/SO101_Magnetic/exports/tool_contact_board_fab_drawing.svg",
+      "role": "pcb_fabrication_drawing",
+      "sha256": "125b65d670b3f0f7a5acea7d415c0ae5f04fd1adeecdc901f68188c588d21f1c"
+    }
+  ],
+  "generator": {
+    "bytes": 55780,
+    "path": "QuickChange/SO101_Magnetic/generate_cad.py",
+    "sha256": "7a1be4680e5ad98050040b09d269c900375f6bd96f292865c31336e2765c0db0"
+  },
+  "inventory_sha256": "3f4d0cdbc4fe04ddc90ed545a2f6e6621d01098d2afd8afeab185ac5c39dad83",
+  "schema_version": "1.0",
+  "units": "mm"
+}

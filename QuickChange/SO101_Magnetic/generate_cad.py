@@ -9,10 +9,13 @@ Feetech power and half-duplex TTL bus without a manual cable operation.
 
 from __future__ import annotations
 
+import argparse
 import csv
+import hashlib
 import json
 import math
 from pathlib import Path
+import re
 
 import cadquery as cq
 
@@ -20,6 +23,36 @@ import cadquery as cq
 HERE = Path(__file__).resolve().parent
 REPOSITORY_ROOT = HERE.parents[1]
 EXPORT_DIR = HERE / "exports"
+CORE_MANIFEST_NAME = "core_cad_manifest.json"
+CORE_OUTPUT_NAMES = (
+    "bill_of_materials.csv",
+    "design_parameters.json",
+    "electrical_pinout.csv",
+    "engineering_check.json",
+    "hardware_CS-Q-12-12-04-N.step",
+    "hardware_DIN934_M3_lock_stud_nut.step",
+    "hardware_E-GUL4-10_reference.step",
+    "hardware_MC-12-12-03.step",
+    "hardware_McMaster_90318A720_shoulder_screw.step",
+    "hardware_Mill-Max_7983-1-15-20-75-14-11-0_reference.step",
+    "so101_passive_tool_dock.step",
+    "so101_passive_tool_dock.stl",
+    "so101_positive_lock_slider.step",
+    "so101_positive_lock_slider.stl",
+    "so101_positive_lock_slider_profile.dxf",
+    "so101_quick_change_assembly.step",
+    "so101_robot_plate.step",
+    "so101_robot_plate.stl",
+    "so101_stock_gripper_retrofit_assembly.step",
+    "so101_stock_gripper_tool_plate.step",
+    "so101_stock_gripper_tool_plate.stl",
+    "so101_tool_contact_board_reference.step",
+    "so101_tool_contact_board_reference.stl",
+    "so101_tool_plate.step",
+    "so101_tool_plate.stl",
+    "tool_contact_board.kicad_pcb",
+    "tool_contact_board_fab_drawing.svg",
+)
 
 # Existing SO-101 follower interface, measured from the official STEP.  The
 # official assembly guide specifies four M3x6 screws at this joint.
@@ -777,14 +810,179 @@ def tool_dock() -> cq.Workplane:
     return dock.clean()
 
 
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _canonical_json_sha256(value: object) -> str:
+    payload = json.dumps(
+        value, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode()
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _canonicalize_step_header(path: Path) -> None:
+    """Remove OCCT's wall-clock timestamp from one generated STEP file."""
+
+    text = path.read_text()
+    canonical, replacements = re.subn(
+        r"(FILE_NAME\('[^']*',)'[^']+'",
+        r"\1'1970-01-01T00:00:00'",
+        text,
+        count=1,
+    )
+    if replacements != 1:
+        raise RuntimeError(f"could not canonicalize STEP header timestamp: {path}")
+    path.write_text(canonical)
+
+
+def _canonicalize_dxf_metadata(path: Path) -> None:
+    """Remove ezdxf's random GUIDs and wall-clock metadata.
+
+    The drawing entities are deterministic, but ezdxf intentionally assigns
+    fresh document GUIDs and timestamps on every write.  Those values are not
+    fabrication geometry and would otherwise prevent hash-closed regeneration.
+    """
+
+    text = path.read_text()
+    substitutions = (
+        (
+            r"(\$FINGERPRINTGUID\s*\n\s*2\s*\n)\{[^}\n]+\}",
+            r"\1{00000000-0000-0000-0000-000000000001}",
+        ),
+        (
+            r"(\$VERSIONGUID\s*\n\s*2\s*\n)\{[^}\n]+\}",
+            r"\1{00000000-0000-0000-0000-000000000002}",
+        ),
+        (
+            r"(1\.4\.4 @ )[0-9T:+.-]+",
+            r"\g<1>1970-01-01T00:00:00+00:00",
+        ),
+        (
+            r"(\$TDCREATE\s*\n\s*40\s*\n)[0-9.]+",
+            r"\g<1>2440587.5",
+        ),
+        (
+            r"(\$TDUPDATE\s*\n\s*40\s*\n)[0-9.]+",
+            r"\g<1>2440587.5",
+        ),
+    )
+    expected_counts = (1, 1, 2, 1, 1)
+    for (pattern, replacement), expected in zip(substitutions, expected_counts):
+        text, replacements = re.subn(pattern, replacement, text)
+        if replacements != expected:
+            raise RuntimeError(
+                f"could not canonicalize DXF metadata ({replacements} != {expected}): "
+                f"{path}"
+            )
+    path.write_text(text)
+
+
+def _artifact_role(name: str) -> str:
+    if name.endswith("_assembly.step"):
+        return "complete_assembly_step"
+    if name.endswith(".step"):
+        return "exact_cad_step"
+    if name.endswith(".stl"):
+        return "tessellated_mesh_export"
+    if name.endswith(".dxf"):
+        return "fabrication_profile_dxf"
+    if name.endswith(".kicad_pcb"):
+        return "editable_pcb_source"
+    if name.endswith(".svg"):
+        return "pcb_fabrication_drawing"
+    if name == "bill_of_materials.csv":
+        return "bill_of_materials"
+    if name == "electrical_pinout.csv":
+        return "electrical_pinout"
+    if name == "design_parameters.json":
+        return "design_parameters"
+    if name == "engineering_check.json":
+        return "engineering_check"
+    raise RuntimeError(f"unclassified core CAD artifact: {name}")
+
+
+def write_core_manifest(output_dir: Path = EXPORT_DIR) -> dict[str, object]:
+    """Hash-close every generated core artifact without self-reference."""
+
+    missing = [name for name in CORE_OUTPUT_NAMES if not (output_dir / name).is_file()]
+    if missing:
+        raise RuntimeError(f"core CAD generation did not emit required files: {missing}")
+    files = [
+        {
+            "path": f"QuickChange/SO101_Magnetic/exports/{name}",
+            "role": _artifact_role(name),
+            "bytes": (output_dir / name).stat().st_size,
+            "sha256": _sha256(output_dir / name),
+        }
+        for name in sorted(CORE_OUTPUT_NAMES)
+    ]
+    inventory_payload = [
+        {key: record[key] for key in ("path", "role", "bytes", "sha256")}
+        for record in files
+    ]
+    manifest: dict[str, object] = {
+        "schema_version": "1.0",
+        "units": "mm",
+        "generator": {
+            "path": "QuickChange/SO101_Magnetic/generate_cad.py",
+            "bytes": Path(__file__).stat().st_size,
+            "sha256": _sha256(Path(__file__)),
+        },
+        "contracts": {
+            "robot_plate_cam_relief": {
+                "required_clearance_mm": ROBOT_CAM_CLEARANCE_MM,
+                "bounds_native_mm": {
+                    "x": [ROBOT_CAM_RELIEF_X_MIN, ROBOT_CAM_RELIEF_X_MAX],
+                    "y": [ROBOT_CAM_RELIEF_Y_MIN, ROBOT_CAM_RELIEF_Y_MAX],
+                    "z": [ROBOT_CAM_RELIEF_Z_MIN, ROBOT_CAM_RELIEF_Z_MAX],
+                },
+                "cam_inner_x_mm": DOCK_CAM_X_INNER,
+                "slider_travel_mm": SLIDER_TRAVEL,
+            },
+            "core_dock_stop": core_dock_stop_spec(),
+            "stock_gripper_mount": stock_gripper_mount_contract(),
+        },
+        "files": files,
+        "file_count": len(files),
+        "inventory_sha256": _canonical_json_sha256(inventory_payload),
+    }
+    (output_dir / CORE_MANIFEST_NAME).write_text(
+        json.dumps(manifest, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    )
+    return manifest
+
+
 def export_part(shape: cq.Workplane, stem: str) -> None:
-    cq.exporters.export(shape, str(EXPORT_DIR / f"{stem}.step"))
+    step_path = EXPORT_DIR / f"{stem}.step"
+    cq.exporters.export(shape, str(step_path))
+    _canonicalize_step_header(step_path)
     cq.exporters.export(
         shape,
         str(EXPORT_DIR / f"{stem}.stl"),
         tolerance=0.08,
         angularTolerance=0.12,
     )
+
+
+def export_reference_step(shape: cq.Workplane, stem: str) -> None:
+    """Export exact reference hardware without an untracked mesh derivative."""
+
+    step_path = EXPORT_DIR / f"{stem}.step"
+    cq.exporters.export(shape, str(step_path))
+    _canonicalize_step_header(step_path)
+
+
+def _strip_assembly_colors(assembly: cq.Assembly) -> None:
+    """Keep named assembly structure while avoiding unstable STEP styles.
+
+    OCCT's geometric/name section is deterministic, while its colored STEP
+    presentation entity ordering is not.  Release assemblies therefore retain
+    names and placements but deliberately omit decorative per-part colors.
+    """
+
+    for component in assembly.objects.values():
+        component.color = None
 
 
 def add_hardware(assembly: cq.Assembly, include_studs: bool = True) -> None:
@@ -875,7 +1073,10 @@ def save_assemblies(robot: cq.Workplane, generic: cq.Workplane, stock: cq.Workpl
         color=cq.Color(0.12, 0.42, 0.90),
     )
     add_hardware(assembly)
-    assembly.save(str(EXPORT_DIR / "so101_quick_change_assembly.step"))
+    _strip_assembly_colors(assembly)
+    quick_change_path = EXPORT_DIR / "so101_quick_change_assembly.step"
+    assembly.save(str(quick_change_path))
+    _canonicalize_step_header(quick_change_path)
 
     retrofit = cq.Assembly(name="so101_stock_gripper_powered_retrofit_v0_2")
     retrofit.add(robot, name="robot_plate", color=cq.Color(0.95, 0.70, 0.10))
@@ -897,7 +1098,10 @@ def save_assemblies(robot: cq.Workplane, generic: cq.Workplane, stock: cq.Workpl
             loc=cq.Location(cq.Vector(*STOCK_FIXED_STEP_ASSEMBLY_POS_MM)),
             color=cq.Color(0.90, 0.74, 0.12),
         )
-    retrofit.save(str(EXPORT_DIR / "so101_stock_gripper_retrofit_assembly.step"))
+    _strip_assembly_colors(retrofit)
+    retrofit_path = EXPORT_DIR / "so101_stock_gripper_retrofit_assembly.step"
+    retrofit.save(str(retrofit_path))
+    _canonicalize_step_header(retrofit_path)
 
 
 def write_contact_board_files() -> None:
@@ -1053,7 +1257,23 @@ def engineering_values() -> dict[str, float]:
     }
 
 
-def main() -> None:
+def _argument_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Generate the deterministic core SO-101 quick-change CAD package."
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=EXPORT_DIR,
+        help="artifact directory; defaults to QuickChange/SO101_Magnetic/exports",
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> None:
+    global EXPORT_DIR
+    args = _argument_parser().parse_args(argv)
+    EXPORT_DIR = args.output_dir.resolve()
     EXPORT_DIR.mkdir(parents=True, exist_ok=True)
     robot = robot_plate()
     generic = tool_plate(stock_gripper=False)
@@ -1073,13 +1293,15 @@ def main() -> None:
     export_part(stock, "so101_stock_gripper_tool_plate")
     export_part(dock, "so101_passive_tool_dock")
     export_part(slider, "so101_positive_lock_slider")
-    cq.exporters.export(slider.faces(">Z"), str(EXPORT_DIR / "so101_positive_lock_slider_profile.dxf"))
-    export_part(magnet, f"hardware_{MAGNET_PART_NUMBER}")
-    export_part(target, f"hardware_{TARGET_PART_NUMBER}")
-    export_part(shoulder, "hardware_McMaster_90318A720_shoulder_screw")
-    export_part(lock_nut, "hardware_DIN934_M3_lock_stud_nut")
-    export_part(spring, f"hardware_{RETURN_SPRING_PART_NUMBER}_reference")
-    export_part(pogo, f"hardware_Mill-Max_{POGO_PART_NUMBER}_reference")
+    slider_profile_path = EXPORT_DIR / "so101_positive_lock_slider_profile.dxf"
+    cq.exporters.export(slider.faces(">Z"), str(slider_profile_path))
+    _canonicalize_dxf_metadata(slider_profile_path)
+    export_reference_step(magnet, f"hardware_{MAGNET_PART_NUMBER}")
+    export_reference_step(target, f"hardware_{TARGET_PART_NUMBER}")
+    export_reference_step(shoulder, "hardware_McMaster_90318A720_shoulder_screw")
+    export_reference_step(lock_nut, "hardware_DIN934_M3_lock_stud_nut")
+    export_reference_step(spring, f"hardware_{RETURN_SPRING_PART_NUMBER}_reference")
+    export_reference_step(pogo, f"hardware_Mill-Max_{POGO_PART_NUMBER}_reference")
     export_part(board, "so101_tool_contact_board_reference")
     save_assemblies(robot, generic, stock)
     write_contact_board_files()
@@ -1185,6 +1407,7 @@ def main() -> None:
     }
     (EXPORT_DIR / "design_parameters.json").write_text(json.dumps(parameters, indent=2) + "\n")
     (EXPORT_DIR / "engineering_check.json").write_text(json.dumps(checks, indent=2) + "\n")
+    write_core_manifest(EXPORT_DIR)
     print(json.dumps(parameters, indent=2))
 
 

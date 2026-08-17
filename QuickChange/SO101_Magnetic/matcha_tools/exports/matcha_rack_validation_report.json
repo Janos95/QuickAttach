@@ -2,15 +2,15 @@
   "authorities": {
     "fcpw_role": "toleranced_mesh_screen_only",
     "matcha_generator": {
-      "bytes": 34060,
+      "bytes": 35636,
       "path": "QuickChange/SO101_Magnetic/matcha_tools/generate_matcha_tool_cad.py",
-      "sha256": "72a8e3737b8ef4839cb416122217f9e335cd61288d77938d25293309b3c36eb6"
+      "sha256": "ba98dddf86ff4fda653295c44f6c679638169a719098c5a719233d893978dcea"
     },
     "occt_role": "STEP import/tessellation and six critical B-rep tangency diagnostics",
     "quick_change_interface_generator": {
-      "bytes": 41594,
+      "bytes": 55780,
       "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-      "sha256": "67398a17cf6c4729475ffbd453e021a5d743a2dab89defc18e215bde998708fb"
+      "sha256": "7a1be4680e5ad98050040b09d269c900375f6bd96f292865c31336e2765c0db0"
     },
     "rack_validator": {
       "bytes": 31131,
@@ -94,9 +94,9 @@
       }
     ],
     "manifest": {
-      "bytes": 3584,
+      "bytes": 4557,
       "path": "QuickChange/SO101_Magnetic/matcha_tools/exports/matcha_tool_manifest.json",
-      "sha256": "85c8b94ced9f98d9344558b701565dc490d2e6b74d3196f699756451826a0b8c"
+      "sha256": "f82173f34bd584728a30aaac350ac863280890a4b28f49a82d24236c65aae5ac"
     },
     "manifest_schema": {
       "files": [
@@ -163,12 +163,12 @@
       ],
       "generator": {
         "path": "generate_matcha_tool_cad.py",
-        "sha256": "72a8e3737b8ef4839cb416122217f9e335cd61288d77938d25293309b3c36eb6"
+        "sha256": "ba98dddf86ff4fda653295c44f6c679638169a719098c5a719233d893978dcea"
       },
       "interface_authority": {
         "construction": "unmodified tool_plate(stock_gripper=False)",
         "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-        "sha256": "67398a17cf6c4729475ffbd453e021a5d743a2dab89defc18e215bde998708fb"
+        "sha256": "7a1be4680e5ad98050040b09d269c900375f6bd96f292865c31336e2765c0db0"
       },
       "rack": {
         "bay_names": [
@@ -183,6 +183,64 @@
         "pcb_lower_rail_clearance_mm": 0.3,
         "rear_clearance_mm": 0.3,
         "stock_gripper_scope": "separate core quick-change dock; not part of this rack",
+        "stop_contracts": {
+          "spoon": {
+            "bay_x_mm": -48.0,
+            "bounds_mm": {
+              "x": [
+                -89.0,
+                -15.0
+              ],
+              "y": [
+                25.0,
+                31.0
+              ],
+              "z": [
+                -3.0,
+                12.5
+              ]
+            },
+            "center_mm": [
+              -52.0,
+              28.0,
+              4.75
+            ],
+            "dock": "matcha_spoon",
+            "size_mm": [
+              74.0,
+              6.0,
+              15.5
+            ]
+          },
+          "whisk": {
+            "bay_x_mm": 48.0,
+            "bounds_mm": {
+              "x": [
+                7.0,
+                81.0
+              ],
+              "y": [
+                25.0,
+                31.0
+              ],
+              "z": [
+                -3.0,
+                12.5
+              ]
+            },
+            "center_mm": [
+              44.0,
+              28.0,
+              4.75
+            ],
+            "dock": "matcha_whisk",
+            "size_mm": [
+              74.0,
+              6.0,
+              15.5
+            ]
+          }
+        },
         "wall_clearance_mm": 0.5
       },
       "schema_version": "1.0",
@@ -40143,24 +40201,24 @@
     "normal_gripper_authority": "separate_core_stock_adapter_and_passive_dock_package",
     "normal_gripper_authority_files": [
       {
-        "bytes": 41594,
+        "bytes": 55780,
         "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-        "sha256": "67398a17cf6c4729475ffbd453e021a5d743a2dab89defc18e215bde998708fb"
+        "sha256": "7a1be4680e5ad98050040b09d269c900375f6bd96f292865c31336e2765c0db0"
       },
       {
         "bytes": 249124,
         "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_tool_plate.step",
-        "sha256": "a8a8af7e374c6cf9ef7761a391a9a03abadf7e374c54fc8b1b27f1206b13effe"
+        "sha256": "5c968d8e060e0f191b5d6eec67a0b195f8e708a043afe6a173c54b74b6a8f4ab"
       },
       {
-        "bytes": 3308038,
+        "bytes": 3324947,
         "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_retrofit_assembly.step",
-        "sha256": "f65e750db579aeb88e9fe9c629beaccbad841c58e5f87d9739f853df5a7d7e08"
+        "sha256": "286afe0afb4f19a2562c58610554172c594a5f05381ec0fd0c53e4883b815482"
       },
       {
         "bytes": 130486,
         "path": "QuickChange/SO101_Magnetic/exports/so101_passive_tool_dock.step",
-        "sha256": "35c82982317eb3041e080066364eb88f52cc798be4c5c5a4157c4c52b1de0863"
+        "sha256": "5dfe8ceee800063a188b2491578811f88e46ca0f4548120254d81b9ecf548a48"
       },
       {
         "bytes": 1413584,

@@ -260,6 +260,33 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
                 hashlib.sha256(path.read_bytes()).hexdigest(),
             )
 
+    def test_core_manifest_closes_exports_and_physical_contracts(self) -> None:
+        self.assertEqual(clearance.validate_core_manifest(), [])
+        manifest = json.loads(clearance.CORE_MANIFEST_PATH.read_text())
+        expected_paths = [
+            f"QuickChange/SO101_Magnetic/exports/{name}"
+            for name in sorted(clearance.CAD.CORE_OUTPUT_NAMES)
+        ]
+        self.assertEqual(
+            [record["path"] for record in manifest["files"]],
+            expected_paths,
+        )
+        self.assertEqual(manifest["file_count"], len(expected_paths))
+        self.assertEqual(
+            manifest["contracts"], clearance._expected_core_manifest_contracts()
+        )
+        inventory_payload = [
+            {
+                key: record[key]
+                for key in ("path", "role", "bytes", "sha256")
+            }
+            for record in manifest["files"]
+        ]
+        self.assertEqual(
+            manifest["inventory_sha256"],
+            clearance._canonical_sha256(inventory_payload),
+        )
+
 
 @unittest.skipUnless(
     _published_report_matches_current_validator(),
@@ -285,7 +312,7 @@ class PublishedCoreCadClearanceReportTests(unittest.TestCase):
             if result["component"] == "robot_plate"
             and result["dock_component"] == "positive_lock_cam"
         )
-        cam["passed"] = True
+        cam["passed"] = not cam["passed"]
         tampered["validation"][
             "machine_json_canonical_sha256_without_this_field"
         ] = None

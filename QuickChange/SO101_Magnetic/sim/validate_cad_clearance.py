@@ -41,6 +41,7 @@ QUICK_CHANGE_DIR = HERE.parent
 REPO_ROOT = QUICK_CHANGE_DIR.parents[1]
 CAD_GENERATOR_PATH = QUICK_CHANGE_DIR / "generate_cad.py"
 CORE_EXPORT_DIR = QUICK_CHANGE_DIR / "exports"
+CORE_MANIFEST_PATH = CORE_EXPORT_DIR / "core_cad_manifest.json"
 ROBOT_XML_PATH = REPO_ROOT / "Simulation/SO101/so101_new_calib.xml"
 FIXED_GRIPPER_STEP_PATH = (
     REPO_ROOT / "STEP/SO101/Follower_Specific/Wrist_Roll_Follower_SO101.step"
@@ -871,6 +872,75 @@ def _thresholds_record() -> dict[str, Any]:
     }
 
 
+def _expected_core_manifest_contracts() -> dict[str, Any]:
+    return {
+        "robot_plate_cam_relief": {
+            "required_clearance_mm": CAD.ROBOT_CAM_CLEARANCE_MM,
+            "bounds_native_mm": {
+                "x": [CAD.ROBOT_CAM_RELIEF_X_MIN, CAD.ROBOT_CAM_RELIEF_X_MAX],
+                "y": [CAD.ROBOT_CAM_RELIEF_Y_MIN, CAD.ROBOT_CAM_RELIEF_Y_MAX],
+                "z": [CAD.ROBOT_CAM_RELIEF_Z_MIN, CAD.ROBOT_CAM_RELIEF_Z_MAX],
+            },
+            "cam_inner_x_mm": CAD.DOCK_CAM_X_INNER,
+            "slider_travel_mm": CAD.SLIDER_TRAVEL,
+        },
+        "core_dock_stop": CAD.core_dock_stop_spec(),
+        "stock_gripper_mount": CAD.stock_gripper_mount_contract(),
+    }
+
+
+def validate_core_manifest() -> list[str]:
+    errors: list[str] = []
+    try:
+        manifest = json.loads(CORE_MANIFEST_PATH.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"core_manifest_unreadable:{exc}"]
+    if manifest.get("schema_version") != "1.0" or manifest.get("units") != "mm":
+        errors.append("core_manifest_schema_or_units_mismatch")
+    if manifest.get("generator") != _file_record(CAD_GENERATOR_PATH):
+        errors.append("core_manifest_generator_record_mismatch")
+    if manifest.get("contracts") != _expected_core_manifest_contracts():
+        errors.append("core_manifest_contract_mismatch")
+    records = manifest.get("files", [])
+    if not isinstance(records, list):
+        return errors + ["core_manifest_files_not_list"]
+    expected_paths = [
+        f"QuickChange/SO101_Magnetic/exports/{name}"
+        for name in sorted(CAD.CORE_OUTPUT_NAMES)
+    ]
+    observed_paths = [record.get("path") for record in records]
+    if observed_paths != expected_paths:
+        errors.append("core_manifest_file_inventory_mismatch")
+    expected_records = [
+        {
+            **_file_record(CORE_EXPORT_DIR / name),
+            "role": CAD._artifact_role(name),
+        }
+        for name in sorted(CAD.CORE_OUTPUT_NAMES)
+    ]
+    # _file_record emits path/bytes/hash; normalize key order only for clarity.
+    expected_records = [
+        {
+            "path": record["path"],
+            "role": record["role"],
+            "bytes": record["bytes"],
+            "sha256": record["sha256"],
+        }
+        for record in expected_records
+    ]
+    if records != expected_records:
+        errors.append("core_manifest_file_record_mismatch")
+    if manifest.get("file_count") != len(expected_records):
+        errors.append("core_manifest_file_count_mismatch")
+    inventory_payload = [
+        {key: record[key] for key in ("path", "role", "bytes", "sha256")}
+        for record in expected_records
+    ]
+    if manifest.get("inventory_sha256") != _canonical_sha256(inventory_payload):
+        errors.append("core_manifest_inventory_digest_mismatch")
+    return errors
+
+
 def _authorities_record() -> dict[str, Any]:
     return {
         "validator": _file_record(Path(__file__)),
@@ -879,6 +949,7 @@ def _authorities_record() -> dict[str, Any]:
         "official_fixed_gripper_step": _file_record(FIXED_GRIPPER_STEP_PATH),
         "fixed_gripper_stl_crosscheck": _file_record(FIXED_GRIPPER_STL_PATH),
         "moving_jaw_source_mesh": _file_record(MOVING_JAW_STL_PATH),
+        "core_cad_manifest": _file_record(CORE_MANIFEST_PATH),
         "core_exports": [
             _file_record(CORE_EXPORT_DIR / name) for name in EXPECTED_CORE_EXPORTS
         ],
@@ -982,6 +1053,7 @@ def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
         dock["seating_stop"].val(),
     )
     stud_cam = _stud_cam_inequality()
+    core_manifest_errors = validate_core_manifest()
     inventory = sorted(
         [component.name for component in tool_components + robot_components]
         + [jaw_closed.name]
@@ -996,6 +1068,8 @@ def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
         blockers.append("stop_envelope")
     if not stud_cam["passed"]:
         blockers.append("stud_cam_inequality")
+    if core_manifest_errors:
+        blockers.append("core_cad_manifest")
 
     authorities = _authorities_record()
     passed = not blockers
@@ -1009,6 +1083,11 @@ def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
         "thresholds": _thresholds_record(),
         "mount_composition": mount,
         "dock_stop_contract": CAD.core_dock_stop_spec(),
+        "core_cad_manifest_validation": {
+            "manifest": _file_record(CORE_MANIFEST_PATH),
+            "errors": core_manifest_errors,
+            "passed": not core_manifest_errors,
+        },
         "inventory": {
             "component_names": inventory,
             "component_count": len(inventory),
@@ -1051,6 +1130,7 @@ def validate_report(report: dict[str, Any]) -> list[str]:
         "thresholds",
         "mount_composition",
         "dock_stop_contract",
+        "core_cad_manifest_validation",
         "inventory",
         "intended_zero_volume_contact_pairs",
         "withdrawal_sweep",
@@ -1079,6 +1159,14 @@ def validate_report(report: dict[str, Any]) -> list[str]:
         errors.append("mount_composition_recomputation_mismatch")
     if report.get("dock_stop_contract") != CAD.core_dock_stop_spec():
         errors.append("dock_stop_contract_mismatch")
+    current_manifest_errors = validate_core_manifest()
+    expected_manifest_validation = {
+        "manifest": _file_record(CORE_MANIFEST_PATH),
+        "errors": current_manifest_errors,
+        "passed": not current_manifest_errors,
+    }
+    if report.get("core_cad_manifest_validation") != expected_manifest_validation:
+        errors.append("core_manifest_validation_mismatch")
 
     positions = report["withdrawal_sweep"].get("sampled_positions_mm", [])
     if not positions or positions[0] != 0.0 or positions[-1] != 80.0:
@@ -1207,6 +1295,8 @@ def validate_report(report: dict[str, Any]) -> list[str]:
         expected_blockers.append("stop_envelope")
     if expected_stud_cam.get("passed") is not True:
         expected_blockers.append("stud_cam_inequality")
+    if current_manifest_errors:
+        expected_blockers.append("core_cad_manifest")
     expected_blockers = sorted(expected_blockers)
     if report.get("blockers") != expected_blockers:
         errors.append("blocker_inventory_mismatch")
@@ -1216,6 +1306,7 @@ def validate_report(report: dict[str, Any]) -> list[str]:
         and report["mount_composition"].get("passed") is True
         and stop_passed
         and expected_stud_cam.get("passed") is True
+        and not current_manifest_errors
         and not expected_blockers
     )
     if report.get("passed") != recomputed_passed or report.get("release_ready") != recomputed_passed:
