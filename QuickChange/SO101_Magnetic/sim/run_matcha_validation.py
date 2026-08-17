@@ -106,6 +106,18 @@ DEVELOPMENT_TESTS = (
         "FcpwFastGateContractTests",
         "test_topology_and_sign_gate_rejects_open_or_flipped_meshes",
     ),
+    qualified(
+        "FcpwFastGateContractTests",
+        "test_topology_sign_is_order_invariant_for_disconnected_components",
+    ),
+    qualified(
+        "FcpwFastGateContractTests",
+        "test_topology_accepts_a_correctly_oriented_nested_cavity",
+    ),
+    qualified(
+        "FcpwFastGateContractTests",
+        "test_validator_recomputes_and_rejects_fabricated_evidence",
+    ),
 )
 
 PRODUCTION_INPUTS = (

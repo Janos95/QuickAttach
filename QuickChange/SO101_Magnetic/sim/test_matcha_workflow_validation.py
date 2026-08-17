@@ -1096,6 +1096,154 @@ class FcpwFastGateContractTests(unittest.TestCase):
             self.assertIsInstance(topology, dict, (label, certificate))
             self.assertFalse(bool(topology.get("passed")), (label, topology))
 
+    def test_topology_sign_is_order_invariant_for_disconnected_components(
+        self,
+    ) -> None:
+        # A large positive shell must not hide a smaller inside-out shell in
+        # aggregate signed volume.  Triangle ordering also must not let a
+        # bounded face-sampling sanity check skip the bad component.
+        positive = box_triangles((0.0, 0.0, 0.0), (10.0, 10.0, 10.0))
+        inside_out = box_triangles((20.0, 20.0, 20.0), (21.0, 21.0, 21.0))[
+            :, ::-1
+        ]
+        positive_slots = {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 23}
+        positive_iterator = iter(positive)
+        negative_iterator = iter(inside_out)
+        mixed = np.ascontiguousarray(
+            [
+                next(positive_iterator)
+                if index in positive_slots
+                else next(negative_iterator)
+                for index in range(len(positive) + len(inside_out))
+            ],
+            dtype=np.float64,
+        )
+        public = getattr(
+            self.authority, "certify_bidirectional_runtime_collision", None
+        )
+        self.assertIsNotNone(public, "public synthetic fidelity API is required")
+        certificate = public(
+            mixed,
+            mixed.copy(),
+            threshold_mm=SURFACE_INTERNAL_TARGET_MM,
+            source_error_mm=0.0,
+            proxy_error_mm=0.0,
+        )
+        self.assertFalse(bool(certificate.get("passed")), certificate)
+        self.assertFalse(
+            bool(certificate["source_topology"].get("passed"))
+            and bool(certificate["occupancy"].get("passed")),
+            certificate,
+        )
+
+    def test_topology_accepts_a_correctly_oriented_nested_cavity(self) -> None:
+        # The disconnected inner shell of a closed cavity is intentionally
+        # negative: orientation follows solid material, not "positive per
+        # component".  A nesting-aware topology gate must retain this valid
+        # OCCT/STEP representation while rejecting an external negative shell.
+        outer = box_triangles((0.0, 0.0, 0.0), (10.0, 10.0, 10.0))
+        cavity = box_triangles((2.0, 2.0, 2.0), (3.0, 3.0, 3.0))[:, ::-1]
+        hollow_solid = np.ascontiguousarray(
+            np.concatenate((outer, cavity)), dtype=np.float64
+        )
+        public = getattr(
+            self.authority, "certify_bidirectional_runtime_collision", None
+        )
+        self.assertIsNotNone(public, "public synthetic fidelity API is required")
+        certificate = public(
+            hollow_solid,
+            hollow_solid.copy(),
+            threshold_mm=SURFACE_INTERNAL_TARGET_MM,
+            source_error_mm=0.0,
+            proxy_error_mm=0.0,
+        )
+        self.assertTrue(certificate.get("passed"), certificate)
+        self.assertTrue(certificate["source_topology"].get("passed"), certificate)
+        self.assertTrue(certificate["proxy_topology"].get("passed"), certificate)
+        self.assertTrue(certificate["occupancy"].get("passed"), certificate)
+
+    def test_validator_recomputes_and_rejects_fabricated_evidence(self) -> None:
+        validator = import_file(
+            PAYLOAD_VALIDATOR,
+            "matcha_payload_validator_validation",
+            "payload collision authority validator",
+        )
+        validate = getattr(
+            validator, "validate_bidirectional_runtime_collision_certificate", None
+        )
+        self.assertIsNotNone(validate, "canonical validator API is required")
+        source = box_triangles((0.0, 0.0, 0.0), (1.0, 1.0, 1.0))
+        proxy = np.ascontiguousarray(
+            source + np.asarray([0.08, 0.0, 0.0]), dtype=np.float64
+        )
+        certificate = self.authority.certify_bidirectional_runtime_collision(
+            source,
+            proxy,
+            threshold_mm=SURFACE_INTERNAL_TARGET_MM,
+            source_error_mm=0.01,
+            proxy_error_mm=0.02,
+        )
+        canonical = validate(
+            certificate,
+            source,
+            proxy,
+            threshold_mm=SURFACE_INTERNAL_TARGET_MM,
+            source_error_mm=0.01,
+            proxy_error_mm=0.02,
+        )
+        self.assertEqual(canonical, certificate)
+
+        fabricated = json.loads(json.dumps(certificate))
+        direction = fabricated["source_to_proxy"]
+        self.assertGreater(float(direction["witness_maximum_mm"]), 0.01)
+        direction["witness_maximum_mm"] = 0.0
+        direction["certified_upper_bound_mm"] = math.fsum(
+            float(direction[field])
+            for field in (
+                "witness_maximum_mm",
+                "query_surface_covering_radius_mm",
+                "query_faceting_error_upper_bound_mm",
+                "target_faceting_error_upper_bound_mm",
+            )
+        )
+        direction["passed"] = bool(
+            direction["certified_upper_bound_mm"] <= SURFACE_INTERNAL_TARGET_MM
+        )
+        with self.assertRaises((AssertionError, RuntimeError, ValueError)):
+            validate(
+                fabricated,
+                source,
+                proxy,
+                threshold_mm=SURFACE_INTERNAL_TARGET_MM,
+                source_error_mm=0.01,
+                proxy_error_mm=0.02,
+            )
+
+        changed_proxy = np.ascontiguousarray(
+            proxy + np.asarray([0.02, 0.0, 0.0]), dtype=np.float64
+        )
+        with self.assertRaises((AssertionError, RuntimeError, ValueError)):
+            validate(
+                certificate,
+                source,
+                changed_proxy,
+                threshold_mm=SURFACE_INTERNAL_TARGET_MM,
+                source_error_mm=0.01,
+                proxy_error_mm=0.02,
+            )
+
+        false_release = json.loads(json.dumps(certificate))
+        false_release["release_ready"] = True
+        with self.assertRaises((AssertionError, RuntimeError, ValueError)):
+            validate(
+                false_release,
+                source,
+                proxy,
+                threshold_mm=SURFACE_INTERNAL_TARGET_MM,
+                source_error_mm=0.01,
+                proxy_error_mm=0.02,
+            )
+
 
 class ValidationTierContractTests(unittest.TestCase):
     def test_development_tier_can_never_publish_release_ready(self) -> None:
