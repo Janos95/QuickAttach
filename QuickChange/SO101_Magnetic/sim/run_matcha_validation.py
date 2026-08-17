@@ -96,6 +96,14 @@ DEVELOPMENT_TESTS = (
     ),
     qualified(
         "SimCadPlacementContractTests",
+        "test_degenerate_line_distance_uses_live_geometry_not_garbage_endpoints",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
+        "test_positive_lock_studs_are_tool_owned_and_match_source_geometry",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
         "test_withdrawal_threshold_is_exactly_safe_against_source_cam",
     ),
     qualified(

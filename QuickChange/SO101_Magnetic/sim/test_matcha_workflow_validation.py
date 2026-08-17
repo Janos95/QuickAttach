@@ -24,6 +24,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Any, Iterable
+from unittest import mock
 
 import numpy as np
 
@@ -1296,6 +1297,259 @@ class SimCadPlacementContractTests(unittest.TestCase):
         self.assertFalse(validator(contact((0.0, 1.0, 0.0)), left, dock_rotation))
         self.assertFalse(validator(contact((0.0, 1.0, 0.0)), right, dock_rotation))
 
+    def test_degenerate_line_distance_uses_live_geometry_not_garbage_endpoints(
+        self,
+    ) -> None:
+        """A zero scalar with an untouched ``from_to`` buffer is not a witness."""
+
+        mujoco = self.demo.mujoco
+        model = self.demo.build_model()
+        data = mujoco.MjData(model)
+        self.demo.initialize(model, data)
+        controller = self.demo.MatchaWorkflowController(model, data)
+        contract = next(
+            record
+            for record in self.demo.CORE_KEEPER_CONTACT_CONTRACT
+            if record["source_pair"] == ["stock_tool_plate", "right_lower_rail"]
+        )
+        geom_ids = [int(model.geom(name).id) for name in contract["runtime_pair"]]
+
+        # Break symmetry without changing the source line: a hard-coded origin
+        # witness would remain y=0, whereas the live edge-overlap midpoint moves
+        # to +2.5 mm.  Disable this one pair in the contact solver so the test
+        # deterministically exercises the optional no-ncon line-tangency path.
+        model.geom_pos[geom_ids[0], 1] += 0.005
+        model.geom_contype[geom_ids[0]] = 0
+        model.geom_conaffinity[geom_ids[0]] = 0
+        mujoco.mj_forward(model, data)
+
+        original_geom_distance = mujoco.mj_geomDistance
+
+        def degenerate_geom_distance(
+            model_arg: Any,
+            data_arg: Any,
+            geom_a: int,
+            geom_b: int,
+            distance_cap: float,
+            from_to: np.ndarray,
+        ) -> float:
+            if {int(geom_a), int(geom_b)} == set(geom_ids):
+                # Reproduce MuJoCo's degenerate-line behavior: return a valid
+                # signed scalar but do not touch the caller's endpoint buffer.
+                return 0.0
+            return float(
+                original_geom_distance(
+                    model_arg,
+                    data_arg,
+                    geom_a,
+                    geom_b,
+                    distance_cap,
+                    from_to,
+                )
+            )
+
+        with mock.patch.object(
+            mujoco, "mj_geomDistance", side_effect=degenerate_geom_distance
+        ):
+            report = controller._core_keeper_contact_report()
+
+        record = next(
+            item
+            for item in report["records"]
+            if item["source_pair"] == contract["source_pair"]
+        )
+        self.assertEqual(record.get("contact_count"), 0, record)
+        self.assertEqual(record.get("signed_distance_mm"), 0.0, record)
+        self.assertIs(record.get("mujoco_from_to_valid"), False, record)
+        self.assertEqual(
+            record.get("closest_point_method"),
+            "analytic_box_box_line_tangency_from_live_geom_transforms",
+            record,
+        )
+        self.assertEqual(
+            record.get("witness_method"),
+            "live_mujoco_signed_geom_distance_and_source_semantics",
+            record,
+        )
+
+        # Independently reconstruct each active geom's transformed edge in the
+        # dock frame.  This deliberately does not call the production fallback.
+        dock = data.body("dock_gripper")
+        dock_rotation = np.asarray(dock.xmat, dtype=np.float64).reshape(3, 3)
+        edge_y_bounds: list[tuple[float, float]] = []
+        for geom_id in geom_ids:
+            geom_type = int(model.geom_type[geom_id])
+            if geom_type == int(mujoco.mjtGeom.mjGEOM_BOX):
+                size = np.asarray(model.geom_size[geom_id], dtype=np.float64)
+                local_vertices = np.asarray(
+                    [
+                        (sx * size[0], sy * size[1], sz * size[2])
+                        for sx in (-1.0, 1.0)
+                        for sy in (-1.0, 1.0)
+                        for sz in (-1.0, 1.0)
+                    ],
+                    dtype=np.float64,
+                )
+            else:
+                self.assertEqual(geom_type, int(mujoco.mjtGeom.mjGEOM_MESH))
+                mesh_id = int(model.geom_dataid[geom_id])
+                start = int(model.mesh_vertadr[mesh_id])
+                count = int(model.mesh_vertnum[mesh_id])
+                local_vertices = np.asarray(
+                    model.mesh_vert[start : start + count], dtype=np.float64
+                )
+            geom_rotation = np.asarray(
+                data.geom_xmat[geom_id], dtype=np.float64
+            ).reshape(3, 3)
+            world_vertices = (
+                np.asarray(data.geom_xpos[geom_id], dtype=np.float64)
+                + local_vertices @ geom_rotation.T
+            )
+            dock_vertices_mm = (
+                (world_vertices - np.asarray(dock.xpos, dtype=np.float64))
+                @ dock_rotation
+                * 1000.0
+            )
+            on_exact_line = (
+                (np.abs(dock_vertices_mm[:, 0] - 28.0) <= 1.0e-3)
+                & (np.abs(dock_vertices_mm[:, 2]) <= 1.0e-3)
+            )
+            self.assertGreaterEqual(int(np.count_nonzero(on_exact_line)), 2)
+            edge = dock_vertices_mm[on_exact_line]
+            edge_y_bounds.append(
+                (float(np.min(edge[:, 1])), float(np.max(edge[:, 1])))
+            )
+
+        source_lower, source_upper = (-21.0, 21.0)
+        overlap_lower = max(source_lower, *(bounds[0] for bounds in edge_y_bounds))
+        overlap_upper = min(source_upper, *(bounds[1] for bounds in edge_y_bounds))
+        self.assertLessEqual(overlap_lower, overlap_upper)
+        expected_point = np.asarray(
+            [28.0, 0.5 * (overlap_lower + overlap_upper), 0.0],
+            dtype=np.float64,
+        )
+        self.assertGreater(abs(float(expected_point[1])), 1.0)
+        closest_points = record.get("closest_points_dock_local_mm")
+        self.assertIsInstance(closest_points, list, record)
+        self.assertEqual(len(closest_points), 2, record)
+        for point in closest_points:
+            np.testing.assert_allclose(
+                np.asarray(point, dtype=np.float64),
+                expected_point,
+                rtol=0.0,
+                atol=1.0e-3,
+                err_msg=str(record),
+            )
+
+    def test_positive_lock_studs_are_tool_owned_and_match_source_geometry(
+        self,
+    ) -> None:
+        """Reject the recovered robot-side/y-offset stud approximation."""
+
+        cad = self.clearance.CAD
+        self.assertEqual(float(cad.LOCK_STUD_X), 12.0)
+        self.assertEqual(float(cad.LOCK_SHOULDER_DIAMETER), 4.0)
+        self.assertEqual(float(cad.LOCK_SHOULDER_LENGTH), 5.0)
+        self.assertEqual(float(cad.LOCK_HEAD_DIAMETER), 6.0)
+        self.assertEqual(float(cad.LOCK_HEAD_HEIGHT), 1.3)
+        source_bounds = cad.shoulder_lock_stud().val().BoundingBox()
+        np.testing.assert_allclose(
+            [
+                source_bounds.xmin,
+                source_bounds.ymin,
+                source_bounds.zmin,
+                source_bounds.xmax,
+                source_bounds.ymax,
+                source_bounds.zmax,
+            ],
+            [-3.0, -3.0, -6.3, 3.0, 3.0, 4.0],
+            rtol=0.0,
+            atol=1.0e-9,
+        )
+
+        compiled_names = {
+            str(self.model.geom(index).name) for index in range(self.model.ngeom)
+        }
+        legacy_names = {
+            name
+            for name in compiled_names
+            if name.startswith("qc_col_stud_")
+            or any(
+                name.startswith(f"{tool}_stud_")
+                for tool in ("gripper", "spoon", "whisk")
+            )
+        }
+        self.assertEqual(
+            sorted(legacy_names),
+            [],
+            "legacy robot-owned or y=+-10 mm stud proxies are not source CAD",
+        )
+
+        expected_names: set[str] = set()
+        for tool in ("gripper", "spoon", "whisk"):
+            owner_id = int(self.model.body(f"tool_{tool}").id)
+            for side, x_mm in (("left", -12.0), ("right", 12.0)):
+                for feature, radius_mm, z_min_mm, z_max_mm in (
+                    ("shoulder", 2.0, -5.0, 0.0),
+                    ("head", 3.0, -6.3, -5.0),
+                ):
+                    name = f"{tool}_lock_stud_{side}_{feature}_collision"
+                    expected_names.add(name)
+                    self.assertIn(name, compiled_names, name)
+                    geom_id = int(self.model.geom(name).id)
+                    self.assertEqual(
+                        int(self.model.geom_bodyid[geom_id]), owner_id, name
+                    )
+                    self.assertEqual(
+                        int(self.model.geom_type[geom_id]),
+                        int(self.demo.mujoco.mjtGeom.mjGEOM_CYLINDER),
+                        name,
+                    )
+                    expected_position = 0.001 * np.asarray(
+                        [x_mm, 0.0, 0.5 * (z_min_mm + z_max_mm)],
+                        dtype=np.float64,
+                    )
+                    expected_size = 0.001 * np.asarray(
+                        [radius_mm, 0.5 * (z_max_mm - z_min_mm)],
+                        dtype=np.float64,
+                    )
+                    np.testing.assert_allclose(
+                        self.model.geom_pos[geom_id],
+                        expected_position,
+                        rtol=0.0,
+                        atol=1.0e-12,
+                        err_msg=name,
+                    )
+                    np.testing.assert_allclose(
+                        self.model.geom_size[geom_id, :2],
+                        expected_size,
+                        rtol=0.0,
+                        atol=1.0e-12,
+                        err_msg=name,
+                    )
+                    quaternion = np.asarray(
+                        self.model.geom_quat[geom_id], dtype=np.float64
+                    )
+                    quaternion /= np.linalg.norm(quaternion)
+                    np.testing.assert_allclose(
+                        np.abs(quaternion),
+                        np.asarray([1.0, 0.0, 0.0, 0.0]),
+                        rtol=0.0,
+                        atol=1.0e-12,
+                        err_msg=name,
+                    )
+                    self.assertTrue(
+                        int(self.model.geom_contype[geom_id])
+                        or int(self.model.geom_conaffinity[geom_id]),
+                        name,
+                    )
+        observed_lock_studs = {
+            name
+            for name in compiled_names
+            if "_lock_stud_" in name and name.endswith("_collision")
+        }
+        self.assertEqual(observed_lock_studs, expected_names)
+
     def test_withdrawal_threshold_is_exactly_safe_against_source_cam(self) -> None:
         cad = self.clearance.CAD
         threshold_mm = float(self.demo.MINIMUM_SOURCE_AXIS_WITHDRAWAL_MM)
@@ -1521,6 +1775,27 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
                 },
                 record,
             )
+            closest_point_method = record.get("closest_point_method")
+            mujoco_from_to_valid = record.get("mujoco_from_to_valid")
+            if closest_point_method == "mujoco_mj_geomDistance":
+                self.assertIs(mujoco_from_to_valid, True, record)
+            elif closest_point_method == (
+                "analytic_box_box_line_tangency_from_live_geom_transforms"
+            ):
+                self.assertIs(mujoco_from_to_valid, False, record)
+                self.assertEqual(
+                    expected["source_witness"].get("kind"),
+                    "line_tangency",
+                    record,
+                )
+                self.assertEqual(contact_count, 0, record)
+                self.assertLessEqual(
+                    abs(signed_distance_mm),
+                    1000.0 * float(self.demo.CONTACT_NUMERICAL_EPSILON_M),
+                    record,
+                )
+            else:
+                self.fail(f"unreviewed keeper closest-point method: {record}")
             closest_points = record.get("closest_points_dock_local_mm")
             self.assertIsInstance(closest_points, list, record)
             self.assertEqual(len(closest_points), 2, record)
