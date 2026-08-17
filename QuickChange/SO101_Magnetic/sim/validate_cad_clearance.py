@@ -52,7 +52,7 @@ FIXED_GRIPPER_STL_PATH = (
 MOVING_JAW_STL_PATH = REPO_ROOT / "Simulation/SO101/assets/moving_jaw_so101_v1.stl"
 REPORT_PATH = HERE / "cad_clearance_report.json"
 
-SCHEMA_VERSION = "1.1"
+SCHEMA_VERSION = "1.2"
 SWEEP_START_MM = 0.0
 SWEEP_END_MM = 80.0
 DEFAULT_SWEEP_STEP_MM = 1.0
@@ -68,8 +68,8 @@ MESH_ANGULAR_TOLERANCE_RAD = 0.10
 CAM_CLEARANCE_SWEEP_STEP_MM = 0.10
 AXIAL_CAPTURE_PRESEAT_MM = 15.0
 AXIAL_CAPTURE_SWEEP_STEP_MM = 0.10
-ROBOT_PLATE_PRE_FULL_DEPTH_RELIEF_VOLUME_MM3 = 21130.316397677383
-ROBOT_PLATE_MINIMUM_RETAINED_VOLUME_FRACTION = 0.99
+ROBOT_PLATE_REFERENCE_VOLUME_MM3 = 21130.316397677383
+ROBOT_PLATE_EXPECTED_SOURCE_VOLUME_MM3 = 20872.829782079527
 ROBOT_PLATE_MINIMUM_FUNCTIONAL_LIGAMENT_MM = 5.0
 POSITIVE_LOCK_TRAVEL_SWEEP_STEP_MM = 0.05
 POSITIVE_LOCK_RELEASE_SLIDER_VOLUME_MM3 = 220.12468083955645
@@ -401,7 +401,13 @@ def _tool_side_components() -> list[BRepComponent]:
             [
                 BRepComponent(
                     f"target_{index}",
-                    CAD.steel_target().translate((x_value, y_value, 0.0)),
+                    CAD.steel_target().translate(
+                        (
+                            x_value,
+                            y_value,
+                            CAD.MAGNETIC_HARDWARE_FACE_RECESS,
+                        )
+                    ),
                     "interface_hardware",
                 ),
                 BRepComponent(
@@ -464,7 +470,12 @@ def _robot_side_components() -> list[BRepComponent]:
             BRepComponent(
                 f"robot_magnet_{index}",
                 CAD.screw_on_magnet().translate(
-                    (x_value, y_value, -CAD.MAGNET_HEIGHT)
+                    (
+                        x_value,
+                        y_value,
+                        -CAD.MAGNET_HEIGHT
+                        - CAD.MAGNETIC_HARDWARE_FACE_RECESS,
+                    )
                 ),
                 "attached_robot_hardware",
             )
@@ -1105,7 +1116,7 @@ def _mechanism_preservation_record() -> dict[str, Any]:
     plate = CAD.robot_plate().val()
     plate_volume = _shape_volume_mm3(plate)
     retained_fraction = (
-        plate_volume / ROBOT_PLATE_PRE_FULL_DEPTH_RELIEF_VOLUME_MM3
+        plate_volume / ROBOT_PLATE_REFERENCE_VOLUME_MM3
     )
     slider = CAD.locking_slider().val()
     slider_bounds = _bbox_tuple(slider)
@@ -1124,9 +1135,10 @@ def _mechanism_preservation_record() -> dict[str, Any]:
         "robot_plate_is_single_valid_solid": bool(
             plate.isValid() and len(plate.Solids()) == 1
         ),
-        "robot_plate_retains_minimum_volume_fraction": bool(
-            retained_fraction + 1.0e-12
-            >= ROBOT_PLATE_MINIMUM_RETAINED_VOLUME_FRACTION
+        "robot_plate_volume_matches_hash_pinned_source_revision": math.isclose(
+            plate_volume,
+            ROBOT_PLATE_EXPECTED_SOURCE_VOLUME_MM3,
+            abs_tol=1.0e-6,
         ),
         "relief_spans_full_printed_plate_thickness": bool(
             CAD.ROBOT_CAM_RELIEF_Z_MIN == 0.0
@@ -1168,12 +1180,13 @@ def _mechanism_preservation_record() -> dict[str, Any]:
     }
     return {
         "robot_plate_volume_mm3": plate_volume,
-        "pre_full_depth_relief_baseline_volume_mm3": (
-            ROBOT_PLATE_PRE_FULL_DEPTH_RELIEF_VOLUME_MM3
+        "reference_plate_volume_mm3": ROBOT_PLATE_REFERENCE_VOLUME_MM3,
+        "gross_volume_guard_role": (
+            "secondary_sanity_only_local_web_ligament_and_clearance_checks_are_authoritative"
         ),
         "retained_volume_fraction": retained_fraction,
         "removed_volume_mm3": (
-            ROBOT_PLATE_PRE_FULL_DEPTH_RELIEF_VOLUME_MM3 - plate_volume
+            ROBOT_PLATE_REFERENCE_VOLUME_MM3 - plate_volume
         ),
         "robot_plate_bbox": _bbox_record(plate_bounds),
         "relief_contract": CAD.robot_cam_relief_contract(),
@@ -1198,6 +1211,308 @@ def _mechanism_preservation_record() -> dict[str, Any]:
         "locked_slider_cam_overlap_volume_mm3": locked_cam_overlap,
         "checks": checks,
         "passed": all(checks.values()),
+    }
+
+
+INTERFACE_AUTHORITY_REQUIREMENTS = (
+    (
+        "fabrication_process_tolerance_qualified",
+        "fabrication_process_tolerance_unqualified",
+    ),
+    (
+        "fixed_pogo_shell_exact_drawing_bound",
+        "fixed_pogo_shell_is_illustrative_reference_only",
+    ),
+    (
+        "pogo_mounting_sectional_bore_resolved",
+        "pogo_mounting_sectional_bore_unresolved",
+    ),
+    (
+        "ground_first_mate_shoulder_datum_resolved",
+        "ground_first_mate_shoulder_datum_unresolved",
+    ),
+    (
+        "ground_first_mate_tolerance_stack_qualified",
+        "ground_first_mate_tolerance_stack_unqualified",
+    ),
+    (
+        "magnetic_fastener_seating_and_preload_bound",
+        "magnetic_fastener_seating_and_preload_unproven",
+    ),
+    (
+        "moving_interface_pair_route_recomputed",
+        "moving_interface_pair_route_not_recomputed",
+    ),
+    (
+        "printed_interface_feature_strength_qualified",
+        "printed_interface_feature_strength_unqualified",
+    ),
+)
+
+
+def _interface_authority_verdict(
+    authority: dict[str, Any],
+) -> dict[str, Any]:
+    """Recompute authority blockers instead of trusting a declared verdict."""
+
+    expected_blockers = [
+        blocker
+        for flag, blocker in INTERFACE_AUTHORITY_REQUIREMENTS
+        if authority.get(flag) is not True
+    ]
+    if (
+        authority.get("fabrication_process_tolerance_qualified") is True
+        and authority.get("qualified_combined_error_limit_mm") is None
+    ):
+        expected_blockers.append("qualified_combined_error_limit_missing")
+    computed_release_ready = not expected_blockers
+    return {
+        "expected_blockers": expected_blockers,
+        "computed_release_ready": computed_release_ready,
+        "declaration_consistent": bool(
+            authority.get("blockers") == expected_blockers
+            and authority.get("release_ready") is computed_release_ready
+        ),
+    }
+
+
+def _interface_hardware_fit_record() -> dict[str, Any]:
+    """Recompute nominal mating-face fit and preserve unresolved authorities."""
+
+    contract = CAD.interface_hardware_fit_contract()
+    required = float(contract["required_clearance_mm"])
+    motion_allowance = float(contract["unqualified_local_motion_allowance_mm"])
+    robot_native = CAD.robot_plate().val()
+    tool_native = CAD.tool_plate(stock_gripper=True).val()
+    robot = CAD.robot_plate().translate(
+        (0.0, 0.0, -CAD.PLATE_THICKNESS)
+    ).val()
+    tool = tool_native
+
+    pad_records: list[dict[str, Any]] = []
+    for index, (x_value, y_value) in enumerate(CAD.pogo_points(), start=1):
+        pad = CAD.contact_pad().translate((x_value, y_value, -0.05)).val()
+        distance = float(robot.distance(pad))
+        pad_records.append(
+            {
+                "index": index,
+                "centre_xy_mm": [x_value, y_value],
+                "distance_mm": distance,
+                "overlap_volume_mm3": _intersection_volume_mm3(robot, pad),
+                "static_residual_after_unqualified_motion_allowance_mm": (
+                    distance - motion_allowance
+                ),
+            }
+        )
+
+    fixed_shell_reference_records: list[dict[str, Any]] = []
+    for index, ((x_value, y_value), signal) in enumerate(
+        zip(CAD.pogo_points(), CAD.CONTACT_SIGNALS), start=1
+    ):
+        protrusion = (
+            CAD.POGO_GROUND_PROTRUSION
+            if signal == "GND"
+            else CAD.POGO_STANDARD_PROTRUSION
+        )
+        installed_z = CAD.PLATE_THICKNESS + protrusion - CAD.POGO_OVERALL_LENGTH
+        shell = CAD.pogo_reference_fixed_shell().translate(
+            (x_value, y_value, installed_z)
+        ).val()
+        fixed_shell_reference_records.append(
+            {
+                "index": index,
+                "signal": signal,
+                "installed_z_mm": installed_z,
+                "reference_overlap_with_printed_plate_mm3": (
+                    _intersection_volume_mm3(shell, robot_native)
+                ),
+                "semantics": (
+                    "illustrative_reference_overlap_not_exact_or_conservative_part_authority"
+                ),
+            }
+        )
+
+    magnetic_records: list[dict[str, Any]] = []
+    unqualified_target_screw = _countersunk_screw(5.0, 10.0, 2.7, 10.0)
+    for index, (x_value, y_value) in enumerate(CAD.magnet_points(), start=1):
+        magnet = CAD.screw_on_magnet().translate(
+            (
+                x_value,
+                y_value,
+                -CAD.MAGNET_HEIGHT - CAD.MAGNETIC_HARDWARE_FACE_RECESS,
+            )
+        ).val()
+        target = CAD.steel_target().translate(
+            (x_value, y_value, CAD.MAGNETIC_HARDWARE_FACE_RECESS)
+        ).val()
+        target_screw = unqualified_target_screw.translate(
+            (x_value, y_value, 0.0)
+        ).val()
+        magnetic_records.append(
+            {
+                "index": index,
+                "centre_xy_mm": [x_value, y_value],
+                "magnet_to_own_pocket_distance_mm": float(
+                    magnet.distance(robot)
+                ),
+                "magnet_to_own_pocket_overlap_mm3": (
+                    _intersection_volume_mm3(magnet, robot)
+                ),
+                "target_to_own_pocket_distance_mm": float(
+                    target.distance(tool)
+                ),
+                "target_to_own_pocket_overlap_mm3": (
+                    _intersection_volume_mm3(target, tool)
+                ),
+                "magnet_to_opposing_plate_distance_mm": float(
+                    magnet.distance(tool)
+                ),
+                "magnet_to_opposing_plate_overlap_mm3": (
+                    _intersection_volume_mm3(magnet, tool)
+                ),
+                "target_to_opposing_plate_distance_mm": float(
+                    target.distance(robot)
+                ),
+                "target_to_opposing_plate_overlap_mm3": (
+                    _intersection_volume_mm3(target, robot)
+                ),
+                "magnet_to_target_air_gap_mm": float(magnet.distance(target)),
+                "target_to_unqualified_reference_screw_distance_mm": float(
+                    target.distance(target_screw)
+                ),
+                "target_fastener_semantics": (
+                    "reference_transform_only_seating_and_preload_unproven"
+                ),
+            }
+        )
+
+    stud_records: list[dict[str, Any]] = []
+    for x_value in (-CAD.LOCK_STUD_X, CAD.LOCK_STUD_X):
+        stud = CAD.shoulder_lock_stud().translate((x_value, 0.0, 0.0)).val()
+        distance = float(robot.distance(stud))
+        stud_records.append(
+            {
+                "centre_x_mm": x_value,
+                "distance_mm": distance,
+                "overlap_volume_mm3": _intersection_volume_mm3(robot, stud),
+                "static_residual_after_unqualified_motion_allowance_mm": (
+                    distance - motion_allowance
+                ),
+            }
+        )
+
+    geometry_checks = {
+        "robot_plate_is_one_valid_solid": bool(
+            robot_native.isValid() and len(robot_native.Solids()) == 1
+        ),
+        "stock_tool_plate_is_one_valid_solid": bool(
+            tool_native.isValid() and len(tool_native.Solids()) == 1
+        ),
+        "pogo_target_pads_do_not_overlap_robot_plate": bool(
+            pad_records
+            and all(
+                record["overlap_volume_mm3"] <= OVERLAP_VOLUME_TOLERANCE_MM3
+                for record in pad_records
+            )
+        ),
+        "pogo_target_pad_seated_clearance_passes": bool(
+            pad_records
+            and min(
+                record[
+                    "static_residual_after_unqualified_motion_allowance_mm"
+                ]
+                for record in pad_records
+            )
+            + NUMERIC_DISTANCE_TOLERANCE_MM
+            >= required
+        ),
+        "magnet_and_target_rear_faces_bear_on_own_pocket_floors": bool(
+            magnetic_records
+            and all(
+                abs(record["magnet_to_own_pocket_distance_mm"])
+                <= NUMERIC_DISTANCE_TOLERANCE_MM
+                and record["magnet_to_own_pocket_overlap_mm3"]
+                <= OVERLAP_VOLUME_TOLERANCE_MM3
+                and abs(record["target_to_own_pocket_distance_mm"])
+                <= NUMERIC_DISTANCE_TOLERANCE_MM
+                and record["target_to_own_pocket_overlap_mm3"]
+                <= OVERLAP_VOLUME_TOLERANCE_MM3
+                for record in magnetic_records
+            )
+        ),
+        "magnetic_hardware_cross_plate_seated_clearance_passes": bool(
+            magnetic_records
+            and all(
+                min(
+                    record["magnet_to_opposing_plate_distance_mm"],
+                    record["target_to_opposing_plate_distance_mm"],
+                )
+                - motion_allowance
+                + NUMERIC_DISTANCE_TOLERANCE_MM
+                >= required
+                and record["magnet_to_opposing_plate_overlap_mm3"]
+                <= OVERLAP_VOLUME_TOLERANCE_MM3
+                and record["target_to_opposing_plate_overlap_mm3"]
+                <= OVERLAP_VOLUME_TOLERANCE_MM3
+                for record in magnetic_records
+            )
+        ),
+        "magnet_target_recessed_air_gap_matches_source": bool(
+            magnetic_records
+            and all(
+                math.isclose(
+                    record["magnet_to_target_air_gap_mm"],
+                    2.0 * CAD.MAGNETIC_HARDWARE_FACE_RECESS,
+                    abs_tol=1.0e-12,
+                )
+                for record in magnetic_records
+            )
+        ),
+        "stud_heads_do_not_overlap_fixed_plate": bool(
+            stud_records
+            and all(
+                record["overlap_volume_mm3"] <= OVERLAP_VOLUME_TOLERANCE_MM3
+                for record in stud_records
+            )
+        ),
+        "stud_head_seated_clearance_passes": bool(
+            stud_records
+            and min(
+                record[
+                    "static_residual_after_unqualified_motion_allowance_mm"
+                ]
+                for record in stud_records
+            )
+            + NUMERIC_DISTANCE_TOLERANCE_MM
+            >= required
+        ),
+        "official_plunger_diameter_is_smaller_than_legacy_reference_pilot": bool(
+            CAD.POGO_PLUNGER_DIAMETER
+            < CAD.POGO_LEGACY_REFERENCE_PILOT_DIAMETER
+        ),
+    }
+    geometry_passed = all(geometry_checks.values())
+    release_authority = contract["release_authority"]
+    authority_verdict = _interface_authority_verdict(release_authority)
+    authority_blockers = list(authority_verdict["expected_blockers"])
+    authority_passed = bool(
+        authority_verdict["computed_release_ready"]
+        and authority_verdict["declaration_consistent"]
+    )
+    passed = bool(geometry_passed and authority_passed)
+    return {
+        "source_contract": contract,
+        "pogo_target_pad_records": pad_records,
+        "fixed_pogo_shell_reference_records": fixed_shell_reference_records,
+        "magnetic_hardware_records": magnetic_records,
+        "fixed_stud_head_records": stud_records,
+        "geometry_checks": geometry_checks,
+        "geometry_passed": geometry_passed,
+        "authority_verdict": authority_verdict,
+        "authority_blockers": authority_blockers,
+        "authority_passed": authority_passed,
+        "passed": passed,
+        "release_ready": passed,
     }
 
 
@@ -1530,8 +1845,11 @@ def _thresholds_record() -> dict[str, Any]:
         "axial_capture_preseat_mm": AXIAL_CAPTURE_PRESEAT_MM,
         "axial_capture_sample_step_mm": AXIAL_CAPTURE_SWEEP_STEP_MM,
         "axial_capture_guided_offset_mm": CAD.ROBOT_CAM_GUIDED_APPROACH_OFFSET_MM,
-        "robot_plate_minimum_retained_volume_fraction": (
-            ROBOT_PLATE_MINIMUM_RETAINED_VOLUME_FRACTION
+        "robot_plate_expected_source_volume_mm3": (
+            ROBOT_PLATE_EXPECTED_SOURCE_VOLUME_MM3
+        ),
+        "robot_plate_retained_volume_guard_role": (
+            "secondary_sanity_only_local_web_ligament_and_clearance_checks_are_authoritative"
         ),
         "robot_plate_minimum_functional_ligament_mm": (
             ROBOT_PLATE_MINIMUM_FUNCTIONAL_LIGAMENT_MM
@@ -1559,6 +1877,7 @@ def _thresholds_record() -> dict[str, Any]:
 def _expected_core_manifest_contracts() -> dict[str, Any]:
     return {
         "robot_plate_cam_relief": CAD.robot_cam_relief_contract(),
+        "interface_hardware_fit": CAD.interface_hardware_fit_contract(),
         "core_dock_stop": CAD.core_dock_stop_spec(),
         "stock_gripper_mount": CAD.stock_gripper_mount_contract(),
         "positive_lock_keyhole": CAD.positive_lock_keyhole_contract(),
@@ -1732,6 +2051,7 @@ def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
     )
     passive_cam = _passive_positive_lock_cam_record()
     mechanism_preservation = _mechanism_preservation_record()
+    interface_hardware_fit = _interface_hardware_fit_record()
     stop = _stop_envelope(
         tool_components,
         jaw_closed,
@@ -1759,6 +2079,8 @@ def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
         blockers.append("passive_positive_lock_cam")
     if not mechanism_preservation["passed"]:
         blockers.append("mechanism_preservation")
+    if not interface_hardware_fit["passed"]:
+        blockers.append("interface_hardware_fit_authority")
     if core_manifest_errors:
         blockers.append("core_cad_manifest")
 
@@ -1802,6 +2124,7 @@ def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
         "axial_capture_sweep": axial_capture,
         "passive_positive_lock_cam": passive_cam,
         "mechanism_preservation": mechanism_preservation,
+        "interface_hardware_fit": interface_hardware_fit,
         "cam_actuation_diagnostics": cam_contact_results,
         "validation": {
             "pair_result_count": len(path_results),
@@ -1833,6 +2156,7 @@ def validate_report(report: dict[str, Any]) -> list[str]:
         "axial_capture_sweep",
         "passive_positive_lock_cam",
         "mechanism_preservation",
+        "interface_hardware_fit",
         "cam_actuation_diagnostics",
         "validation",
     }
@@ -1995,6 +2319,9 @@ def validate_report(report: dict[str, Any]) -> list[str]:
     expected_mechanism = _mechanism_preservation_record()
     if report.get("mechanism_preservation") != expected_mechanism:
         errors.append("mechanism_preservation_recomputation_mismatch")
+    expected_interface_fit = _interface_hardware_fit_record()
+    if report.get("interface_hardware_fit") != expected_interface_fit:
+        errors.append("interface_hardware_fit_recomputation_mismatch")
 
     expected_blockers = []
     for result in results:
@@ -2014,6 +2341,8 @@ def validate_report(report: dict[str, Any]) -> list[str]:
         expected_blockers.append("passive_positive_lock_cam")
     if expected_mechanism.get("passed") is not True:
         expected_blockers.append("mechanism_preservation")
+    if expected_interface_fit.get("passed") is not True:
+        expected_blockers.append("interface_hardware_fit_authority")
     if current_manifest_errors:
         expected_blockers.append("core_cad_manifest")
     expected_blockers = sorted(expected_blockers)
@@ -2028,6 +2357,7 @@ def validate_report(report: dict[str, Any]) -> list[str]:
         and expected_axial_capture.get("passed") is True
         and expected_passive_cam.get("passed") is True
         and expected_mechanism.get("passed") is True
+        and expected_interface_fit.get("passed") is True
         and not current_manifest_errors
         and not expected_blockers
     )

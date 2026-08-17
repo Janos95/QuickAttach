@@ -144,6 +144,240 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
             )
         )
 
+    def test_mating_hardware_nominal_fit_and_authority_blockers_are_explicit(
+        self,
+    ) -> None:
+        cad = clearance.CAD
+        contract = cad.interface_hardware_fit_contract()
+        robot_native = cad.robot_plate().val()
+        tool_native = cad.tool_plate(stock_gripper=True).val()
+        self.assertTrue(robot_native.isValid())
+        self.assertTrue(tool_native.isValid())
+        self.assertEqual(len(robot_native.Solids()), 1)
+        self.assertEqual(len(tool_native.Solids()), 1)
+
+        robot = cad.robot_plate().translate(
+            (0.0, 0.0, -cad.PLATE_THICKNESS)
+        ).val()
+        tool = tool_native
+        motion_bound = contract["unqualified_local_motion_allowance_mm"]
+        arithmetic_residual = contract[
+            "unqualified_arithmetic_residual_mm"
+        ]
+        required = contract["required_clearance_mm"]
+        self.assertFalse(contract["release_authority"]["release_ready"])
+        self.assertFalse(
+            contract["release_authority"][
+                "fabrication_process_tolerance_qualified"
+            ]
+        )
+        self.assertIsNone(
+            contract["release_authority"]["qualified_combined_error_limit_mm"]
+        )
+
+        pad_distances = []
+        for x_value, y_value in cad.pogo_points():
+            pad = cad.contact_pad().translate(
+                (x_value, y_value, -0.05)
+            ).val()
+            self.assertEqual(clearance._intersection_volume_mm3(robot, pad), 0.0)
+            pad_distances.append(float(robot.distance(pad)))
+        self.assertTrue(
+            all(math.isclose(value, 0.30, abs_tol=1.0e-12) for value in pad_distances)
+        )
+        self.assertGreaterEqual(
+            min(pad_distances) - motion_bound - required,
+            arithmetic_residual - 1.0e-12,
+        )
+
+        cross_distances = []
+        magnet_target_distances = []
+        for x_value, y_value in cad.magnet_points():
+            magnet = cad.screw_on_magnet().translate(
+                (
+                    x_value,
+                    y_value,
+                    -cad.MAGNET_HEIGHT - cad.MAGNETIC_HARDWARE_FACE_RECESS,
+                )
+            ).val()
+            target = cad.steel_target().translate(
+                (x_value, y_value, cad.MAGNETIC_HARDWARE_FACE_RECESS)
+            ).val()
+            self.assertEqual(
+                clearance._intersection_volume_mm3(magnet, robot), 0.0
+            )
+            self.assertEqual(
+                clearance._intersection_volume_mm3(target, tool), 0.0
+            )
+            self.assertTrue(math.isclose(magnet.distance(robot), 0.0, abs_tol=1.0e-12))
+            self.assertTrue(math.isclose(target.distance(tool), 0.0, abs_tol=1.0e-12))
+            self.assertEqual(clearance._intersection_volume_mm3(magnet, tool), 0.0)
+            self.assertEqual(clearance._intersection_volume_mm3(target, robot), 0.0)
+            cross_distances.extend(
+                [float(magnet.distance(tool)), float(target.distance(robot))]
+            )
+            magnet_target_distances.append(float(magnet.distance(target)))
+
+        expected_cross_distance = math.hypot(0.30, 0.05)
+        self.assertTrue(
+            all(
+                math.isclose(value, expected_cross_distance, abs_tol=1.0e-12)
+                for value in cross_distances
+            )
+        )
+        self.assertGreaterEqual(
+            min(cross_distances) - motion_bound - required,
+            arithmetic_residual - 1.0e-12,
+        )
+        self.assertTrue(
+            all(
+                math.isclose(value, 0.10, abs_tol=1.0e-12)
+                for value in magnet_target_distances
+            )
+        )
+
+        studs = [
+            cad.shoulder_lock_stud().translate((x_value, 0.0, 0.0)).val()
+            for x_value in (-cad.LOCK_STUD_X, cad.LOCK_STUD_X)
+        ]
+        minimum_stud_distance = min(float(robot.distance(stud)) for stud in studs)
+        self.assertTrue(
+            math.isclose(minimum_stud_distance, 0.40, abs_tol=1.0e-12)
+        )
+        self.assertGreaterEqual(
+            minimum_stud_distance - motion_bound - required,
+            arithmetic_residual - 1.0e-12,
+        )
+
+        pad_contract = contract["pogo_target_pad_relief"]
+        self.assertTrue(
+            math.isclose(
+                pad_contract["minimum_adjacent_surface_web_mm"],
+                0.40,
+                abs_tol=1.0e-12,
+            )
+        )
+        self.assertEqual(
+            pad_contract["mounting_authority"],
+            "unresolved_choose_barb_or_knurl_and_rebuild_sectional_bore",
+        )
+        self.assertEqual(pad_contract["official_barb_mounting_hole_mm"], 1.92)
+        self.assertEqual(pad_contract["official_knurl_mounting_hole_mm"], 1.58)
+        self.assertEqual(
+            pad_contract["official_minimum_body_counterbore_diameter_mm"],
+            2.21,
+        )
+        self.assertEqual(
+            pad_contract["manufacturer_source"],
+            (
+                "https://www.mill-max.com/products/discrete-spring-loaded-pins/"
+                "spring-loaded-pin-with-solder-cup-termination/7983/"
+                "7983-1-15-20-75-14-11-0"
+            ),
+        )
+        self.assertTrue(
+            math.isclose(cad.POGO_PLUNGER_DIAMETER, 1.07, abs_tol=1.0e-12)
+        )
+        self.assertTrue(
+            cad.POGO_PLUNGER_DIAMETER
+            < cad.POGO_LEGACY_REFERENCE_PILOT_DIAMETER
+        )
+        fixed_pin_bounds = cad.pogo_reference_fixed_shell().val().BoundingBox()
+        self.assertTrue(
+            math.isclose(
+                fixed_pin_bounds.zmax,
+                cad.POGO_REFERENCE_SOLDER_CUP_LENGTH
+                + cad.POGO_REFERENCE_FIXED_SLEEVE_LENGTH,
+                abs_tol=1.0e-12,
+            )
+        )
+        standard_plunger = cad.pogo_reference_plunger(
+            cad.POGO_STANDARD_PROTRUSION
+        ).translate(
+            (
+                0.0,
+                0.0,
+                cad.PLATE_THICKNESS
+                + cad.POGO_STANDARD_PROTRUSION
+                - cad.POGO_OVERALL_LENGTH,
+            )
+        ).val()
+        ground_plunger = cad.pogo_reference_plunger(
+            cad.POGO_GROUND_PROTRUSION
+        ).translate(
+            (
+                0.0,
+                0.0,
+                cad.PLATE_THICKNESS
+                + cad.POGO_GROUND_PROTRUSION
+                - cad.POGO_OVERALL_LENGTH,
+            )
+        ).val()
+        self.assertTrue(
+            math.isclose(
+                standard_plunger.BoundingBox().zmax,
+                cad.PLATE_THICKNESS,
+                abs_tol=1.0e-12,
+            )
+        )
+        self.assertTrue(
+            math.isclose(
+                ground_plunger.BoundingBox().zmax,
+                cad.PLATE_THICKNESS,
+                abs_tol=1.0e-12,
+            )
+        )
+        for bad_compression in (
+            -0.01,
+            cad.POGO_GROUND_PROTRUSION + 0.01,
+            math.nan,
+        ):
+            with self.assertRaises(ValueError):
+                cad.pogo_reference_plunger(bad_compression)
+        well_contract = contract["fixed_stud_head_wells"]
+        self.assertGreaterEqual(well_contract["cam_relief_ligament_mm"], 7.95)
+        self.assertGreaterEqual(
+            well_contract["nearest_horn_counterbore_ligament_mm"], 1.90
+        )
+        self.assertGreaterEqual(
+            well_contract["slider_lobe_bearing_annulus_mm"], 0.80
+        )
+        evidence = clearance._interface_hardware_fit_record()
+        self.assertTrue(evidence["geometry_passed"], evidence)
+        self.assertFalse(evidence["authority_passed"])
+        self.assertFalse(evidence["passed"])
+        self.assertFalse(evidence["release_ready"])
+        self.assertTrue(
+            all(
+                record["reference_overlap_with_printed_plate_mm3"] > 0.0
+                for record in evidence["fixed_pogo_shell_reference_records"]
+            )
+        )
+        self.assertEqual(
+            evidence["authority_blockers"],
+            contract["release_authority"]["blockers"],
+        )
+        forged_authority = copy.deepcopy(contract["release_authority"])
+        forged_authority["release_ready"] = True
+        forged_verdict = clearance._interface_authority_verdict(
+            forged_authority
+        )
+        self.assertFalse(forged_verdict["computed_release_ready"])
+        self.assertFalse(forged_verdict["declaration_consistent"])
+        missing_limit = copy.deepcopy(contract["release_authority"])
+        for flag, _blocker in clearance.INTERFACE_AUTHORITY_REQUIREMENTS:
+            missing_limit[flag] = True
+        missing_limit["blockers"] = []
+        missing_limit["release_ready"] = True
+        missing_limit_verdict = clearance._interface_authority_verdict(
+            missing_limit
+        )
+        self.assertFalse(missing_limit_verdict["computed_release_ready"])
+        self.assertIn(
+            "qualified_combined_error_limit_missing",
+            missing_limit_verdict["expected_blockers"],
+        )
+
     def test_robot_plate_cam_relief_is_continuously_clear(self) -> None:
         robot_plate = next(
             component
@@ -246,14 +480,17 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
         preservation = clearance._mechanism_preservation_record()
         self.assertTrue(preservation["passed"], preservation)
         self.assertTrue(all(preservation["checks"].values()))
-        self.assertGreaterEqual(
-            preservation["retained_volume_fraction"],
-            clearance.ROBOT_PLATE_MINIMUM_RETAINED_VOLUME_FRACTION,
+        self.assertTrue(
+            math.isclose(
+                preservation["robot_plate_volume_mm3"],
+                clearance.ROBOT_PLATE_EXPECTED_SOURCE_VOLUME_MM3,
+                abs_tol=1.0e-6,
+            )
         )
         self.assertTrue(
             math.isclose(
                 preservation["removed_volume_mm3"],
-                106.30309519747607,
+                257.48661559785614,
                 abs_tol=1.0e-6,
             )
         )
@@ -262,9 +499,13 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
                 preservation["relief_contract"][
                     "minimum_relief_to_stud_well_ligament_mm"
                 ],
-                8.225,
+                7.950000000000001,
                 abs_tol=1.0e-12,
             )
+        )
+        self.assertEqual(
+            preservation["gross_volume_guard_role"],
+            "secondary_sanity_only_local_web_ligament_and_clearance_checks_are_authoritative",
         )
         self.assertTrue(
             math.isclose(

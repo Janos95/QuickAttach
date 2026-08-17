@@ -85,7 +85,7 @@ MAGNET_HEIGHT = 4.0
 MAGNET_HOLE_DIAMETER = 4.5
 MAGNET_COUNTERSINK_DIAMETER = 9.46
 MAGNET_COUNTERSINK_DEPTH = 2.48
-MAGNET_POCKET_WIDTH = 12.25
+MAGNET_POCKET_WIDTH = 12.60
 MAGNET_POCKET_DEPTH = 4.05
 
 # Matching Supermagnete MC-12-12-03 steel target (EAN 7640172691892).
@@ -94,8 +94,15 @@ TARGET_WIDTH = 12.0
 TARGET_HEIGHT = 3.0
 TARGET_SMALL_HOLE_DIAMETER = 5.7
 TARGET_COUNTERSINK_DIAMETER = 11.7
-TARGET_POCKET_WIDTH = 12.25
+TARGET_POCKET_WIDTH = 12.60
 TARGET_POCKET_DEPTH = 3.05
+
+# Both catalog magnetic components bear on their pocket floors, leaving their
+# brittle plated faces deliberately below the printed mating lands.  The
+# widened pockets retain 0.30 mm nominal lateral clearance to the opposing
+# 12 mm component; the 0.05 mm recess prevents the hardware from becoming the
+# impact stop.
+MAGNETIC_HARDWARE_FACE_RECESS = 0.05
 
 MAGNET_CENTER_Y = 16.0
 
@@ -129,6 +136,20 @@ LOCK_NUT_POCKET_FLOOR = 1.5
 KEYHOLE_ENTRY_DIAMETER = 6.5
 KEYHOLE_NECK_WIDTH = 4.25
 GUIDE_SLOT_WIDTH = 2.4
+
+# Fixed robot-plate head wells are deliberately larger/deeper than the moving
+# slider entry holes.  Keeping these datums separate preserves head retention
+# in the 6.5 mm keyholes while providing route and fabrication reserve around
+# the 6.0 mm stud heads.
+ROBOT_STUD_WELL_DIAMETER = 7.2
+ROBOT_STUD_WELL_BOTTOM_Z = 2.8
+
+# The 4 mm ENIG targets must never bear on the printed robot face around the
+# much smaller press-fit pogo pilots.  A shallow face relief clears each pad
+# while retaining more than 9 mm of backed wing thickness and the full-length
+# reamed pilot below it.
+POGO_PAD_RELIEF_DIAMETER = 4.6
+POGO_PAD_RELIEF_DEPTH = 0.35
 
 # The narrow keyhole is a true swept shoulder path, not merely a rectangle
 # between the unlocked and locked centre coordinates.  Its two semicircular
@@ -195,7 +216,7 @@ ROBOT_CAM_GUIDED_APPROACH_OFFSET_MM = 0.20
 # The right stud well is the closest fixed functional cut; the right slider
 # lobe is the closest moving lock feature.  Neither datum is moved by the
 # relief correction.
-ROBOT_STUD_WELL_RADIUS = (KEYHOLE_ENTRY_DIAMETER + 0.15) / 2.0
+ROBOT_STUD_WELL_RADIUS = ROBOT_STUD_WELL_DIAMETER / 2.0
 ROBOT_CAM_RELIEF_TO_STUD_WELL_LIGAMENT_MM = ROBOT_CAM_RELIEF_X_MIN - (
     LOCK_STUD_X + ROBOT_STUD_WELL_RADIUS
 )
@@ -237,16 +258,37 @@ RETURN_SPRING_FIXED_X = -22.8
 RETURN_SPRING_CENTER_Z = 4.2
 
 # Mill-Max high-current solder-cup spring contact.  The manufacturer specifies
-# an 8 A maximum, 6.4 A derated current, 1.397 mm full stroke and 0.7 mm
-# mid-stroke.  Ground is installed 0.2 mm farther forward for first-mate.
+# an 8 A maximum, 6.2 A derated current, nominal 1.40 +/- 0.13 mm full stroke,
+# and a 1.07 mm plunger. Ground is shown 0.2 mm farther forward for first-mate,
+# but the shoulder datum needed to manufacture that offset is unresolved. The
+# following two solids are visualization envelopes only, not purchased-part or
+# dynamic contact authority.
 POGO_PART_NUMBER = "7983-1-15-20-75-14-11-0"
-POGO_MAX_DIAMETER = 2.1
-POGO_PRESS_FIT_HOLE = 1.575
+POGO_REFERENCE_BODY_NOMINAL_DIAMETER = 2.11
+POGO_OFFICIAL_DIAMETER_TOLERANCE = 0.051
+# The current straight pilot is retained only as a legacy visualization datum.
+# It is not a fabrication prescription: Mill-Max documents mutually exclusive
+# barb- and knurl-side installations with different holes and a body
+# counterbore/shoulder stop.
+POGO_LEGACY_REFERENCE_PILOT_DIAMETER = 1.575
 POGO_OVERALL_LENGTH = 9.5
 POGO_MID_STROKE = 0.7
-POGO_FULL_STROKE = 1.397
+POGO_NOMINAL_FULL_STROKE = 1.40
+POGO_FULL_STROKE_TOLERANCE = 0.13
+POGO_GUARANTEED_MINIMUM_FULL_STROKE = (
+    POGO_NOMINAL_FULL_STROKE - POGO_FULL_STROKE_TOLERANCE
+)
 POGO_STANDARD_PROTRUSION = 0.70
 POGO_GROUND_PROTRUSION = 0.90
+POGO_REFERENCE_SOLDER_CUP_DIAMETER = 1.64
+POGO_REFERENCE_SOLDER_CUP_LENGTH = 3.0
+POGO_REFERENCE_FIXED_SLEEVE_LENGTH = 5.1
+POGO_PLUNGER_DIAMETER = 1.07
+POGO_REFERENCE_PLUNGER_EXPOSURE = (
+    POGO_OVERALL_LENGTH
+    - POGO_REFERENCE_SOLDER_CUP_LENGTH
+    - POGO_REFERENCE_FIXED_SLEEVE_LENGTH
+)
 CONTACT_BOARD_WIDTH = 10.0
 CONTACT_BOARD_HEIGHT = 22.0
 CONTACT_BOARD_THICKNESS = 1.0
@@ -290,6 +332,200 @@ def horn_points() -> list[tuple[float, float]]:
 
 def pogo_points() -> list[tuple[float, float]]:
     return [(CONTACT_CENTER_X + CONTACT_TARGET_PAD_OFFSET_X, y) for y in CONTACT_Y]
+
+
+def interface_hardware_fit_contract() -> dict[str, object]:
+    """Return source dimensions and honest authority gaps at the mating face."""
+
+    rear_wiring_pocket_top = -0.05 + 1.9
+    counterbore_bottom = PLATE_THICKNESS - POGO_PAD_RELIEF_DEPTH
+    ground_pin_sleeve_top = (
+        PLATE_THICKNESS
+        + POGO_GROUND_PROTRUSION
+        - POGO_OVERALL_LENGTH
+        + POGO_REFERENCE_SOLDER_CUP_LENGTH
+        + POGO_REFERENCE_FIXED_SLEEVE_LENGTH
+    )
+    nearest_horn_counterbore_ligament = (
+        math.hypot(LOCK_STUD_X - HORN_HOLE_PATTERN / 2.0, HORN_HOLE_PATTERN / 2.0)
+        - ROBOT_STUD_WELL_DIAMETER / 2.0
+        - 6.2 / 2.0
+    )
+    return {
+        "schema_version": "1.0",
+        "frame": "mating_component_native_mm",
+        "required_clearance_mm": 0.20,
+        # This allowance is arithmetic only.  The moving cross-interface pair
+        # route has not yet been sampled/replayed and is a release blocker.
+        "unqualified_local_motion_allowance_mm": 0.0501,
+        # This is only the exact-CAD arithmetic left after the route interval
+        # and required-clearance deductions.  It is not a qualified SLS/FDM
+        # or catalog-hardware tolerance and must never be presented as one.
+        "unqualified_arithmetic_residual_mm": 0.0499,
+        "release_authority": {
+            "fabrication_process_tolerance_qualified": False,
+            "qualified_combined_error_limit_mm": None,
+            "fixed_pogo_shell_exact_drawing_bound": False,
+            "pogo_mounting_sectional_bore_resolved": False,
+            "ground_first_mate_shoulder_datum_resolved": False,
+            "ground_first_mate_tolerance_stack_qualified": False,
+            "magnetic_fastener_seating_and_preload_bound": False,
+            "moving_interface_pair_route_recomputed": False,
+            "printed_interface_feature_strength_qualified": False,
+            "release_ready": False,
+            "blockers": [
+                "fabrication_process_tolerance_unqualified",
+                "fixed_pogo_shell_is_illustrative_reference_only",
+                "pogo_mounting_sectional_bore_unresolved",
+                "ground_first_mate_shoulder_datum_unresolved",
+                "ground_first_mate_tolerance_stack_unqualified",
+                "magnetic_fastener_seating_and_preload_unproven",
+                "moving_interface_pair_route_not_recomputed",
+                "printed_interface_feature_strength_unqualified",
+            ],
+        },
+        "magnetic_hardware": {
+            "magnet_pocket_width_mm": MAGNET_POCKET_WIDTH,
+            "target_pocket_width_mm": TARGET_POCKET_WIDTH,
+            "component_width_mm": MAGNET_WIDTH,
+            "nominal_lateral_clearance_mm": (
+                min(MAGNET_POCKET_WIDTH, TARGET_POCKET_WIDTH) - MAGNET_WIDTH
+            )
+            / 2.0,
+            "face_recess_each_mm": MAGNETIC_HARDWARE_FACE_RECESS,
+            "combined_magnet_target_air_gap_mm": (
+                2.0 * MAGNETIC_HARDWARE_FACE_RECESS
+            ),
+            "magnet_native_z_bounds_mm": [
+                PLATE_THICKNESS - MAGNET_POCKET_DEPTH,
+                PLATE_THICKNESS - MAGNETIC_HARDWARE_FACE_RECESS,
+            ],
+            "target_tool_local_z_bounds_mm": [
+                MAGNETIC_HARDWARE_FACE_RECESS,
+                TARGET_POCKET_DEPTH,
+            ],
+            "own_pocket_support": "named_rear_face_to_pocket_floor_tangency",
+        },
+        "pogo_target_pad_relief": {
+            "manufacturer_source": (
+                "https://www.mill-max.com/products/discrete-spring-loaded-pins/"
+                "spring-loaded-pin-with-solder-cup-termination/7983/"
+                "7983-1-15-20-75-14-11-0"
+            ),
+            "manufacturer_press_fit_application_note": (
+                "https://www.mill-max.com/sites/default/files/external/assets/"
+                "2020-10/spring-loaded_solder-cup_pin_2.pdf"
+            ),
+            "manufacturer_press_fit_application_note_sha256": (
+                "bbf4c414a11bd3355cde2bb25624c6736b61942964b2cbb3fc42c67c09e87adf"
+            ),
+            "manufacturer_dimension_drawing": {
+                "url": (
+                    "https://www.mill-max.com/sites/default/files/external/"
+                    "products/fullsize/2020-09/7983.svg"
+                ),
+                "sha256": (
+                    "c97327d953663a0aa04ea389ee2d2be19372ffa21503f46e5cbbfb0fd2e890e8"
+                ),
+            },
+            "official_profile_nominal_diameters_mm": {
+                "plunger": 1.07,
+                "upper": 1.73,
+                "shoulder": 1.85,
+                "barb": 1.94,
+                "body": 2.11,
+                "knurl": 1.65,
+                "solder_cup_shaft": 1.52,
+                "solder_cup_bore": 0.97,
+            },
+            "official_standard_length_tolerance_mm": 0.15,
+            "ground_first_mate_tolerance_stack": {
+                "nominal_offset_mm": (
+                    POGO_GROUND_PROTRUSION - POGO_STANDARD_PROTRUSION
+                ),
+                "independent_pin_length_error_bound_mm": 0.30,
+                "guaranteed_worst_case_lead_mm": (
+                    POGO_GROUND_PROTRUSION
+                    - POGO_STANDARD_PROTRUSION
+                    - 0.30
+                ),
+                "passed": False,
+            },
+            "fixed_shell_authority": "illustrative_reference_only_not_conservative",
+            "mounting_authority": (
+                "unresolved_choose_barb_or_knurl_and_rebuild_sectional_bore"
+            ),
+            "diameter_mm": POGO_PAD_RELIEF_DIAMETER,
+            "depth_mm": POGO_PAD_RELIEF_DEPTH,
+            "target_pad_diameter_mm": CONTACT_PAD_DIAMETER,
+            "legacy_reference_straight_pilot_diameter_mm": (
+                POGO_LEGACY_REFERENCE_PILOT_DIAMETER
+            ),
+            "official_barb_mounting_hole_mm": 1.92,
+            "official_knurl_feature_diameter_mm": 1.65,
+            "official_knurl_mounting_hole_mm": 1.58,
+            "official_minimum_body_counterbore_diameter_mm": 2.21,
+            "fixed_shell_reference_nominal_body_diameter_mm": (
+                POGO_REFERENCE_BODY_NOMINAL_DIAMETER
+            ),
+            "official_diameter_tolerance_mm": POGO_OFFICIAL_DIAMETER_TOLERANCE,
+            "official_plunger_diameter_mm": POGO_PLUNGER_DIAMETER,
+            "official_nominal_full_stroke_mm": POGO_NOMINAL_FULL_STROKE,
+            "official_full_stroke_tolerance_mm": POGO_FULL_STROKE_TOLERANCE,
+            "official_guaranteed_minimum_full_stroke_mm": (
+                POGO_GUARANTEED_MINIMUM_FULL_STROKE
+            ),
+            "reference_render_retraction_range_mm": [
+                0.0,
+                POGO_GROUND_PROTRUSION,
+            ],
+            "nominal_radial_clearance_mm": (
+                POGO_PAD_RELIEF_DIAMETER - CONTACT_PAD_DIAMETER
+            )
+            / 2.0,
+            "nominal_axial_clearance_mm": (
+                POGO_PAD_RELIEF_DEPTH - 0.05
+            ),
+            "minimum_adjacent_surface_web_mm": (
+                CONTACT_PITCH - POGO_PAD_RELIEF_DIAMETER
+            ),
+            "minimum_outer_y_surface_web_mm": (
+                ELECTRICAL_WING_HEIGHT / 2.0
+                - max(abs(value) for value in CONTACT_Y)
+                - POGO_PAD_RELIEF_DIAMETER / 2.0
+            ),
+            "legacy_reference_pilot_land_mm": (
+                counterbore_bottom - rear_wiring_pocket_top
+            ),
+            "legacy_ground_shell_to_face_relief_offset_mm": (
+                counterbore_bottom - ground_pin_sleeve_top
+            ),
+        },
+        "fixed_stud_head_wells": {
+            "diameter_mm": ROBOT_STUD_WELL_DIAMETER,
+            "bottom_native_z_mm": ROBOT_STUD_WELL_BOTTOM_Z,
+            "stud_head_diameter_mm": LOCK_HEAD_DIAMETER,
+            "nominal_radial_clearance_mm": (
+                ROBOT_STUD_WELL_DIAMETER - LOCK_HEAD_DIAMETER
+            )
+            / 2.0,
+            "nominal_axial_clearance_mm": (
+                PLATE_THICKNESS
+                - LOCK_SHOULDER_LENGTH
+                - LOCK_HEAD_HEIGHT
+                - ROBOT_STUD_WELL_BOTTOM_Z
+            ),
+            "cam_relief_ligament_mm": (
+                ROBOT_CAM_RELIEF_TO_STUD_WELL_LIGAMENT_MM
+            ),
+            "nearest_horn_counterbore_ligament_mm": (
+                nearest_horn_counterbore_ligament
+            ),
+            "slider_lobe_bearing_annulus_mm": (
+                SLIDER_LOBE_RADIUS - ROBOT_STUD_WELL_RADIUS
+            ),
+        },
+    }
 
 
 def square_cutter(width: float, depth: float, x: float, y: float, z: float) -> cq.Workplane:
@@ -478,12 +714,56 @@ def compression_spring(length: float = RETURN_SPRING_FREE_LENGTH) -> cq.Workplan
     return spring.rotate((0, 0, 0), (0, 1, 0), 90).clean()
 
 
-def pogo_pin() -> cq.Workplane:
-    # Simplified but dimensionally bounded reference for the Mill-Max part.
-    solder_cup = cq.Workplane("XY").circle(0.82).extrude(3.0)
-    sleeve = cq.Workplane("XY").circle(POGO_MAX_DIAMETER / 2).extrude(5.1).translate((0, 0, 3.0))
-    plunger = cq.Workplane("XY").circle(0.84).extrude(1.4).translate((0, 0, 8.1))
-    return solder_cup.union(sleeve).union(plunger).clean()
+def pogo_reference_fixed_shell() -> cq.Workplane:
+    """Return an illustrative shell, never a conservative clearance bound."""
+
+    solder_cup = (
+        cq.Workplane("XY")
+        .circle(POGO_REFERENCE_SOLDER_CUP_DIAMETER / 2.0)
+        .extrude(POGO_REFERENCE_SOLDER_CUP_LENGTH)
+    )
+    sleeve = (
+        cq.Workplane("XY")
+        .circle(POGO_REFERENCE_BODY_NOMINAL_DIAMETER / 2.0)
+        .extrude(POGO_REFERENCE_FIXED_SLEEVE_LENGTH)
+        .translate((0.0, 0.0, POGO_REFERENCE_SOLDER_CUP_LENGTH))
+    )
+    return solder_cup.union(sleeve).clean()
+
+
+def pogo_reference_plunger(retraction_mm: float = 0.0) -> cq.Workplane:
+    """Return a visual plunger envelope, never dynamic or retention authority."""
+
+    if (
+        not math.isfinite(retraction_mm)
+        or retraction_mm < 0.0
+        or retraction_mm > POGO_GROUND_PROTRUSION
+    ):
+        raise ValueError("retraction_mm must be finite and inside reference range")
+    exposed_length = POGO_REFERENCE_PLUNGER_EXPOSURE - retraction_mm
+    if exposed_length <= 0.0:
+        raise ValueError("retraction_mm removes the reference plunger")
+    return (
+        cq.Workplane("XY")
+        .circle(POGO_PLUNGER_DIAMETER / 2.0)
+        .extrude(exposed_length)
+        .translate(
+            (
+                0.0,
+                0.0,
+                POGO_REFERENCE_SOLDER_CUP_LENGTH
+                + POGO_REFERENCE_FIXED_SLEEVE_LENGTH,
+            )
+        )
+    )
+
+
+def pogo_reference_pin(retraction_mm: float = 0.0) -> cq.Workplane:
+    """Return the explicitly non-authoritative display envelope."""
+
+    return pogo_reference_fixed_shell().union(
+        pogo_reference_plunger(retraction_mm)
+    ).clean()
 
 
 def contact_board() -> cq.Workplane:
@@ -1109,11 +1389,11 @@ def robot_plate() -> cq.Workplane:
     for x in (-LOCK_STUD_X, LOCK_STUD_X):
         plate = plate.cut(
             cylinder_cutter(
-                KEYHOLE_ENTRY_DIAMETER + 0.15,
-                PLATE_THICKNESS - 2.9,
+                ROBOT_STUD_WELL_DIAMETER,
+                PLATE_THICKNESS - ROBOT_STUD_WELL_BOTTOM_Z + 0.1,
                 x,
                 0,
-                2.9,
+                ROBOT_STUD_WELL_BOTTOM_Z,
             )
         )
 
@@ -1134,9 +1414,26 @@ def robot_plate() -> cq.Workplane:
     plate = plate.cut(cylinder_cutter(4.2, 1.25, 0, 0, PLATE_THICKNESS - 1.2))
     plate = plate.cut(cylinder_cutter(1.7, 2.0, 0, 0, SLIDER_SLOT_BOTTOM - 2.0))
 
-    # Pogo cartridge: ream these printed pilots to the Mill-Max press-fit size.
+    # Legacy visual pilot only. The official barb/knurl sectional mounting bore
+    # remains a release blocker and this cut is not a fabrication prescription.
     for x, y in pogo_points():
-        plate = plate.cut(cylinder_cutter(POGO_PRESS_FIT_HOLE, PLATE_THICKNESS + 0.2, x, y))
+        plate = plate.cut(
+            cylinder_cutter(
+                POGO_LEGACY_REFERENCE_PILOT_DIAMETER,
+                PLATE_THICKNESS + 0.2,
+                x,
+                y,
+            )
+        )
+        plate = plate.cut(
+            cylinder_cutter(
+                POGO_PAD_RELIEF_DIAMETER,
+                POGO_PAD_RELIEF_DEPTH + 0.1,
+                x,
+                y,
+                PLATE_THICKNESS - POGO_PAD_RELIEF_DEPTH,
+            )
+        )
     rear_wiring_pocket = box_cutter(8.0, 20.0, 1.9, CONTACT_CENTER_X, 0, -0.05)
     plate = plate.cut(rear_wiring_pocket)
 
@@ -1429,6 +1726,7 @@ def write_core_manifest(output_dir: Path = EXPORT_DIR) -> dict[str, object]:
         },
         "contracts": {
             "robot_plate_cam_relief": robot_cam_relief_contract(),
+            "interface_hardware_fit": interface_hardware_fit_contract(),
             "core_dock_stop": core_dock_stop_spec(),
             "stock_gripper_mount": stock_gripper_mount_contract(),
             "positive_lock_keyhole": positive_lock_keyhole_contract(),
@@ -1483,13 +1781,27 @@ def add_hardware(assembly: cq.Assembly, include_studs: bool = True) -> None:
         assembly.add(
             magnet,
             name=f"magnet_{index}_{MAGNET_PART_NUMBER}",
-            loc=cq.Location(cq.Vector(x, y, PLATE_THICKNESS - MAGNET_HEIGHT)),
+            loc=cq.Location(
+                cq.Vector(
+                    x,
+                    y,
+                    PLATE_THICKNESS
+                    - MAGNET_HEIGHT
+                    - MAGNETIC_HARDWARE_FACE_RECESS,
+                )
+            ),
             color=cq.Color(0.48, 0.12, 0.62),
         )
         assembly.add(
             target,
             name=f"target_{index}_{TARGET_PART_NUMBER}",
-            loc=cq.Location(cq.Vector(x, y, PLATE_THICKNESS)),
+            loc=cq.Location(
+                cq.Vector(
+                    x,
+                    y,
+                    PLATE_THICKNESS + MAGNETIC_HARDWARE_FACE_RECESS,
+                )
+            ),
             color=cq.Color(0.72, 0.75, 0.78),
         )
 
@@ -1527,7 +1839,7 @@ def add_hardware(assembly: cq.Assembly, include_studs: bool = True) -> None:
                 color=cq.Color(0.69, 0.71, 0.74),
             )
 
-    pin = pogo_pin()
+    pin = pogo_reference_pin()
     for index, ((x, y), signal) in enumerate(zip(pogo_points(), CONTACT_SIGNALS), start=1):
         protrusion = POGO_GROUND_PROTRUSION if signal == "GND" else POGO_STANDARD_PROTRUSION
         z = PLATE_THICKNESS + protrusion - POGO_OVERALL_LENGTH
@@ -1707,7 +2019,7 @@ def write_bom() -> None:
         ("robot", 1, "304 stainless lock slider", "1.5-1.6 mm sheet", "exports/so101_positive_lock_slider_profile.dxf", "new; STL is fit-check only"),
         ("robot", 1, RETURN_SPRING_PART_NUMBER, "OD4 x L10 mm, 0.98 N/mm return spring", "https://us.misumi-ec.com/vona2/detail/110310903689/?HissuCode=E-GUL4-10", "new"),
         ("robot", 1, "M2x6 flat-head", "slider guide/retainer", "standard fastener", "new"),
-        ("robot", 4, POGO_PART_NUMBER, "high-current solder-cup spring pin", "https://www.mill-max.com/products/new/high-current-small-scale-spring-loaded-pins", "new"),
+        ("robot", 4, POGO_PART_NUMBER, "high-current solder-cup spring pin", "https://www.mill-max.com/products/discrete-spring-loaded-pins/spring-loaded-pin-with-solder-cup-termination/7983/7983-1-15-20-75-14-11-0", "reference only; sectional mounting bore and first-mate shoulder datums unresolved"),
         ("tool", 1, "so101_stock_gripper_tool_plate", "printed PA12/PA-CF part", "exports/so101_stock_gripper_tool_plate.step", "new"),
         ("tool", 2, TARGET_PART_NUMBER, "12x12x3 mm Q235 steel magnet target", "https://www.supermagnete.de/eng/magnet-counterparts-to-screw-on/metal-plates-with-countersunk-hole-12-x-12-x-3mm_MC-12-12-03", "new"),
         ("tool", 2, "ISO 10642 M5x10", "countersunk screw for steel target", "standard fastener", "new"),
@@ -1776,7 +2088,7 @@ def main(argv: list[str] | None = None) -> None:
     shoulder = shoulder_lock_stud()
     lock_nut = lock_stud_nut()
     spring = compression_spring()
-    pogo = pogo_pin()
+    pogo = pogo_reference_pin()
     board = contact_board()
 
     export_part(robot, "so101_robot_plate")
@@ -1814,6 +2126,7 @@ def main(argv: list[str] | None = None) -> None:
         "collision_geometry_contract": {
             "core_dock_stop": core_dock_stop_spec(),
             "stock_gripper_mount": stock_gripper_mount_contract(),
+            "interface_hardware_fit": interface_hardware_fit_contract(),
             "positive_lock_keyhole": positive_lock_keyhole_contract(),
             "positive_lock_cam": {
                 **positive_lock_cam_contract(),
@@ -1858,7 +2171,7 @@ def main(argv: list[str] | None = None) -> None:
             "signals": list(CONTACT_SIGNALS),
             "pogo_pin": POGO_PART_NUMBER,
             "pogo_catalog_max_current_A": 8.0,
-            "pogo_catalog_derated_current_A": 6.4,
+            "pogo_catalog_derated_current_A": 6.2,
             "ground_first_mate_offset": POGO_GROUND_PROTRUSION - POGO_STANDARD_PROTRUSION,
             "stock_gripper_uses": ["GND", "+12V", "TTL_DATA"],
             "tool_board": [CONTACT_BOARD_WIDTH, CONTACT_BOARD_HEIGHT, CONTACT_BOARD_THICKNESS],
