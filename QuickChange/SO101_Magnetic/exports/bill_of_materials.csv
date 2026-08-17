@@ -7,7 +7,7 @@ robot,4,M3x10 socket-head,robot plate to existing wrist horn,standard fastener,n
 robot,1,304 stainless lock slider,1.5-1.6 mm sheet,exports/so101_positive_lock_slider_profile.dxf,new; STL is fit-check only
 robot,1,E-GUL4-10,"OD4 x L10 mm, 0.98 N/mm return spring",https://us.misumi-ec.com/vona2/detail/110310903689/?HissuCode=E-GUL4-10,new
 robot,1,M2x6 flat-head,slider guide/retainer,standard fastener,new
-robot,4,7983-1-15-20-75-14-11-0,high-current solder-cup spring pin,https://www.mill-max.com/products/new/high-current-small-scale-spring-loaded-pins,new
+robot,4,7983-1-15-20-75-14-11-0,high-current solder-cup spring pin,https://www.mill-max.com/products/discrete-spring-loaded-pins/spring-loaded-pin-with-solder-cup-termination/7983/7983-1-15-20-75-14-11-0,reference only; sectional mounting bore and first-mate shoulder datums unresolved
 tool,1,so101_stock_gripper_tool_plate,printed PA12/PA-CF part,exports/so101_stock_gripper_tool_plate.step,new
 tool,2,MC-12-12-03,12x12x3 mm Q235 steel magnet target,https://www.supermagnete.de/eng/magnet-counterparts-to-screw-on/metal-plates-with-countersunk-hole-12-x-12-x-3mm_MC-12-12-03,new
 tool,2,ISO 10642 M5x10,countersunk screw for steel target,standard fastener,new

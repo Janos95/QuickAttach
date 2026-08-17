@@ -2,15 +2,15 @@
   "authorities": {
     "fcpw_role": "toleranced_mesh_screen_only",
     "matcha_generator": {
-      "bytes": 35636,
+      "bytes": 35699,
       "path": "QuickChange/SO101_Magnetic/matcha_tools/generate_matcha_tool_cad.py",
-      "sha256": "ba98dddf86ff4fda653295c44f6c679638169a719098c5a719233d893978dcea"
+      "sha256": "877f8c75eab5c68ab6771a5d4fd77cfd201df7100c0ae1ad587fbbd430da20c2"
     },
     "occt_role": "STEP import/tessellation and six critical B-rep tangency diagnostics",
     "quick_change_interface_generator": {
-      "bytes": 60415,
+      "bytes": 87799,
       "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-      "sha256": "baf63afb535b229bc8a233d56d6992ed73f9f40df02ff33eb987d738a1560e0b"
+      "sha256": "0b6776e6223b30d583010fbe2dd2f83886b2d2c8edd5af044ce5ed816b833263"
     },
     "rack_validator": {
       "bytes": 31131,
@@ -33,142 +33,142 @@
     "closure_passed": true,
     "files": [
       {
-        "bytes": 19287,
+        "bytes": 19270,
         "path": "QuickChange/SO101_Magnetic/matcha_tools/exports/so101_matcha_spoon_mass_ledger.json",
         "role": "mass_ledger",
-        "sha256": "576bec2226d22644feb0d2a196c795804f5f0e6dd947562dccfd0ff9cb4cc2a4"
+        "sha256": "8871e3225cd0ce2b94df96c211d490fd581f83aba555d1cd62f46ad41dd81e37"
       },
       {
-        "bytes": 440794,
+        "bytes": 440542,
         "path": "QuickChange/SO101_Magnetic/matcha_tools/exports/so101_matcha_spoon_printed_body.step",
         "role": "printable_body_step",
-        "sha256": "49a59ac395fb7b036595acbb2077c487135ab632164ce6c644f0fca874ebf88f"
+        "sha256": "228035ed8d977855e10144b3e4e783d938b1c2fc455a6723cb3eaa7a8593f89a"
       },
       {
         "bytes": 570684,
         "path": "QuickChange/SO101_Magnetic/matcha_tools/exports/so101_matcha_spoon_printed_body.stl",
         "role": "printable_body_stl",
-        "sha256": "6324a7a5327e67de14500cf2ff9b701e7c0ab3735209ff0d0a4ecd66235cd88f"
+        "sha256": "111b85b4a6878f7f84fff838ce5c67770275200e5071b096c7e67a72379d7586"
       },
       {
-        "bytes": 800341,
+        "bytes": 800089,
         "path": "QuickChange/SO101_Magnetic/matcha_tools/exports/so101_matcha_spoon_tool_assembly.step",
         "role": "complete_rigid_assembly_step",
-        "sha256": "6e245cac049b92217f192fac7c5600fcf6a905c28f8b3ad732e634f707321173"
+        "sha256": "5a231604084f557b3f6d5db25c122cd3400a43aca9dd6347e053aa041225a6ef"
       },
       {
-        "bytes": 311265,
+        "bytes": 397116,
         "path": "QuickChange/SO101_Magnetic/matcha_tools/exports/so101_matcha_two_bay_rack.step",
         "role": "rack_step",
-        "sha256": "26620dc94076ab786d4fd4e14238b682fe13e9d1e756467583f01bcd302fcfa8"
+        "sha256": "04413d422d54de81449e5da2f4f247f065e70bb64ec524a30f40b720a35971b9"
       },
       {
-        "bytes": 11484,
+        "bytes": 16084,
         "path": "QuickChange/SO101_Magnetic/matcha_tools/exports/so101_matcha_two_bay_rack.stl",
         "role": "rack_stl",
-        "sha256": "547eac6a8e62dd47cdbf5e30f8b2b797ed4eb6e3f6a8a76b1ea03a1b93e7b478"
+        "sha256": "6966858adc45713ae21acfb1c70fe0ec8948bda224516dfe690f0513ed508219"
       },
       {
-        "bytes": 27397,
+        "bytes": 27362,
         "path": "QuickChange/SO101_Magnetic/matcha_tools/exports/so101_matcha_whisk_mass_ledger.json",
         "role": "mass_ledger",
-        "sha256": "9403fd9a3ec6474fe152b636526c378695e5c8e044eafa1ff963a8b287369fc0"
+        "sha256": "4a66b75393e42f7004db99badc13d9a94898d28c2c1383c33fc0c8e00fc535fd"
       },
       {
-        "bytes": 324318,
+        "bytes": 324066,
         "path": "QuickChange/SO101_Magnetic/matcha_tools/exports/so101_matcha_whisk_printed_body.step",
         "role": "printable_body_step",
-        "sha256": "9bbc905e2c1df105ac2ad817b21229c244abe1d8933dd0777daecd4be8f05df2"
+        "sha256": "3219079b0eccce577878321f83ae0abd9d2cf1d5fdc737ed840b43bf3deb2e88"
       },
       {
         "bytes": 497684,
         "path": "QuickChange/SO101_Magnetic/matcha_tools/exports/so101_matcha_whisk_printed_body.stl",
         "role": "printable_body_stl",
-        "sha256": "3085abdaa0ebc12e70678f5880176ccf151b2cb20adcdf3f638b2c9358a78218"
+        "sha256": "282a2a80347d88096a90c96e5a444687b565a8a4a7314c41c78e1edcc2a44061"
       },
       {
-        "bytes": 790199,
+        "bytes": 789947,
         "path": "QuickChange/SO101_Magnetic/matcha_tools/exports/so101_matcha_whisk_tool_assembly.step",
         "role": "complete_rigid_assembly_step",
-        "sha256": "88697e3f12624262360cf73097122a6ea04a22bffae1ca45e7f846dc50c4692b"
+        "sha256": "0d57df4fd7ff97089a6f0dff454fcc38b98cc1e424c836df1d720de5b97767e2"
       }
     ],
     "manifest": {
-      "bytes": 4557,
+      "bytes": 8901,
       "path": "QuickChange/SO101_Magnetic/matcha_tools/exports/matcha_tool_manifest.json",
-      "sha256": "31202c262533d52745509c81046ef2500b9591e3586df64107166f417f3985d9"
+      "sha256": "93fd5b9470f3ac6cf358c3458c7b22dfc4ee43d655a18eeadb6203af7bc30ecb"
     },
     "manifest_schema": {
       "files": [
         {
-          "bytes": 19287,
+          "bytes": 19270,
           "path": "exports/so101_matcha_spoon_mass_ledger.json",
           "role": "mass_ledger",
-          "sha256": "576bec2226d22644feb0d2a196c795804f5f0e6dd947562dccfd0ff9cb4cc2a4"
+          "sha256": "8871e3225cd0ce2b94df96c211d490fd581f83aba555d1cd62f46ad41dd81e37"
         },
         {
-          "bytes": 440794,
+          "bytes": 440542,
           "path": "exports/so101_matcha_spoon_printed_body.step",
           "role": "printable_body_step",
-          "sha256": "49a59ac395fb7b036595acbb2077c487135ab632164ce6c644f0fca874ebf88f"
+          "sha256": "228035ed8d977855e10144b3e4e783d938b1c2fc455a6723cb3eaa7a8593f89a"
         },
         {
           "bytes": 570684,
           "path": "exports/so101_matcha_spoon_printed_body.stl",
           "role": "printable_body_stl",
-          "sha256": "6324a7a5327e67de14500cf2ff9b701e7c0ab3735209ff0d0a4ecd66235cd88f"
+          "sha256": "111b85b4a6878f7f84fff838ce5c67770275200e5071b096c7e67a72379d7586"
         },
         {
-          "bytes": 800341,
+          "bytes": 800089,
           "path": "exports/so101_matcha_spoon_tool_assembly.step",
           "role": "complete_rigid_assembly_step",
-          "sha256": "6e245cac049b92217f192fac7c5600fcf6a905c28f8b3ad732e634f707321173"
+          "sha256": "5a231604084f557b3f6d5db25c122cd3400a43aca9dd6347e053aa041225a6ef"
         },
         {
-          "bytes": 311265,
+          "bytes": 397116,
           "path": "exports/so101_matcha_two_bay_rack.step",
           "role": "rack_step",
-          "sha256": "26620dc94076ab786d4fd4e14238b682fe13e9d1e756467583f01bcd302fcfa8"
+          "sha256": "04413d422d54de81449e5da2f4f247f065e70bb64ec524a30f40b720a35971b9"
         },
         {
-          "bytes": 11484,
+          "bytes": 16084,
           "path": "exports/so101_matcha_two_bay_rack.stl",
           "role": "rack_stl",
-          "sha256": "547eac6a8e62dd47cdbf5e30f8b2b797ed4eb6e3f6a8a76b1ea03a1b93e7b478"
+          "sha256": "6966858adc45713ae21acfb1c70fe0ec8948bda224516dfe690f0513ed508219"
         },
         {
-          "bytes": 27397,
+          "bytes": 27362,
           "path": "exports/so101_matcha_whisk_mass_ledger.json",
           "role": "mass_ledger",
-          "sha256": "9403fd9a3ec6474fe152b636526c378695e5c8e044eafa1ff963a8b287369fc0"
+          "sha256": "4a66b75393e42f7004db99badc13d9a94898d28c2c1383c33fc0c8e00fc535fd"
         },
         {
-          "bytes": 324318,
+          "bytes": 324066,
           "path": "exports/so101_matcha_whisk_printed_body.step",
           "role": "printable_body_step",
-          "sha256": "9bbc905e2c1df105ac2ad817b21229c244abe1d8933dd0777daecd4be8f05df2"
+          "sha256": "3219079b0eccce577878321f83ae0abd9d2cf1d5fdc737ed840b43bf3deb2e88"
         },
         {
           "bytes": 497684,
           "path": "exports/so101_matcha_whisk_printed_body.stl",
           "role": "printable_body_stl",
-          "sha256": "3085abdaa0ebc12e70678f5880176ccf151b2cb20adcdf3f638b2c9358a78218"
+          "sha256": "282a2a80347d88096a90c96e5a444687b565a8a4a7314c41c78e1edcc2a44061"
         },
         {
-          "bytes": 790199,
+          "bytes": 789947,
           "path": "exports/so101_matcha_whisk_tool_assembly.step",
           "role": "complete_rigid_assembly_step",
-          "sha256": "88697e3f12624262360cf73097122a6ea04a22bffae1ca45e7f846dc50c4692b"
+          "sha256": "0d57df4fd7ff97089a6f0dff454fcc38b98cc1e424c836df1d720de5b97767e2"
         }
       ],
       "generator": {
         "path": "generate_matcha_tool_cad.py",
-        "sha256": "ba98dddf86ff4fda653295c44f6c679638169a719098c5a719233d893978dcea"
+        "sha256": "877f8c75eab5c68ab6771a5d4fd77cfd201df7100c0ae1ad587fbbd430da20c2"
       },
       "interface_authority": {
         "construction": "unmodified tool_plate(stock_gripper=False)",
         "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-        "sha256": "baf63afb535b229bc8a233d56d6992ed73f9f40df02ff33eb987d738a1560e0b"
+        "sha256": "0b6776e6223b30d583010fbe2dd2f83886b2d2c8edd5af044ce5ed816b833263"
       },
       "rack": {
         "bay_names": [
@@ -181,6 +181,180 @@
           0.0
         ],
         "pcb_lower_rail_clearance_mm": 0.3,
+        "positive_lock_cam": {
+          "axial_lead": {
+            "contact_angle_deg": 45.0,
+            "contact_land_width_mm": 2.0,
+            "kind": "ruled_loft_between_rectangles",
+            "lower_rectangle_mm": {
+              "x": [
+                27.25,
+                29.0
+              ],
+              "y": [
+                0.0,
+                2.0
+              ],
+              "z": -9.6
+            },
+            "minimum_wall_mm": 1.75,
+            "rise_mm": 3.1999999999999993,
+            "run_mm": 3.1999999999999993,
+            "upper_rectangle_mm": {
+              "x": [
+                24.05,
+                29.0
+              ],
+              "y": [
+                0.0,
+                2.0
+              ],
+              "z": -6.4
+            },
+            "volume_mm3": 21.439999999999994
+          },
+          "construction": "union_main_xy_wedge_ruled_axial_lead_hold_finger",
+          "expected_geometry": {
+            "added_volume_mm3": 44.71499999999999,
+            "bounds_mm": {
+              "x": [
+                24.05,
+                34.0
+              ],
+              "y": [
+                -16.0,
+                2.0
+              ],
+              "z": [
+                -9.6,
+                -1.9500000000000002
+              ]
+            },
+            "total_volume_mm3": 325.435
+          },
+          "frame": "dock_local_mm",
+          "hold_finger": {
+            "bounds_mm": {
+              "x": [
+                24.05,
+                29.0
+              ],
+              "y": [
+                0.0,
+                2.0
+              ],
+              "z": [
+                -6.4,
+                -4.15
+              ]
+            },
+            "kind": "axis_aligned_box",
+            "volume_mm3": 22.275
+          },
+          "main_xy_wedge": {
+            "polygon_xy_mm": [
+              [
+                28.0,
+                -16.0
+              ],
+              [
+                34.0,
+                -16.0
+              ],
+              [
+                34.0,
+                0.0
+              ],
+              [
+                24.05,
+                0.0
+              ]
+            ],
+            "z_bounds_mm": [
+              -4.15,
+              -1.9500000000000002
+            ]
+          },
+          "manufacturability": {
+            "declared_process_floor_mm": 0.2,
+            "lead_is_self_supporting_at_45_deg": true,
+            "minimum_feature_mm": 1.0
+          },
+          "outer_root_bridge": {
+            "bounds_mm": {
+              "x": [
+                28.0,
+                29.0
+              ],
+              "y": [
+                -1.0,
+                1.0
+              ],
+              "z": [
+                -4.65,
+                -3.65
+              ]
+            },
+            "gross_volume_mm3": 2.000000000000001,
+            "kind": "axis_aligned_box",
+            "net_added_volume_mm3": 1.0000000000000009,
+            "outside_locked_tab_swept_x": true,
+            "overlap_with_hold_mm3": 0.5,
+            "overlap_with_main_wedge_mm3": 0.5
+          },
+          "passive_capture": {
+            "head_entry_tangent_preseat_mm": 3.1,
+            "lateral_axis": "dock_local_positive_x",
+            "lateral_offset_breakpoints_mm": [
+              [
+                6.4,
+                0.2
+              ],
+              [
+                3.2,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ]
+            ],
+            "nominal_unlocked_q_mm": 0.0,
+            "passive_open_q_max_mm": 0.05000000000000071,
+            "preseat_definition": "robot_source_translation_dock_local_z_mm=-preseat_mm",
+            "ramp_contact_start_preseat_mm": 6.346666666666667,
+            "ramp_q_affine_coefficients": {
+              "clamp_mm": [
+                0.05000000000000071,
+                3.0
+              ],
+              "constant": -3.15,
+              "lateral_offset": -1.0,
+              "preseat": 1.0
+            },
+            "recenter_end_preseat_mm": 3.2,
+            "recenter_start_preseat_mm": 6.4
+          },
+          "passive_release": {
+            "axis": "dock_local_negative_y",
+            "initial_q_hold_withdrawal_mm": 2.0,
+            "nominal_exit_withdrawal_mm": 15.0,
+            "q3_tangent_withdrawal_mm": 13.949367088607595,
+            "q_per_withdrawal_slope": 0.24687499999999996,
+            "required_exit_clearance_mm": 0.2
+          },
+          "quasistatic_load_envelope": {
+            "contact_face_area_mm2": 9.050966799187806,
+            "maximum_axial_reaction_n": 3.5279999999999974,
+            "maximum_cam_normal_force_n": 4.989345448052276,
+            "maximum_spring_deflection_mm": 3.599999999999998,
+            "maximum_spring_force_n": 3.527999999999998,
+            "mean_contact_pressure_mpa": 0.5512499999999998,
+            "return_spring_rate_n_per_mm": 0.98,
+            "semantics": "frictionless_quasistatic_source_envelope"
+          },
+          "schema_version": "1.0"
+        },
         "rear_clearance_mm": 0.3,
         "stock_gripper_scope": "separate core quick-change dock; not part of this rack",
         "stop_contracts": {
@@ -379,7 +553,7 @@
         "backend_version": "1.2.0",
         "clearance_authority": false,
         "mesh_a": {
-          "sha256": "76608742def204aeb894fdf285a7bdc4e5f10a7346256693d556b2e2d1492852",
+          "sha256": "0a1e6aa7bfacded15493f96c4a543d28dceb4b788ecb43e9c5a5c8d26b55973d",
           "triangles": 7904,
           "vertices": 7218
         },
@@ -518,7 +692,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 1.9999999999999822,
+        "certified_clearance_mm": 1.9499999999999824,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -526,7 +700,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 1.9999999999999822,
+      "minimum_signed_clearance_mm": 1.9499999999999824,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "common_tool_plate",
@@ -542,10 +716,10 @@
       "tool_component": "common_tool_plate",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -563,7 +737,7 @@
         "backend_version": "1.2.0",
         "clearance_authority": false,
         "mesh_a": {
-          "sha256": "76608742def204aeb894fdf285a7bdc4e5f10a7346256693d556b2e2d1492852",
+          "sha256": "0a1e6aa7bfacded15493f96c4a543d28dceb4b788ecb43e9c5a5c8d26b55973d",
           "triangles": 7904,
           "vertices": 7218
         },
@@ -712,7 +886,7 @@
         "backend_version": "1.2.0",
         "clearance_authority": false,
         "mesh_a": {
-          "sha256": "76608742def204aeb894fdf285a7bdc4e5f10a7346256693d556b2e2d1492852",
+          "sha256": "0a1e6aa7bfacded15493f96c4a543d28dceb4b788ecb43e9c5a5c8d26b55973d",
           "triangles": 7904,
           "vertices": 7218
         },
@@ -886,7 +1060,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 92.02173656261873,
+        "certified_clearance_mm": 92.07065211884839,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -894,7 +1068,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 92.02173656261873,
+      "minimum_signed_clearance_mm": 92.07065211884839,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "common_tool_plate",
@@ -910,10 +1084,10 @@
       "tool_component": "common_tool_plate",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -1271,7 +1445,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 18.110770276274835,
+        "certified_clearance_mm": 18.155026752665496,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -1279,7 +1453,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 18.110770276274835,
+      "minimum_signed_clearance_mm": 18.155026752665496,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_1_MC-12-12-03",
@@ -1551,7 +1725,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 114.0175425099138,
+        "certified_clearance_mm": 114.06666900190432,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -1559,7 +1733,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 114.0175425099138,
+      "minimum_signed_clearance_mm": 114.06666900190432,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_1_MC-12-12-03",
@@ -1936,7 +2110,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 19.1049731745428,
+        "certified_clearance_mm": 19.14954297600859,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -1944,7 +2118,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 19.1049731745428,
+      "minimum_signed_clearance_mm": 19.14954297600859,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_screw_1_ISO10642_M5x10",
@@ -2216,7 +2390,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 115.0173899895142,
+        "certified_clearance_mm": 115.06652413708342,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -2224,7 +2398,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 115.0173899895142,
+      "minimum_signed_clearance_mm": 115.06652413708342,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_screw_1_ISO10642_M5x10",
@@ -2601,7 +2775,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 20.781742707591125,
+        "certified_clearance_mm": 20.810428776527537,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -2609,7 +2783,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 20.781742707591125,
+      "minimum_signed_clearance_mm": 20.810428776527537,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_nut_1_DIN934_M5",
@@ -2881,7 +3055,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 115.62469812496485,
+        "certified_clearance_mm": 115.67136168122022,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -2889,7 +3063,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 115.62469812496485,
+      "minimum_signed_clearance_mm": 115.67136168122022,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_nut_1_DIN934_M5",
@@ -3266,7 +3440,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 18.110770276274835,
+        "certified_clearance_mm": 18.155026752665496,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -3274,7 +3448,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 18.110770276274835,
+      "minimum_signed_clearance_mm": 18.155026752665496,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_2_MC-12-12-03",
@@ -3290,10 +3464,10 @@
       "tool_component": "target_2_MC-12-12-03",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -24.0,
+        "path_y_mm": -22.99999995,
         "tool_translation_mm": [
           -48.0,
-          -24.0,
+          -22.99999995,
           0.0
         ]
       }
@@ -3546,7 +3720,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 114.0175425099138,
+        "certified_clearance_mm": 114.06666900190432,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -3554,7 +3728,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 114.0175425099138,
+      "minimum_signed_clearance_mm": 114.06666900190432,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_2_MC-12-12-03",
@@ -3570,10 +3744,10 @@
       "tool_component": "target_2_MC-12-12-03",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -24.0,
+        "path_y_mm": -22.99999995,
         "tool_translation_mm": [
           -48.0,
-          -24.0,
+          -22.99999995,
           0.0
         ]
       }
@@ -3931,7 +4105,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 19.1049731745428,
+        "certified_clearance_mm": 19.14954297600859,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -3939,7 +4113,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 19.1049731745428,
+      "minimum_signed_clearance_mm": 19.14954297600859,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_screw_2_ISO10642_M5x10",
@@ -3955,10 +4129,10 @@
       "tool_component": "target_screw_2_ISO10642_M5x10",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -24.0,
+        "path_y_mm": -22.99999995,
         "tool_translation_mm": [
           -48.0,
-          -24.0,
+          -22.99999995,
           0.0
         ]
       }
@@ -4211,7 +4385,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 115.0173899895142,
+        "certified_clearance_mm": 115.06652413708342,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -4219,7 +4393,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 115.0173899895142,
+      "minimum_signed_clearance_mm": 115.06652413708342,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_screw_2_ISO10642_M5x10",
@@ -4235,10 +4409,10 @@
       "tool_component": "target_screw_2_ISO10642_M5x10",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -24.0,
+        "path_y_mm": -22.99999995,
         "tool_translation_mm": [
           -48.0,
-          -24.0,
+          -22.99999995,
           0.0
         ]
       }
@@ -4596,7 +4770,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 20.781742707591125,
+        "certified_clearance_mm": 20.810428776527537,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -4604,7 +4778,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 20.781742707591125,
+      "minimum_signed_clearance_mm": 20.810428776527537,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_nut_2_DIN934_M5",
@@ -4620,10 +4794,10 @@
       "tool_component": "target_nut_2_DIN934_M5",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -24.0,
+        "path_y_mm": -22.99999995,
         "tool_translation_mm": [
           -48.0,
-          -24.0,
+          -22.99999995,
           0.0
         ]
       }
@@ -4876,7 +5050,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 115.62469812496485,
+        "certified_clearance_mm": 115.67136168122022,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -4884,7 +5058,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 115.62469812496485,
+      "minimum_signed_clearance_mm": 115.67136168122022,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_nut_2_DIN934_M5",
@@ -4900,10 +5074,10 @@
       "tool_component": "target_nut_2_DIN934_M5",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -24.0,
+        "path_y_mm": -22.99999995,
         "tool_translation_mm": [
           -48.0,
-          -24.0,
+          -22.99999995,
           0.0
         ]
       }
@@ -5261,7 +5435,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 33.0,
+        "certified_clearance_mm": 33.049999899999996,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -5269,7 +5443,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 33.0,
+      "minimum_signed_clearance_mm": 33.049999899999996,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "shoulder_lock_stud_1_McMaster_90318A720",
@@ -5285,10 +5459,10 @@
       "tool_component": "shoulder_lock_stud_1_McMaster_90318A720",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -5541,7 +5715,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 129.0,
+        "certified_clearance_mm": 129.0499999,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -5549,7 +5723,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 129.0,
+      "minimum_signed_clearance_mm": 129.0499999,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "shoulder_lock_stud_1_McMaster_90318A720",
@@ -5565,10 +5739,10 @@
       "tool_component": "shoulder_lock_stud_1_McMaster_90318A720",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -5926,7 +6100,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 33.01064414303343,
+        "certified_clearance_mm": 33.055106678318616,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -5934,7 +6108,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 33.01064414303343,
+      "minimum_signed_clearance_mm": 33.055106678318616,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "lock_stud_nut_1_DIN934_M3",
@@ -5950,10 +6124,10 @@
       "tool_component": "lock_stud_nut_1_DIN934_M3",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.999999949999999,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.999999949999999,
           0.0
         ]
       }
@@ -6206,7 +6380,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 128.87211002573324,
+        "certified_clearance_mm": 128.920743769425,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -6214,7 +6388,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 128.87211002573324,
+      "minimum_signed_clearance_mm": 128.920743769425,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "lock_stud_nut_1_DIN934_M3",
@@ -6230,10 +6404,10 @@
       "tool_component": "lock_stud_nut_1_DIN934_M3",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.999999949999999,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.999999949999999,
           0.0
         ]
       }
@@ -6591,7 +6765,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 9.0,
+        "certified_clearance_mm": 9.049999899999996,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -6599,7 +6773,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 9.0,
+      "minimum_signed_clearance_mm": 9.049999899999996,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "shoulder_lock_stud_2_McMaster_90318A720",
@@ -6615,10 +6789,10 @@
       "tool_component": "shoulder_lock_stud_2_McMaster_90318A720",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -6871,7 +7045,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 105.0,
+        "certified_clearance_mm": 105.0499999,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -6879,7 +7053,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 105.0,
+      "minimum_signed_clearance_mm": 105.0499999,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "shoulder_lock_stud_2_McMaster_90318A720",
@@ -6895,10 +7069,10 @@
       "tool_component": "shoulder_lock_stud_2_McMaster_90318A720",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -7256,7 +7430,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 9.493318587370267,
+        "certified_clearance_mm": 9.521583554133548,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -7264,7 +7438,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 9.493318587370267,
+      "minimum_signed_clearance_mm": 9.521583554133548,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "lock_stud_nut_2_DIN934_M3",
@@ -7280,10 +7454,10 @@
       "tool_component": "lock_stud_nut_2_DIN934_M3",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.999999949999999,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.999999949999999,
           0.0
         ]
       }
@@ -7536,7 +7710,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 104.88298819898306,
+        "certified_clearance_mm": 104.93130443259084,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -7544,7 +7718,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 104.88298819898306,
+      "minimum_signed_clearance_mm": 104.93130443259084,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "lock_stud_nut_2_DIN934_M3",
@@ -7560,10 +7734,10 @@
       "tool_component": "lock_stud_nut_2_DIN934_M3",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.999999949999999,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.999999949999999,
           0.0
         ]
       }
@@ -7921,7 +8095,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 49.040799340956916,
+        "certified_clearance_mm": 49.08874606455129,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -7929,7 +8103,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 49.040799340956916,
+      "minimum_signed_clearance_mm": 49.08874606455129,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "tool_contact_board_FR4",
@@ -7945,10 +8119,10 @@
       "tool_component": "tool_contact_board_FR4",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -8201,7 +8375,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 145.01379244747721,
+        "certified_clearance_mm": 145.06310685694692,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -8209,7 +8383,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 145.01379244747721,
+      "minimum_signed_clearance_mm": 145.06310685694692,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "tool_contact_board_FR4",
@@ -8225,10 +8399,10 @@
       "tool_component": "tool_contact_board_FR4",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -8586,7 +8760,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 53.03586050965893,
+        "certified_clearance_mm": 53.0840135011474,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -8594,7 +8768,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 53.03586050965893,
+      "minimum_signed_clearance_mm": 53.0840135011474,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_pad_P1_GND",
@@ -8610,10 +8784,10 @@
       "tool_component": "target_pad_P1_GND",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -0.5,
+        "path_y_mm": 0.0,
         "tool_translation_mm": [
           -48.0,
-          -0.5,
+          0.0,
           0.0
         ]
       }
@@ -8866,7 +9040,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 149.01275952078734,
+        "certified_clearance_mm": 149.0621094382808,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -8874,7 +9048,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 149.01275952078734,
+      "minimum_signed_clearance_mm": 149.0621094382808,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_pad_P1_GND",
@@ -8890,10 +9064,10 @@
       "tool_component": "target_pad_P1_GND",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -0.5,
+        "path_y_mm": 0.0,
         "tool_translation_mm": [
           -48.0,
-          -0.5,
+          0.0,
           0.0
         ]
       }
@@ -9251,7 +9425,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 53.03586050965893,
+        "certified_clearance_mm": 53.0840135011474,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -9259,7 +9433,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 53.03586050965893,
+      "minimum_signed_clearance_mm": 53.0840135011474,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_pad_P2_+12V",
@@ -9275,10 +9449,10 @@
       "tool_component": "target_pad_P2_+12V",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -5.5,
+        "path_y_mm": -4.49999995,
         "tool_translation_mm": [
           -48.0,
-          -5.5,
+          -4.49999995,
           0.0
         ]
       }
@@ -9531,7 +9705,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 149.01275952078734,
+        "certified_clearance_mm": 149.0621094382808,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -9539,7 +9713,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 149.01275952078734,
+      "minimum_signed_clearance_mm": 149.0621094382808,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_pad_P2_+12V",
@@ -9555,10 +9729,10 @@
       "tool_component": "target_pad_P2_+12V",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -5.5,
+        "path_y_mm": -4.49999995,
         "tool_translation_mm": [
           -48.0,
-          -5.5,
+          -4.49999995,
           0.0
         ]
       }
@@ -9916,7 +10090,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 53.03586050965893,
+        "certified_clearance_mm": 53.0840135011474,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -9924,7 +10098,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 53.03586050965893,
+      "minimum_signed_clearance_mm": 53.0840135011474,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_pad_P3_TTL_DATA",
@@ -9940,10 +10114,10 @@
       "tool_component": "target_pad_P3_TTL_DATA",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -10.5,
+        "path_y_mm": -9.49999995,
         "tool_translation_mm": [
           -48.0,
-          -10.5,
+          -9.49999995,
           0.0
         ]
       }
@@ -10196,7 +10370,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 149.01275952078734,
+        "certified_clearance_mm": 149.0621094382808,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -10204,7 +10378,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 149.01275952078734,
+      "minimum_signed_clearance_mm": 149.0621094382808,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_pad_P3_TTL_DATA",
@@ -10220,10 +10394,10 @@
       "tool_component": "target_pad_P3_TTL_DATA",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -10.5,
+        "path_y_mm": -9.49999995,
         "tool_translation_mm": [
           -48.0,
-          -10.5,
+          -9.49999995,
           0.0
         ]
       }
@@ -10581,7 +10755,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 53.03586050965893,
+        "certified_clearance_mm": 53.0840135011474,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -10589,7 +10763,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 53.03586050965893,
+      "minimum_signed_clearance_mm": 53.0840135011474,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_pad_P4_TOOL_ID_SPARE",
@@ -10605,10 +10779,10 @@
       "tool_component": "target_pad_P4_TOOL_ID_SPARE",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -15.5,
+        "path_y_mm": -14.49999995,
         "tool_translation_mm": [
           -48.0,
-          -15.5,
+          -14.49999995,
           0.0
         ]
       }
@@ -10861,7 +11035,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 149.01275952078734,
+        "certified_clearance_mm": 149.0621094382808,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -10869,7 +11043,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 149.01275952078734,
+      "minimum_signed_clearance_mm": 149.0621094382808,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_pad_P4_TOOL_ID_SPARE",
@@ -10885,10 +11059,10 @@
       "tool_component": "target_pad_P4_TOOL_ID_SPARE",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -15.5,
+        "path_y_mm": -14.49999995,
         "tool_translation_mm": [
           -48.0,
-          -15.5,
+          -14.49999995,
           0.0
         ]
       }
@@ -11246,7 +11420,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 11.543396280991137,
+        "certified_clearance_mm": 11.498043203084604,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -11254,7 +11428,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 11.543396280991137,
+      "minimum_signed_clearance_mm": 11.498043203084604,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "spoon_printed_carrier",
@@ -11270,10 +11444,10 @@
       "tool_component": "spoon_printed_carrier",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -11526,7 +11700,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 97.67932226269795,
+        "certified_clearance_mm": 97.72310360554458,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -11534,7 +11708,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 97.67932226269795,
+      "minimum_signed_clearance_mm": 97.72310360554458,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "spoon_printed_carrier",
@@ -11550,10 +11724,10 @@
       "tool_component": "spoon_printed_carrier",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -11911,7 +12085,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 25.65638308296787,
+        "certified_clearance_mm": 25.671092469741133,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -11919,7 +12093,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 25.65638308296787,
+      "minimum_signed_clearance_mm": 25.671092469741133,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "spoon_stainless_insert",
@@ -11935,10 +12109,10 @@
       "tool_component": "spoon_stainless_insert",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -12191,7 +12365,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 118.3311031542426,
+        "certified_clearance_mm": 118.37484931432859,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -12199,7 +12373,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 118.3311031542426,
+      "minimum_signed_clearance_mm": 118.37484931432859,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "spoon_stainless_insert",
@@ -12215,10 +12389,10 @@
       "tool_component": "spoon_stainless_insert",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -12576,7 +12750,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 32.55764119219941,
+        "certified_clearance_mm": 32.56078922861054,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -12584,7 +12758,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 32.55764119219941,
+      "minimum_signed_clearance_mm": 32.56078922861054,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "spoon_set_screw_x_minus_M3x6",
@@ -12600,10 +12774,10 @@
       "tool_component": "spoon_set_screw_x_minus_M3x6",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -12856,7 +13030,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 122.0,
+        "certified_clearance_mm": 122.04017771205514,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -12864,7 +13038,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 122.0,
+      "minimum_signed_clearance_mm": 122.04017771205514,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "spoon_set_screw_x_minus_M3x6",
@@ -12880,10 +13054,10 @@
       "tool_component": "spoon_set_screw_x_minus_M3x6",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -13241,7 +13415,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 27.80287754891569,
+        "certified_clearance_mm": 27.793974105730182,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -13249,7 +13423,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 27.80287754891569,
+      "minimum_signed_clearance_mm": 27.793974105730182,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "spoon_set_screw_x_plus_M3x6",
@@ -13265,10 +13439,10 @@
       "tool_component": "spoon_set_screw_x_plus_M3x6",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -13521,7 +13695,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 115.12167476196652,
+        "certified_clearance_mm": 115.16121299026857,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -13529,7 +13703,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 115.12167476196652,
+      "minimum_signed_clearance_mm": 115.16121299026857,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "spoon_set_screw_x_plus_M3x6",
@@ -13545,10 +13719,10 @@
       "tool_component": "spoon_set_screw_x_plus_M3x6",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -13906,7 +14080,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 55.68087642988389,
+        "certified_clearance_mm": 55.72813462578843,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -13914,7 +14088,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 55.68087642988389,
+      "minimum_signed_clearance_mm": 55.72813462578843,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "tool_id_21_resistor_0603",
@@ -13930,10 +14104,10 @@
       "tool_component": "tool_id_21_resistor_0603",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -16.8,
+        "path_y_mm": -15.79999995,
         "tool_translation_mm": [
           -48.0,
-          -16.8,
+          -15.79999995,
           0.0
         ]
       }
@@ -14186,7 +14360,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 151.62968047186538,
+        "certified_clearance_mm": 151.6786898996362,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -14194,7 +14368,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 151.62968047186538,
+      "minimum_signed_clearance_mm": 151.6786898996362,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "tool_id_21_resistor_0603",
@@ -14210,10 +14384,10 @@
       "tool_component": "tool_id_21_resistor_0603",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -16.8,
+        "path_y_mm": -15.79999995,
         "tool_translation_mm": [
           -48.0,
-          -16.8,
+          -15.79999995,
           0.0
         ]
       }
@@ -14571,7 +14745,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 11.656864930160253,
+        "certified_clearance_mm": 11.612170329443158,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -14579,7 +14753,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 11.656864930160253,
+      "minimum_signed_clearance_mm": 11.612170329443158,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "spoon_balance_slug_steel",
@@ -14595,10 +14769,10 @@
       "tool_component": "spoon_balance_slug_steel",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -14851,7 +15025,7 @@
     {
       "bay": "spoon",
       "continuous_certificate": {
-        "certified_clearance_mm": 97.84008636545657,
+        "certified_clearance_mm": 97.88382134224227,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -14859,7 +15033,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 97.84008636545657,
+      "minimum_signed_clearance_mm": 97.88382134224227,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "spoon_balance_slug_steel",
@@ -14875,10 +15049,10 @@
       "tool_component": "spoon_balance_slug_steel",
       "witness": {
         "mechanism_state": "rigid_nominal",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           -48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -15254,7 +15428,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 26.076809620810593,
+        "certified_clearance_mm": 26.07302245617105,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -15262,7 +15436,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 26.076809620810593,
+      "minimum_signed_clearance_mm": 26.07302245617105,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "common_tool_plate",
@@ -15284,10 +15458,10 @@
       "tool_component": "common_tool_plate",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -15469,7 +15643,7 @@
         "backend_version": "1.2.0",
         "clearance_authority": false,
         "mesh_a": {
-          "sha256": "bededbbdd08c31bfb4abea7e40b79cb09703698e5705a1e027407fc46127bd46",
+          "sha256": "65b7b50f0ec10b8a2b2cdd841c85e25c51012308f6dc2139369313409300ba63",
           "triangles": 7904,
           "vertices": 7218
         },
@@ -15626,7 +15800,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 1.9999999999999822,
+        "certified_clearance_mm": 1.9499999999999824,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -15634,7 +15808,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 1.9999999999999822,
+      "minimum_signed_clearance_mm": 1.9499999999999824,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "common_tool_plate",
@@ -15656,10 +15830,10 @@
       "tool_component": "common_tool_plate",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -15677,7 +15851,7 @@
         "backend_version": "1.2.0",
         "clearance_authority": false,
         "mesh_a": {
-          "sha256": "bededbbdd08c31bfb4abea7e40b79cb09703698e5705a1e027407fc46127bd46",
+          "sha256": "65b7b50f0ec10b8a2b2cdd841c85e25c51012308f6dc2139369313409300ba63",
           "triangles": 7904,
           "vertices": 7218
         },
@@ -15844,7 +16018,7 @@
         "backend_version": "1.2.0",
         "clearance_authority": false,
         "mesh_a": {
-          "sha256": "bededbbdd08c31bfb4abea7e40b79cb09703698e5705a1e027407fc46127bd46",
+          "sha256": "65b7b50f0ec10b8a2b2cdd841c85e25c51012308f6dc2139369313409300ba63",
           "triangles": 7904,
           "vertices": 7218
         },
@@ -16165,7 +16339,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 56.0357029044876,
+        "certified_clearance_mm": 56.033940607456834,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -16173,7 +16347,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 56.0357029044876,
+      "minimum_signed_clearance_mm": 56.033940607456834,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_1_MC-12-12-03",
@@ -16493,7 +16667,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 18.110770276274835,
+        "certified_clearance_mm": 18.155026752665503,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -16501,7 +16675,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 18.110770276274835,
+      "minimum_signed_clearance_mm": 18.155026752665503,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_1_MC-12-12-03",
@@ -16944,7 +17118,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 57.0350769263968,
+        "certified_clearance_mm": 57.033345509447365,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -16952,7 +17126,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 57.0350769263968,
+      "minimum_signed_clearance_mm": 57.033345509447365,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_screw_1_ISO10642_M5x10",
@@ -17272,7 +17446,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 19.1049731745428,
+        "certified_clearance_mm": 19.149542976008597,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -17280,7 +17454,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 19.1049731745428,
+      "minimum_signed_clearance_mm": 19.149542976008597,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_screw_1_ISO10642_M5x10",
@@ -17723,7 +17897,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 57.86926529944219,
+        "certified_clearance_mm": 57.86280641566933,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -17731,7 +17905,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 57.86926529944219,
+      "minimum_signed_clearance_mm": 57.86280641566933,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_nut_1_DIN934_M5",
@@ -18051,7 +18225,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 20.781742707591125,
+        "certified_clearance_mm": 20.810428776527544,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -18059,7 +18233,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 20.781742707591125,
+      "minimum_signed_clearance_mm": 20.810428776527544,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_nut_1_DIN934_M5",
@@ -18502,7 +18676,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 56.0357029044876,
+        "certified_clearance_mm": 56.033940607456834,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -18510,7 +18684,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 56.0357029044876,
+      "minimum_signed_clearance_mm": 56.033940607456834,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_2_MC-12-12-03",
@@ -18532,10 +18706,10 @@
       "tool_component": "target_2_MC-12-12-03",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -24.0,
+        "path_y_mm": -22.99999995,
         "tool_translation_mm": [
           48.0,
-          -24.0,
+          -22.99999995,
           0.0
         ]
       }
@@ -18830,7 +19004,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 18.110770276274835,
+        "certified_clearance_mm": 18.155026752665503,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -18838,7 +19012,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 18.110770276274835,
+      "minimum_signed_clearance_mm": 18.155026752665503,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_2_MC-12-12-03",
@@ -18860,10 +19034,10 @@
       "tool_component": "target_2_MC-12-12-03",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -24.0,
+        "path_y_mm": -22.99999995,
         "tool_translation_mm": [
           48.0,
-          -24.0,
+          -22.99999995,
           0.0
         ]
       }
@@ -19281,7 +19455,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 57.0350769263968,
+        "certified_clearance_mm": 57.033345509447365,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -19289,7 +19463,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 57.0350769263968,
+      "minimum_signed_clearance_mm": 57.033345509447365,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_screw_2_ISO10642_M5x10",
@@ -19311,10 +19485,10 @@
       "tool_component": "target_screw_2_ISO10642_M5x10",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -24.0,
+        "path_y_mm": -22.99999995,
         "tool_translation_mm": [
           48.0,
-          -24.0,
+          -22.99999995,
           0.0
         ]
       }
@@ -19609,7 +19783,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 19.1049731745428,
+        "certified_clearance_mm": 19.149542976008597,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -19617,7 +19791,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 19.1049731745428,
+      "minimum_signed_clearance_mm": 19.149542976008597,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_screw_2_ISO10642_M5x10",
@@ -19639,10 +19813,10 @@
       "tool_component": "target_screw_2_ISO10642_M5x10",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -24.0,
+        "path_y_mm": -22.99999995,
         "tool_translation_mm": [
           48.0,
-          -24.0,
+          -22.99999995,
           0.0
         ]
       }
@@ -20060,7 +20234,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 57.86926529944219,
+        "certified_clearance_mm": 57.86280641566933,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -20068,7 +20242,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 57.86926529944219,
+      "minimum_signed_clearance_mm": 57.86280641566933,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_nut_2_DIN934_M5",
@@ -20090,10 +20264,10 @@
       "tool_component": "target_nut_2_DIN934_M5",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -24.0,
+        "path_y_mm": -22.99999995,
         "tool_translation_mm": [
           48.0,
-          -24.0,
+          -22.99999995,
           0.0
         ]
       }
@@ -20388,7 +20562,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 20.781742707591125,
+        "certified_clearance_mm": 20.810428776527544,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -20396,7 +20570,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 20.781742707591125,
+      "minimum_signed_clearance_mm": 20.810428776527544,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_nut_2_DIN934_M5",
@@ -20418,10 +20592,10 @@
       "tool_component": "target_nut_2_DIN934_M5",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -24.0,
+        "path_y_mm": -22.99999995,
         "tool_translation_mm": [
           48.0,
-          -24.0,
+          -22.99999995,
           0.0
         ]
       }
@@ -20869,10 +21043,10 @@
       "tool_component": "shoulder_lock_stud_1_McMaster_90318A720",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -21167,7 +21341,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 33.0,
+        "certified_clearance_mm": 33.0499999,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -21175,7 +21349,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 33.0,
+      "minimum_signed_clearance_mm": 33.0499999,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "shoulder_lock_stud_1_McMaster_90318A720",
@@ -21197,10 +21371,10 @@
       "tool_component": "shoulder_lock_stud_1_McMaster_90318A720",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -21618,7 +21792,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 46.95519870349163,
+        "certified_clearance_mm": 46.95149822193518,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -21626,7 +21800,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 46.95519870349163,
+      "minimum_signed_clearance_mm": 46.95149822193518,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "lock_stud_nut_1_DIN934_M3",
@@ -21648,10 +21822,10 @@
       "tool_component": "lock_stud_nut_1_DIN934_M3",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.999999949999999,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.999999949999999,
           0.0
         ]
       }
@@ -21946,7 +22120,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 33.01064414303343,
+        "certified_clearance_mm": 33.05510667831862,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -21954,7 +22128,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 33.01064414303343,
+      "minimum_signed_clearance_mm": 33.05510667831862,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "lock_stud_nut_1_DIN934_M3",
@@ -21976,10 +22150,10 @@
       "tool_component": "lock_stud_nut_1_DIN934_M3",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.999999949999999,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.999999949999999,
           0.0
         ]
       }
@@ -22427,10 +22601,10 @@
       "tool_component": "shoulder_lock_stud_2_McMaster_90318A720",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -22725,7 +22899,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 9.0,
+        "certified_clearance_mm": 9.049999900000003,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -22733,7 +22907,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 9.0,
+      "minimum_signed_clearance_mm": 9.049999900000003,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "shoulder_lock_stud_2_McMaster_90318A720",
@@ -22755,10 +22929,10 @@
       "tool_component": "shoulder_lock_stud_2_McMaster_90318A720",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -23176,7 +23350,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 70.91100206752871,
+        "certified_clearance_mm": 70.90855177072129,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -23184,7 +23358,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 70.91100206752871,
+      "minimum_signed_clearance_mm": 70.90855177072129,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "lock_stud_nut_2_DIN934_M3",
@@ -23206,10 +23380,10 @@
       "tool_component": "lock_stud_nut_2_DIN934_M3",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.999999949999999,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.999999949999999,
           0.0
         ]
       }
@@ -23504,7 +23678,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 9.493318587370267,
+        "certified_clearance_mm": 9.521583554133555,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -23512,7 +23686,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 9.493318587370267,
+      "minimum_signed_clearance_mm": 9.521583554133555,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "lock_stud_nut_2_DIN934_M3",
@@ -23534,10 +23708,10 @@
       "tool_component": "lock_stud_nut_2_DIN934_M3",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.999999949999999,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.999999949999999,
           0.0
         ]
       }
@@ -23955,7 +24129,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 27.073972741361768,
+        "certified_clearance_mm": 27.070325081165908,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -23963,7 +24137,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 27.073972741361768,
+      "minimum_signed_clearance_mm": 27.070325081165908,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "tool_contact_board_FR4",
@@ -23985,10 +24159,10 @@
       "tool_component": "tool_contact_board_FR4",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -24283,7 +24457,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 49.040799340956916,
+        "certified_clearance_mm": 49.088746064551295,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -24291,7 +24465,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 49.040799340956916,
+      "minimum_signed_clearance_mm": 49.088746064551295,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "tool_contact_board_FR4",
@@ -24313,10 +24487,10 @@
       "tool_component": "tool_contact_board_FR4",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -24734,7 +24908,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 29.06548640570118,
+        "certified_clearance_mm": 29.062174729362564,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -24742,7 +24916,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 29.06548640570118,
+      "minimum_signed_clearance_mm": 29.062174729362564,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_pad_P1_GND",
@@ -24764,10 +24938,10 @@
       "tool_component": "target_pad_P1_GND",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -0.5,
+        "path_y_mm": 0.0,
         "tool_translation_mm": [
           48.0,
-          -0.5,
+          0.0,
           0.0
         ]
       }
@@ -25062,7 +25236,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 53.03586050965893,
+        "certified_clearance_mm": 53.08401350114741,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -25070,7 +25244,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 53.03586050965893,
+      "minimum_signed_clearance_mm": 53.08401350114741,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_pad_P1_GND",
@@ -25092,10 +25266,10 @@
       "tool_component": "target_pad_P1_GND",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -0.5,
+        "path_y_mm": 0.0,
         "tool_translation_mm": [
           48.0,
-          -0.5,
+          0.0,
           0.0
         ]
       }
@@ -25513,7 +25687,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 29.06548640570118,
+        "certified_clearance_mm": 29.062174729362564,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -25521,7 +25695,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 29.06548640570118,
+      "minimum_signed_clearance_mm": 29.062174729362564,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_pad_P2_+12V",
@@ -25543,10 +25717,10 @@
       "tool_component": "target_pad_P2_+12V",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -5.5,
+        "path_y_mm": -4.49999995,
         "tool_translation_mm": [
           48.0,
-          -5.5,
+          -4.49999995,
           0.0
         ]
       }
@@ -25841,7 +26015,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 53.03586050965893,
+        "certified_clearance_mm": 53.08401350114741,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -25849,7 +26023,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 53.03586050965893,
+      "minimum_signed_clearance_mm": 53.08401350114741,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_pad_P2_+12V",
@@ -25871,10 +26045,10 @@
       "tool_component": "target_pad_P2_+12V",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -5.5,
+        "path_y_mm": -4.49999995,
         "tool_translation_mm": [
           48.0,
-          -5.5,
+          -4.49999995,
           0.0
         ]
       }
@@ -26292,7 +26466,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 29.06548640570118,
+        "certified_clearance_mm": 29.062174729362564,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -26300,7 +26474,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 29.06548640570118,
+      "minimum_signed_clearance_mm": 29.062174729362564,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_pad_P3_TTL_DATA",
@@ -26322,10 +26496,10 @@
       "tool_component": "target_pad_P3_TTL_DATA",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -10.5,
+        "path_y_mm": -9.49999995,
         "tool_translation_mm": [
           48.0,
-          -10.5,
+          -9.49999995,
           0.0
         ]
       }
@@ -26620,7 +26794,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 53.03586050965893,
+        "certified_clearance_mm": 53.08401350114741,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -26628,7 +26802,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 53.03586050965893,
+      "minimum_signed_clearance_mm": 53.08401350114741,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_pad_P3_TTL_DATA",
@@ -26650,10 +26824,10 @@
       "tool_component": "target_pad_P3_TTL_DATA",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -10.5,
+        "path_y_mm": -9.49999995,
         "tool_translation_mm": [
           48.0,
-          -10.5,
+          -9.49999995,
           0.0
         ]
       }
@@ -27071,7 +27245,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 29.06548640570118,
+        "certified_clearance_mm": 29.062174729362564,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -27079,7 +27253,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 29.06548640570118,
+      "minimum_signed_clearance_mm": 29.062174729362564,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_pad_P4_TOOL_ID_SPARE",
@@ -27101,10 +27275,10 @@
       "tool_component": "target_pad_P4_TOOL_ID_SPARE",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -15.5,
+        "path_y_mm": -14.49999995,
         "tool_translation_mm": [
           48.0,
-          -15.5,
+          -14.49999995,
           0.0
         ]
       }
@@ -27399,7 +27573,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 53.03586050965893,
+        "certified_clearance_mm": 53.08401350114741,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -27407,7 +27581,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 53.03586050965893,
+      "minimum_signed_clearance_mm": 53.08401350114741,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "target_pad_P4_TOOL_ID_SPARE",
@@ -27429,10 +27603,10 @@
       "tool_component": "target_pad_P4_TOOL_ID_SPARE",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -15.5,
+        "path_y_mm": -14.49999995,
         "tool_translation_mm": [
           48.0,
-          -15.5,
+          -14.49999995,
           0.0
         ]
       }
@@ -27850,7 +28024,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 40.660177077823946,
+        "certified_clearance_mm": 40.64606377006265,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -27858,7 +28032,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 40.660177077823946,
+      "minimum_signed_clearance_mm": 40.64606377006265,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_printed_carrier",
@@ -27880,10 +28054,10 @@
       "tool_component": "whisk_printed_carrier",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -28178,7 +28352,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 11.543396380615196,
+        "certified_clearance_mm": 11.498043302666764,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -28186,7 +28360,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 11.543396380615196,
+      "minimum_signed_clearance_mm": 11.498043302666764,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_printed_carrier",
@@ -28208,10 +28382,10 @@
       "tool_component": "whisk_printed_carrier",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -28629,7 +28803,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 53.02122216622322,
+        "certified_clearance_mm": 53.00332536737672,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -28637,7 +28811,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 53.02122216622322,
+      "minimum_signed_clearance_mm": 53.00332536737672,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_motor_12V_envelope",
@@ -28659,10 +28833,10 @@
       "tool_component": "whisk_motor_12V_envelope",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -28957,7 +29131,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 22.20923231451281,
+        "certified_clearance_mm": 22.192453620318776,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -28965,7 +29139,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 22.20923231451281,
+      "minimum_signed_clearance_mm": 22.192453620318776,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_motor_12V_envelope",
@@ -28987,10 +29161,10 @@
       "tool_component": "whisk_motor_12V_envelope",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -29408,7 +29582,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 79.07117047318826,
+        "certified_clearance_mm": 79.0386139807626,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -29416,7 +29590,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 79.07117047318826,
+      "minimum_signed_clearance_mm": 79.0386139807626,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_motor_shaft",
@@ -29438,10 +29612,10 @@
       "tool_component": "whisk_motor_shaft",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -29736,7 +29910,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 56.00223209837265,
+        "certified_clearance_mm": 55.9759322887078,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -29744,7 +29918,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 56.00223209837265,
+      "minimum_signed_clearance_mm": 55.9759322887078,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_motor_shaft",
@@ -29766,10 +29940,10 @@
       "tool_component": "whisk_motor_shaft",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -30187,7 +30361,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 76.05425694857587,
+        "certified_clearance_mm": 76.01777752604978,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -30195,7 +30369,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 76.05425694857587,
+      "minimum_signed_clearance_mm": 76.01777752604978,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_eccentric_rotor",
@@ -30217,10 +30391,10 @@
       "tool_component": "whisk_eccentric_rotor",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -30515,7 +30689,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 57.23853597009623,
+        "certified_clearance_mm": 57.20231636210199,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -30523,7 +30697,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 57.23853597009623,
+      "minimum_signed_clearance_mm": 57.20231636210199,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_eccentric_rotor",
@@ -30545,10 +30719,10 @@
       "tool_component": "whisk_eccentric_rotor",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -30966,7 +31140,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 81.70832270950126,
+        "certified_clearance_mm": 81.67191989906935,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -30974,7 +31148,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 81.70832270950126,
+      "minimum_signed_clearance_mm": 81.67191989906935,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_eccentric_pin",
@@ -30996,10 +31170,10 @@
       "tool_component": "whisk_eccentric_pin",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -31294,7 +31468,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 62.16309194369276,
+        "certified_clearance_mm": 62.12974325063641,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -31302,7 +31476,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 62.16309194369276,
+      "minimum_signed_clearance_mm": 62.12974325063641,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_eccentric_pin",
@@ -31324,10 +31498,10 @@
       "tool_component": "whisk_eccentric_pin",
       "witness": {
         "mechanism_state": "eccentric_+4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -31745,7 +31919,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 76.74144903505537,
+        "certified_clearance_mm": 76.70529642730025,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -31753,7 +31927,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 76.74144903505537,
+      "minimum_signed_clearance_mm": 76.70529642730025,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_rotor_counterweight",
@@ -31775,10 +31949,10 @@
       "tool_component": "whisk_rotor_counterweight",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -32073,7 +32247,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 61.28825336065631,
+        "certified_clearance_mm": 61.26422279593532,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -32081,7 +32255,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 61.28825336065631,
+      "minimum_signed_clearance_mm": 61.26422279593532,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_rotor_counterweight",
@@ -32103,10 +32277,10 @@
       "tool_component": "whisk_rotor_counterweight",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -32524,7 +32698,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 77.42092740338364,
+        "certified_clearance_mm": 77.38024618725376,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -32532,7 +32706,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 77.42092740338364,
+      "minimum_signed_clearance_mm": 77.38024618725376,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_carriage_x",
@@ -32554,10 +32728,10 @@
       "tool_component": "whisk_carriage_x",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -32852,7 +33026,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 63.387695966961914,
+        "certified_clearance_mm": 63.343547410845254,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -32860,7 +33034,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 63.387695966961914,
+      "minimum_signed_clearance_mm": 63.343547410845254,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_carriage_x",
@@ -32882,10 +33056,10 @@
       "tool_component": "whisk_carriage_x",
       "witness": {
         "mechanism_state": "eccentric_+4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -33303,7 +33477,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 81.01668038126469,
+        "certified_clearance_mm": 80.97783647393896,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -33311,7 +33485,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 81.01668038126469,
+      "minimum_signed_clearance_mm": 80.97783647393896,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_compliance_carriage",
@@ -33333,10 +33507,10 @@
       "tool_component": "whisk_compliance_carriage",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -33631,7 +33805,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 64.27832060656222,
+        "certified_clearance_mm": 64.23949328403829,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -33639,7 +33813,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 64.27832060656222,
+      "minimum_signed_clearance_mm": 64.23949328403829,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_compliance_carriage",
@@ -33661,10 +33835,10 @@
       "tool_component": "whisk_compliance_carriage",
       "witness": {
         "mechanism_state": "eccentric_+4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -34082,7 +34256,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 89.49860334105779,
+        "certified_clearance_mm": 89.4600609210613,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -34090,7 +34264,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 89.49860334105779,
+      "minimum_signed_clearance_mm": 89.4600609210613,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_compliance_spring",
@@ -34112,10 +34286,10 @@
       "tool_component": "whisk_compliance_spring",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -34410,7 +34584,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 71.56814934033156,
+        "certified_clearance_mm": 71.53324399319523,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -34418,7 +34592,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 71.56814934033156,
+      "minimum_signed_clearance_mm": 71.53324399319523,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_compliance_spring",
@@ -34440,10 +34614,10 @@
       "tool_component": "whisk_compliance_spring",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -34861,7 +35035,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 67.09135562797938,
+        "certified_clearance_mm": 67.0529827822745,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -34869,7 +35043,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 67.09135562797938,
+      "minimum_signed_clearance_mm": 67.0529827822745,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_food_grade_bellows",
@@ -34891,10 +35065,10 @@
       "tool_component": "whisk_food_grade_bellows",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -35189,7 +35363,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 51.74214916294065,
+        "certified_clearance_mm": 51.69724363048769,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -35197,7 +35371,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 51.74214916294065,
+      "minimum_signed_clearance_mm": 51.69724363048769,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_food_grade_bellows",
@@ -35219,10 +35393,10 @@
       "tool_component": "whisk_food_grade_bellows",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -35640,7 +35814,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 97.37403401318034,
+        "certified_clearance_mm": 97.33144404559094,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -35648,7 +35822,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 97.37403401318034,
+      "minimum_signed_clearance_mm": 97.33144404559094,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_brush_hub",
@@ -35670,10 +35844,10 @@
       "tool_component": "whisk_brush_hub",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -35968,7 +36142,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 83.96250651332414,
+        "certified_clearance_mm": 83.92087045181312,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -35976,7 +36150,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 83.96250651332414,
+      "minimum_signed_clearance_mm": 83.92087045181312,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_brush_hub",
@@ -35998,10 +36172,10 @@
       "tool_component": "whisk_brush_hub",
       "witness": {
         "mechanism_state": "eccentric_+4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -36419,7 +36593,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 106.41619986665,
+        "certified_clearance_mm": 106.37207818112591,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -36427,7 +36601,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 106.41619986665,
+      "minimum_signed_clearance_mm": 106.37207818112591,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_bamboo_bristles",
@@ -36449,10 +36623,10 @@
       "tool_component": "whisk_bamboo_bristles",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -36747,7 +36921,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 94.68092426247837,
+        "certified_clearance_mm": 94.63771188364764,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -36755,7 +36929,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 94.68092426247837,
+      "minimum_signed_clearance_mm": 94.63771188364764,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_bamboo_bristles",
@@ -36777,10 +36951,10 @@
       "tool_component": "whisk_bamboo_bristles",
       "witness": {
         "mechanism_state": "eccentric_+4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -37198,7 +37372,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 106.19252563151514,
+        "certified_clearance_mm": 106.14829249686497,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -37206,7 +37380,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 106.19252563151514,
+      "minimum_signed_clearance_mm": 106.14829249686497,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_brush_collision_envelope",
@@ -37228,10 +37402,10 @@
       "tool_component": "whisk_brush_collision_envelope",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -37526,7 +37700,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 94.65121499484304,
+        "certified_clearance_mm": 94.60767673761998,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -37534,7 +37708,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 94.65121499484304,
+      "minimum_signed_clearance_mm": 94.60767673761998,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_brush_collision_envelope",
@@ -37556,10 +37730,10 @@
       "tool_component": "whisk_brush_collision_envelope",
       "witness": {
         "mechanism_state": "eccentric_+4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -37977,7 +38151,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 53.16013544000805,
+        "certified_clearance_mm": 53.14604877128684,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -37985,7 +38159,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 53.16013544000805,
+      "minimum_signed_clearance_mm": 53.14604877128684,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_bus_driver_board",
@@ -38007,10 +38181,10 @@
       "tool_component": "whisk_bus_driver_board",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -38305,7 +38479,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 19.849433241279208,
+        "certified_clearance_mm": 19.8445205885655,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -38313,7 +38487,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 19.849433241279208,
+      "minimum_signed_clearance_mm": 19.8445205885655,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_bus_driver_board",
@@ -38335,10 +38509,10 @@
       "tool_component": "whisk_bus_driver_board",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -38756,7 +38930,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 28.955828428832774,
+        "certified_clearance_mm": 28.950690838043922,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -38764,7 +38938,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 28.955828428832774,
+      "minimum_signed_clearance_mm": 28.950690838043922,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "tool_id_22_resistor_0603",
@@ -38786,10 +38960,10 @@
       "tool_component": "tool_id_22_resistor_0603",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -16.8,
+        "path_y_mm": -15.79999995,
         "tool_translation_mm": [
           48.0,
-          -16.8,
+          -15.79999995,
           0.0
         ]
       }
@@ -39084,7 +39258,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 55.68087642988389,
+        "certified_clearance_mm": 55.72813462578843,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -39092,7 +39266,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 55.68087642988389,
+      "minimum_signed_clearance_mm": 55.72813462578843,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "tool_id_22_resistor_0603",
@@ -39114,10 +39288,10 @@
       "tool_component": "tool_id_22_resistor_0603",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -16.8,
+        "path_y_mm": -15.79999995,
         "tool_translation_mm": [
           48.0,
-          -16.8,
+          -15.79999995,
           0.0
         ]
       }
@@ -39535,7 +39709,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 76.83073929098951,
+        "certified_clearance_mm": 76.82320612939817,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -39543,7 +39717,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 76.83073929098951,
+      "minimum_signed_clearance_mm": 76.82320612939817,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_balance_slug_steel",
@@ -39565,10 +39739,10 @@
       "tool_component": "whisk_balance_slug_steel",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -39863,7 +40037,7 @@
     {
       "bay": "whisk",
       "continuous_certificate": {
-        "certified_clearance_mm": 11.656864930160253,
+        "certified_clearance_mm": 11.612170329443158,
         "maximum_between_sample_motion_bound_mm": 0.05,
         "sampled_path_is_secondary": true,
         "semantics": "euclidean_separation_of_exact_brep_axis_aligned_bounds_over_full_y_sweep"
@@ -39871,7 +40045,7 @@
       "manufacturing_clearance_mm": 0.2,
       "maximum_overlap_volume_mm3": 0.0,
       "method": "analytic_continuous_swept_aabb_lower_bound",
-      "minimum_signed_clearance_mm": 11.656864930160253,
+      "minimum_signed_clearance_mm": 11.612170329443158,
       "numeric_tolerance_mm": 0.001,
       "pair": [
         "whisk_balance_slug_steel",
@@ -39893,10 +40067,10 @@
       "tool_component": "whisk_balance_slug_steel",
       "witness": {
         "mechanism_state": "eccentric_-4.00_compliance_-5.05",
-        "path_y_mm": -8.0,
+        "path_y_mm": -6.99999995,
         "tool_translation_mm": [
           48.0,
-          -8.0,
+          -6.99999995,
           0.0
         ]
       }
@@ -40201,24 +40375,24 @@
     "normal_gripper_authority": "separate_core_stock_adapter_and_passive_dock_package",
     "normal_gripper_authority_files": [
       {
-        "bytes": 60415,
+        "bytes": 87799,
         "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-        "sha256": "baf63afb535b229bc8a233d56d6992ed73f9f40df02ff33eb987d738a1560e0b"
+        "sha256": "0b6776e6223b30d583010fbe2dd2f83886b2d2c8edd5af044ce5ed816b833263"
       },
       {
-        "bytes": 249124,
+        "bytes": 248872,
         "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_tool_plate.step",
-        "sha256": "5c968d8e060e0f191b5d6eec67a0b195f8e708a043afe6a173c54b74b6a8f4ab"
+        "sha256": "ca2eb199b43ec63c38c49a4e954ed2238348bb10a03206abe6eb3233343cb526"
       },
       {
-        "bytes": 3304071,
+        "bytes": 3320413,
         "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_retrofit_assembly.step",
-        "sha256": "e09bafe2632b795bf04c4fec10bb55b6561d7fcd50309ee6f14ee590e9e0a4c3"
+        "sha256": "3487e09b193b483c7db6c9d4652b6beb4897c75a3acf9c48f8d387a9fbe91cfa"
       },
       {
-        "bytes": 130486,
+        "bytes": 174898,
         "path": "QuickChange/SO101_Magnetic/exports/so101_passive_tool_dock.step",
-        "sha256": "5dfe8ceee800063a188b2491578811f88e46ca0f4548120254d81b9ecf548a48"
+        "sha256": "a83ab898183d4f79fcd6391e68cff33a4b594d2fc1548a5206b4eedc2dbff5eb"
       },
       {
         "bytes": 1413584,
