@@ -25,6 +25,53 @@ SIGNAL_Y_M = {
 }
 SIGNAL_TO_BORE = {"ground": 1, "power": 2, "data": 3, "id": 4}
 
+# Frozen source contracts.  The stock-gripper dock is the released core
+# quick-change design; spoon and whisk use the separate two-bay matcha rack.
+# Keeping these datums distinct prevents the convenient recovered rack box
+# from silently becoming collision authority for three different parts.
+CORE_DOCK_STOP_BOUNDS_M = (
+    (-0.045, 0.037),
+    (0.026, 0.032),
+    (-0.003, 0.0125),
+)
+CORE_DOCK_STOP_HOLES_M = (
+    (-0.025, 0.00475, 0.0022),
+    (0.021, 0.00475, 0.0022),
+)
+MATCHA_DOCK_STOP_BOUNDS_M = (
+    (-0.041, 0.033),
+    (0.025, 0.031),
+    (-0.003, 0.0125),
+)
+CORE_DOCK_CAM_POLYGON_M = (
+    (0.028, -0.016),
+    (0.034, -0.016),
+    (0.034, 0.0),
+    (0.02405, 0.0),
+)
+CORE_DOCK_CAM_Z_BOUNDS_M = (-0.00415, -0.00195)
+MATCHA_DOCK_CAM_POLYGON_M = (
+    (0.028, -0.017),
+    (0.034, -0.017),
+    (0.034, 0.001),
+    (0.024, 0.001),
+)
+MATCHA_DOCK_CAM_Z_BOUNDS_M = (-0.0042, -0.0020)
+
+# The released core plate carries a local fixed-side recess around the full
+# passive-cam sweep.  Values are the published 0.50 mm guarded contract,
+# clipped to the runtime plate bounds.
+ROBOT_CAM_RELIEF_BOUNDS_M = (
+    (0.02355, 0.024),
+    (-0.0165, 0.024),
+    (0.00485, 0.00805),
+)
+
+# A 0.20 mm Z partition leaves a conservative staircase around each round
+# core-stop passage.  Its maximum planar miss is below the 0.35 mm runtime
+# proxy release limit, while no box ever fills source hole material.
+CORE_STOP_HOLE_PARTITION_STEP_M = 0.0002
+
 
 def _safe_name(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9_]+", "_", value).strip("_") or "unnamed"
@@ -54,7 +101,7 @@ def _geom(
     name: str,
     geom_type: str,
     pos: tuple[float, float, float] = (0.0, 0.0, 0.0),
-    size: tuple[float, ...],
+    size: tuple[float, ...] | None,
     rgba: str,
     quat: str | None = None,
     collision: bool = True,
@@ -64,17 +111,81 @@ def _geom(
     record = {
         "name": name,
         "type": geom_type,
-        "pos": " ".join(f"{value:.9g}" for value in pos),
-        "size": " ".join(f"{value:.9g}" for value in size),
+        "pos": " ".join(f"{value:.12g}" for value in pos),
         "rgba": rgba,
         "group": str(group),
         "contype": "1" if collision else "0",
         "conaffinity": "1" if collision else "0",
     }
+    if size is not None:
+        record["size"] = " ".join(f"{value:.12g}" for value in size)
     if quat is not None:
         record["quat"] = quat
     record.update(attributes)
     return ET.SubElement(parent, "geom", record)
+
+
+def _add_convex_prism_mesh(
+    asset: ET.Element,
+    *,
+    name: str,
+    polygon_xy: tuple[tuple[float, float], ...],
+    z_bounds: tuple[float, float],
+) -> str:
+    """Install one deterministic convex source-contract prism mesh."""
+
+    if len(polygon_xy) < 3:
+        raise ValueError("a prism needs at least three polygon vertices")
+    existing = asset.find(f"./mesh[@name='{name}']")
+    if existing is not None:
+        return name
+    z_min, z_max = z_bounds
+    vertices = [(*point, z_min) for point in polygon_xy]
+    vertices.extend((*point, z_max) for point in polygon_xy)
+    count = len(polygon_xy)
+    faces: list[tuple[int, int, int]] = []
+    # Input polygons are counter-clockwise.  Reverse the lower cap, retain the
+    # upper cap and triangulate each side with deterministic vertex ordering.
+    for index in range(1, count - 1):
+        faces.append((0, index + 1, index))
+        faces.append((count, count + index, count + index + 1))
+    for index in range(count):
+        following = (index + 1) % count
+        faces.append((index, following, count + following))
+        faces.append((index, count + following, count + index))
+    ET.SubElement(
+        asset,
+        "mesh",
+        {
+            "name": name,
+            "vertex": " ".join(
+                f"{coordinate:.12g}" for vertex in vertices for coordinate in vertex
+            ),
+            "face": " ".join(str(item) for face in faces for item in face),
+        },
+    )
+    return name
+
+
+def _add_box_from_bounds(
+    parent: ET.Element,
+    *,
+    name: str,
+    bounds: tuple[tuple[float, float], ...],
+    rgba: str,
+    **attributes: str,
+) -> ET.Element:
+    if len(bounds) != 3 or any(hi <= lo for lo, hi in bounds):
+        raise ValueError(f"invalid box bounds for {name}: {bounds}")
+    return _geom(
+        parent,
+        name=name,
+        geom_type="box",
+        pos=tuple((lo + hi) / 2.0 for lo, hi in bounds),
+        size=tuple((hi - lo) / 2.0 for lo, hi in bounds),
+        rgba=rgba,
+        **attributes,
+    )
 
 
 def activate_upstream_robot_collisions(robot_root: ET.Element) -> list[str]:
@@ -150,16 +261,30 @@ def add_robot_quick_change_interface(wrist_output: ET.Element) -> ET.Element:
         "body",
         {"name": "robot_plate_frame", "quat": "0 1 0 0"},
     )
-    _geom(
-        frame,
-        name="qc_col_robot_plate_core__mating_land",
-        geom_type="box",
-        pos=(0.0, 0.0, 0.00475),
-        size=(0.024, 0.024, 0.00475),
-        rgba="0.93 0.62 0.04 0.28",
-        contype="64",
-        conaffinity="31",
+    # Partition the outer +X strip around the fixed-side cam relief.  The main
+    # mating solid keeps its stable semantic name, while all four pieces form
+    # a conservative proxy of the previous plate minus the published guarded
+    # cam passage.
+    plate_piece_bounds = (
+        ((-0.024, 0.02355), (-0.024, 0.024), (0.0, 0.0095)),
+        ((0.02355, 0.024), (-0.024, -0.0165), (0.0, 0.0095)),
+        ((0.02355, 0.024), (-0.0165, 0.024), (0.0, 0.00485)),
+        ((0.02355, 0.024), (-0.0165, 0.024), (0.00805, 0.0095)),
     )
+    for index, bounds in enumerate(plate_piece_bounds):
+        name = (
+            "qc_col_robot_plate_core__mating_land"
+            if index == 0
+            else f"qc_col_robot_plate_cam_relief_part_{index:02d}"
+        )
+        _add_box_from_bounds(
+            frame,
+            name=name,
+            bounds=bounds,
+            rgba="0.93 0.62 0.04 0.28",
+            contype="64",
+            conaffinity="31",
+        )
     # Shoulder-stud wells are represented by the mating lands around the two
     # retained studs; the actual stud heads remain separately active.
     for side, y_value in (("left", -0.010), ("right", 0.010)):
@@ -401,6 +526,7 @@ def add_tool_quick_change_interface(body: ET.Element, tool: str) -> list[str]:
 
 def add_supported_dock(
     worldbody: ET.Element,
+    asset: ET.Element,
     tool: str,
     *,
     position: tuple[float, float, float],
@@ -460,16 +586,66 @@ def add_supported_dock(
         size=(0.020, 0.010, 0.005),
         rgba="0.16 0.18 0.21 1",
     )
-    _geom(
-        dock,
-        name=f"dock_{tool}_qc_col_dock_stop",
-        geom_type="box",
-        pos=(0.0, 0.029, 0.00475),
-        size=(0.031, 0.004, 0.00475),
-        rgba=rgba,
-        solref="0.0005 1",
-        solimp="0.99 0.9999 0.00001",
-    )
+    if tool == "gripper":
+        x_bounds, y_bounds, z_bounds = CORE_DOCK_STOP_BOUNDS_M
+        hole_z = CORE_DOCK_STOP_HOLES_M[0][1]
+        radius = CORE_DOCK_STOP_HOLES_M[0][2]
+        middle_min = hole_z - radius
+        middle_max = hole_z + radius
+        stop_bounds: list[tuple[tuple[float, float], ...]] = [
+            (x_bounds, y_bounds, (z_bounds[0], middle_min)),
+        ]
+        slice_count = round(
+            (middle_max - middle_min) / CORE_STOP_HOLE_PARTITION_STEP_M
+        )
+        for slice_index in range(slice_count):
+            z_min = middle_min + slice_index * CORE_STOP_HOLE_PARTITION_STEP_M
+            z_max = min(
+                middle_max, z_min + CORE_STOP_HOLE_PARTITION_STEP_M
+            )
+            nearest_delta = (
+                0.0
+                if z_min <= hole_z <= z_max
+                else min(abs(z_min - hole_z), abs(z_max - hole_z))
+            )
+            hole_half_width = math.sqrt(
+                max(0.0, radius * radius - nearest_delta * nearest_delta)
+            )
+            left_x, right_x = (hole[0] for hole in CORE_DOCK_STOP_HOLES_M)
+            for interval in (
+                (x_bounds[0], left_x - hole_half_width),
+                (left_x + hole_half_width, right_x - hole_half_width),
+                (right_x + hole_half_width, x_bounds[1]),
+            ):
+                stop_bounds.append((interval, y_bounds, (z_min, z_max)))
+        stop_bounds.append((x_bounds, y_bounds, (middle_max, z_bounds[1])))
+        for index, bounds in enumerate(stop_bounds):
+            _add_box_from_bounds(
+                dock,
+                name=(
+                    f"dock_{tool}_qc_col_dock_stop_part_{index:03d}"
+                    "__dock_stop_land"
+                ),
+                bounds=bounds,
+                rgba=rgba,
+                solref="0.0005 1",
+                solimp="0.99 0.9999 0.00001",
+            )
+        cam_polygon = CORE_DOCK_CAM_POLYGON_M
+        cam_z_bounds = CORE_DOCK_CAM_Z_BOUNDS_M
+    elif tool in {"spoon", "whisk"}:
+        _add_box_from_bounds(
+            dock,
+            name=f"dock_{tool}_qc_col_dock_stop",
+            bounds=MATCHA_DOCK_STOP_BOUNDS_M,
+            rgba=rgba,
+            solref="0.0005 1",
+            solimp="0.99 0.9999 0.00001",
+        )
+        cam_polygon = MATCHA_DOCK_CAM_POLYGON_M
+        cam_z_bounds = MATCHA_DOCK_CAM_Z_BOUNDS_M
+    else:
+        raise ValueError(f"unsupported dock source contract for {tool!r}")
     # The guide cheeks constrain the plate across local Y.  Keeping the long
     # local-X service corridor open is essential: the spoon handle and whisk
     # payload leave the rack through that corridor.
@@ -482,12 +658,18 @@ def add_supported_dock(
             size=(0.034, 0.003, 0.010),
             rgba=rgba,
         )
+    cam_mesh_name = _add_convex_prism_mesh(
+        asset,
+        name=f"dock_{tool}_positive_lock_cam_source_mesh",
+        polygon_xy=cam_polygon,
+        z_bounds=cam_z_bounds,
+    )
     _geom(
         dock,
         name=f"dock_{tool}_cam_collision",
-        geom_type="box",
-        pos=(0.020, -0.033, 0.013),
-        size=(0.003, 0.003, 0.003),
+        geom_type="mesh",
+        size=None,
+        mesh=cam_mesh_name,
         rgba="0.12 0.75 0.35 1",
     )
     ET.SubElement(
@@ -501,6 +683,19 @@ def add_supported_dock(
         },
     )
     return dock
+
+
+def is_dock_stop_collision_name(tool: str, name: str) -> bool:
+    """Return whether *name* is an exact member of one dock's stop family."""
+
+    if tool == "gripper":
+        return re.fullmatch(
+            r"dock_gripper_qc_col_dock_stop_part_[0-9]{3}__dock_stop_land",
+            name,
+        ) is not None
+    if tool in {"spoon", "whisk"}:
+        return name == f"dock_{tool}_qc_col_dock_stop"
+    return False
 
 
 def collision_geom_names(root: ET.Element) -> list[str]:

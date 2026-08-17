@@ -226,8 +226,10 @@ def _split_stock_gripper(robot_root: ET.Element) -> ET.Element:
         raise RuntimeError("Calibrated robot no longer has the stock gripper subtree")
     stock = copy.deepcopy(original)
     stock.set("name", "stock_gripper")
-    stock.set("pos", "0 0 0.0095")
-    stock.set("quat", "0 1 0 0")
+    # Exact wrapper pose solved from the calibrated collision-mesh geom frame
+    # to the released stock-gripper STEP tool-local source contract.
+    stock.set("pos", "0.0004875 -0.000000214 0.010500706")
+    stock.set("quat", "0 -1 0 0")
     wrist_roll = stock.find("./joint[@name='wrist_roll']")
     if wrist_roll is None:
         raise RuntimeError("Stock subtree no longer contains wrist_roll")
@@ -826,9 +828,10 @@ def _build_xml_and_assets() -> tuple[str, dict[str, bytes]]:
     stock_gripper = _split_stock_gripper(robot_root)
     _merge_scene(robot_root, scene_root)
     worldbody = robot_root.find("worldbody")
+    asset = robot_root.find("asset")
     actuator = robot_root.find("actuator")
     equality = robot_root.find("equality")
-    if worldbody is None or actuator is None or equality is None:
+    if worldbody is None or asset is None or actuator is None or equality is None:
         raise RuntimeError("Merged robot is missing a required MJCF container")
     colors = {
         "gripper": "0.36 0.42 0.48 1",
@@ -839,6 +842,7 @@ def _build_xml_and_assets() -> tuple[str, dict[str, bytes]]:
         position, quat = DOCK_POSES[tool]
         qc.add_supported_dock(
             worldbody,
+            asset,
             tool,
             position=position,
             quat=quat,
@@ -1158,9 +1162,14 @@ class MatchaWorkflowController:
     def _dock_stop_contact_is_valid(self, contact: mujoco.MjContact, tool: str) -> bool:
         geom_a = str(self.model.geom(int(contact.geom[0])).name)
         geom_b = str(self.model.geom(int(contact.geom[1])).name)
-        stop_name = f"dock_{tool}_qc_col_dock_stop"
-        if stop_name not in {geom_a, geom_b}:
+        stop_names = [
+            name
+            for name in (geom_a, geom_b)
+            if qc.is_dock_stop_collision_name(tool, name)
+        ]
+        if len(stop_names) != 1:
             return False
+        stop_name = stop_names[0]
         plate_name = geom_b if geom_a == stop_name else geom_a
         if not (
             plate_name.startswith(f"matcha_col_{tool}_plate_")
