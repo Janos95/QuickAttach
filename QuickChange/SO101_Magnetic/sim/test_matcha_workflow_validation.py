@@ -483,6 +483,85 @@ class RenderedCollisionInventoryTests(unittest.TestCase):
         self.assertTrue(complete, coverage)
         self.assertEqual(missing, [], coverage)
 
+    def test_initialized_scene_has_no_unreviewed_penetration(self) -> None:
+        if not hasattr(self.demo, "initialize") or not hasattr(
+            self.demo, "initial_contact_report"
+        ):
+            self.skipTest("initialized contact audit API is not restored yet")
+        import mujoco
+
+        data = mujoco.MjData(self.model)
+        self.demo.initialize(self.model, data)
+        report = self.demo.initial_contact_report(self.model, data)
+        self.assertTrue(report.get("passed"), report)
+        self.assertEqual(int(report.get("penetration_count", -1)), 0, report)
+        self.assertEqual(report.get("penetrations"), [], report)
+
+    def test_declared_fixture_support_chains_exist_and_are_exactly_tangent(
+        self,
+    ) -> None:
+        import mujoco
+
+        config = load_json(MATCHA_CONFIG, "matcha simulation config")
+        chains = config.get("fixture_support_chains")
+        self.assertIsInstance(chains, dict)
+        self.assertTrue(chains)
+        data = mujoco.MjData(self.model)
+        self.demo.initialize(self.model, data)
+        missing: list[str] = []
+        measurements: dict[str, list[dict[str, float | str]]] = {}
+        for fixture, chain in sorted(chains.items()):
+            self.assertIsInstance(chain, list)
+            self.assertGreaterEqual(len(chain), 2)
+            fixture_records: list[dict[str, float | str]] = []
+            for first, second in zip(chain, chain[1:]):
+                first_name = str(first)
+                second_name = str(second)
+                first_id = mujoco.mj_name2id(
+                    self.model, mujoco.mjtObj.mjOBJ_GEOM, first_name
+                )
+                second_id = mujoco.mj_name2id(
+                    self.model, mujoco.mjtObj.mjOBJ_GEOM, second_name
+                )
+                if first_id < 0 or second_id < 0:
+                    missing.extend(
+                        name
+                        for name, geom_id in (
+                            (first_name, first_id),
+                            (second_name, second_id),
+                        )
+                        if geom_id < 0
+                    )
+                    continue
+                for geom_id in (first_id, second_id):
+                    self.assertTrue(
+                        int(self.model.geom_contype[geom_id])
+                        or int(self.model.geom_conaffinity[geom_id]),
+                        str(self.model.geom(geom_id).name),
+                    )
+                witness = np.zeros(6, dtype=np.float64)
+                distance = float(
+                    mujoco.mj_geomDistance(
+                        self.model,
+                        data,
+                        first_id,
+                        second_id,
+                        0.05,
+                        witness,
+                    )
+                )
+                fixture_records.append(
+                    {
+                        "first": first_name,
+                        "second": second_name,
+                        "distance_m": distance,
+                    }
+                )
+                self.assertLessEqual(abs(distance), 1.0e-7, fixture_records[-1])
+            measurements[str(fixture)] = fixture_records
+        self.assertEqual(sorted(set(missing)), [], f"stale support names: {missing}")
+        self.assertTrue(all(measurements.values()), measurements)
+
     def test_payload_report_active_geom_inventory_matches_compiled_model(self) -> None:
         report = load_json(PAYLOAD_REPORT, "payload collision authority report")
         groups = report.get("groups")

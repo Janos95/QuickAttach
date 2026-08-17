@@ -60,6 +60,14 @@ DEVELOPMENT_TESTS = (
     ),
     qualified(
         "RenderedCollisionInventoryTests",
+        "test_initialized_scene_has_no_unreviewed_penetration",
+    ),
+    qualified(
+        "RenderedCollisionInventoryTests",
+        "test_declared_fixture_support_chains_exist_and_are_exactly_tangent",
+    ),
+    qualified(
+        "RenderedCollisionInventoryTests",
         "test_payload_report_active_geom_inventory_matches_compiled_model",
     ),
     qualified(
