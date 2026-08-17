@@ -77,12 +77,19 @@ def import_file(path: Path, module_name: str, description: str) -> ModuleType:
     if spec is None or spec.loader is None:
         raise AssertionError(f"Cannot import {description}: {path}")
     module = importlib.util.module_from_spec(spec)
+    # Dataclasses and several annotation resolvers consult sys.modules while
+    # the class body is executing; mirror normal import semantics here.
+    sys.modules[module_name] = module
     try:
         spec.loader.exec_module(module)
     except ModuleNotFoundError as error:
+        sys.modules.pop(module_name, None)
         raise unittest.SkipTest(
             f"{description} dependency is not installed yet: {error.name}"
         ) from error
+    except Exception:
+        sys.modules.pop(module_name, None)
+        raise
     return module
 
 
@@ -194,7 +201,7 @@ class MatchaIdentityAndCadContractTests(unittest.TestCase):
                 )
             )
             whisk = tool_from_manifest(manifest, "matcha_whisk")
-            device = whisk.get("ttl_device_id")
+            device = whisk.get("ttl_device_id", whisk.get("bus_address"))
             if device is None and isinstance(whisk.get("electrical"), dict):
                 device = whisk["electrical"].get("ttl_device_id")
             if device is not None:
@@ -229,36 +236,52 @@ class MatchaIdentityAndCadContractTests(unittest.TestCase):
     def test_cad_manifest_closes_hashes_masses_com_and_interface(self) -> None:
         manifest = load_json(CAD_MANIFEST, "matcha CAD manifest")
         self.assertEqual(str(manifest.get("units", "")).lower(), "mm")
-        interface = manifest.get("interface")
+        interface = manifest.get("interface", manifest.get("interface_authority"))
         self.assertIsInstance(interface, dict)
         mismatch = interface.get("interface_match_mm3", {})
         if isinstance(mismatch, dict) and "absolute_mismatch_mm3" in mismatch:
             self.assertEqual(float(mismatch["absolute_mismatch_mm3"]), 0.0)
+        authority_path = interface.get("path")
+        authority_sha = interface.get("sha256")
+        if authority_path is not None:
+            resolved_authority = REPOSITORY_ROOT / str(authority_path)
+            self.assertTrue(resolved_authority.is_file(), resolved_authority)
+            self.assertRegex(str(authority_sha), r"^[0-9a-f]{64}$")
+            self.assertEqual(sha256_file(resolved_authority), authority_sha)
+        self.assertIn("tool_plate(stock_gripper=False)", str(interface.get("construction")))
 
         for key, expected_id in (("matcha_spoon", 21), ("matcha_whisk", 22)):
             tool = tool_from_manifest(manifest, key)
             self.assertEqual(int(tool["tool_id"]), expected_id)
-            components = tool.get("components")
+            ledger_path = CAD_ROOT / str(tool["mass_ledger_path"])
+            ledger = load_json(ledger_path, f"{key} mass ledger")
+            self.assertEqual(int(ledger["tool_id"]), expected_id)
+            self.assertEqual(str(ledger["tool"]), key.removeprefix("matcha_"))
+            components = ledger.get("components")
             self.assertIsInstance(components, list)
             self.assertTrue(components, key)
             component_masses = [
-                float(component["mass_g"])
+                float(component["mass_kg"])
                 for component in components
-                if isinstance(component, dict) and "mass_g" in component
+                if isinstance(component, dict)
+                and component.get("fabrication")
+                and "mass_kg" in component
             ]
-            declared_mass = first_number(tool, "mass_g", "total_mass_g")
+            declared_mass = first_number(ledger, "total_mass_kg")
             if declared_mass is not None and component_masses:
                 self.assertAlmostEqual(
-                    math.fsum(component_masses), declared_mass, delta=1.0e-3
+                    math.fsum(component_masses), declared_mass, delta=1.0e-12
                 )
             if declared_mass is not None:
                 self.assertGreater(declared_mass, 0.0)
-            com = tool.get("center_of_mass_mm", tool.get("com_mm"))
+            self.assertEqual(len(components), int(tool["component_count"]))
+            com = ledger.get("center_of_mass_mm", ledger.get("com_mm"))
             if com is not None:
                 self.assertEqual(len(com), 3)
                 self.assertTrue(all(math.isfinite(float(value)) for value in com))
 
-        records = list(iter_file_records(manifest.get("exports", {})))
+        records = list(iter_file_records(manifest.get("files", [])))
+        records += list(iter_file_records(manifest.get("exports", {})))
         records += list(iter_file_records(manifest.get("validation_artifacts", {})))
         self.assertTrue(records, "manifest has no hash-pinned outputs")
         seen: set[str] = set()
