@@ -2443,6 +2443,262 @@ class SimCadPlacementContractTests(unittest.TestCase):
             "the slider keyhole must clear each shoulder throughout its full travel",
         )
 
+    def test_current_positive_lock_cam_is_a_fail_closed_sequence_control(
+        self,
+    ) -> None:
+        """Quantify why the old axial-then-seated-recenter route cannot lock.
+
+        This is the negative control for the forthcoming coupled passive-cam
+        oracle.  It deliberately evaluates only the released main XY wedge:
+        the final positive gate must add a hash-bound axial lead and prove a
+        coupled +0.20 -> 0.00 mm X recenter while that lead opens the slider.
+        Merely retaining the late same-Z waypoint would collide even if the
+        controller claimed the slider was already open.
+        """
+
+        cad = self.clearance.CAD
+        overlap_tolerance_mm3 = float(
+            self.clearance.OVERLAP_VOLUME_TOLERANCE_MM3
+        )
+        distance_tolerance_mm = float(
+            self.clearance.NUMERIC_DISTANCE_TOLERANCE_MM
+        )
+        # Rebuild the released main XY wedge explicitly.  The production
+        # ``positive_lock_cam`` may now union an axial lead; folding that new
+        # feature into this negative control would erase the very ordering
+        # defect the control is intended to preserve.
+        cam = (
+            cad.cq.Workplane("XY")
+            .polyline(
+                [
+                    (cad.DOCK_CAM_X_OUTER_MIN, cad.DOCK_CAM_Y_MIN),
+                    (cad.DOCK_CAM_X_OUTER_MAX, cad.DOCK_CAM_Y_MIN),
+                    (cad.DOCK_CAM_X_OUTER_MAX, cad.DOCK_CAM_Y_MAX),
+                    (cad.DOCK_CAM_X_INNER, cad.DOCK_CAM_Y_MAX),
+                ]
+            )
+            .close()
+            .extrude(cad.DOCK_CAM_THICKNESS)
+            .translate((0.0, 0.0, cad.DOCK_CAM_Z_MIN))
+            .clean()
+            .val()
+        )
+
+        def slider(
+            q_mm: float,
+            *,
+            robot_x_mm: float = 0.0,
+            robot_y_mm: float = 0.0,
+            preseat_mm: float = 0.0,
+        ) -> Any:
+            return (
+                cad.locking_slider()
+                .translate(
+                    (
+                        q_mm + robot_x_mm,
+                        robot_y_mm,
+                        cad.SLIDER_Z - cad.PLATE_THICKNESS - preseat_mm,
+                    )
+                )
+                .val()
+            )
+
+        def overlap_mm3(first: Any, second: Any) -> float:
+            if float(first.distance(second)) > distance_tolerance_mm:
+                return 0.0
+            return float(
+                self.clearance._intersection_volume_mm3(first, second)
+            )
+
+        heads = {
+            side: cad.axis_cylinder(
+                cad.LOCK_HEAD_DIAMETER,
+                cad.LOCK_HEAD_HEIGHT,
+                (
+                    stud_x_mm,
+                    0.0,
+                    -cad.LOCK_SHOULDER_LENGTH - cad.LOCK_HEAD_HEIGHT,
+                ),
+            ).val()
+            for side, stud_x_mm in (
+                ("left", -float(cad.LOCK_STUD_X)),
+                ("right", float(cad.LOCK_STUD_X)),
+            )
+        }
+
+        # Derive both event positions from the exact source BRep bounds.  The
+        # locked slider approaches along -Z from below.  Its top first reaches
+        # the stud-head bottom at 3.1 mm preseat, whereas the unchanged XY cam
+        # cannot touch its tab until only 0.95 mm remains.
+        locked_at_guided_x = slider(
+            float(cad.SLIDER_TRAVEL), robot_x_mm=0.20
+        )
+        slider_bounds = locked_at_guided_x.BoundingBox()
+        head_bounds = next(iter(heads.values())).BoundingBox()
+        cam_bounds = cam.BoundingBox()
+        first_head_tangent_preseat_mm = float(
+            slider_bounds.zmax - head_bounds.zmin
+        )
+        first_main_cam_tangent_preseat_mm = float(
+            slider_bounds.zmax - cam_bounds.zmin
+        )
+        self.assertAlmostEqual(first_head_tangent_preseat_mm, 3.10, places=12)
+        self.assertAlmostEqual(first_main_cam_tangent_preseat_mm, 0.95, places=12)
+
+        head_tangent_slider = slider(
+            float(cad.SLIDER_TRAVEL),
+            robot_x_mm=0.20,
+            preseat_mm=first_head_tangent_preseat_mm,
+        )
+        head_post_tangent_slider = slider(
+            float(cad.SLIDER_TRAVEL),
+            robot_x_mm=0.20,
+            preseat_mm=first_head_tangent_preseat_mm - 0.001,
+        )
+        head_tangent_distances = {
+            side: float(head_tangent_slider.distance(head))
+            for side, head in heads.items()
+        }
+        head_post_tangent_overlaps = {
+            side: overlap_mm3(head_post_tangent_slider, head)
+            for side, head in heads.items()
+        }
+        for distance_mm in head_tangent_distances.values():
+            self.assertLessEqual(distance_mm, distance_tolerance_mm)
+        for overlap in head_post_tangent_overlaps.values():
+            self.assertGreater(overlap, overlap_tolerance_mm3)
+
+        cam_tangent_slider = slider(
+            float(cad.SLIDER_TRAVEL),
+            robot_x_mm=0.20,
+            preseat_mm=first_main_cam_tangent_preseat_mm,
+        )
+        cam_post_tangent_slider = slider(
+            float(cad.SLIDER_TRAVEL),
+            robot_x_mm=0.20,
+            preseat_mm=first_main_cam_tangent_preseat_mm - 0.001,
+        )
+        self.assertLessEqual(
+            float(cam_tangent_slider.distance(cam)), distance_tolerance_mm
+        )
+        cam_post_tangent_overlap_mm3 = overlap_mm3(
+            cam_post_tangent_slider, cam
+        )
+        self.assertGreater(
+            cam_post_tangent_overlap_mm3, overlap_tolerance_mm3
+        )
+
+        lead_margin_mm = (
+            first_main_cam_tangent_preseat_mm
+            - first_head_tangent_preseat_mm
+        )
+        self.assertAlmostEqual(lead_margin_mm, -2.15, places=12)
+
+        # q=0 is the nominal unlocked reference; q=+0.05 mm is the honest
+        # spring-advanced passive contact state set by the source's 50 um
+        # tab/cam gap.  Either state intersects the current cam if the robot
+        # waits until fully seated to recenter from guided X=+0.20 mm.
+        late_recenter_overlap_mm3 = {
+            "nominal_q0": overlap_mm3(
+                slider(0.0, robot_x_mm=0.20), cam
+            ),
+            "passive_open_q0p05": overlap_mm3(
+                slider(0.05, robot_x_mm=0.20), cam
+            ),
+        }
+        self.assertGreater(
+            late_recenter_overlap_mm3["nominal_q0"], overlap_tolerance_mm3
+        )
+        self.assertGreater(
+            late_recenter_overlap_mm3["passive_open_q0p05"],
+            overlap_tolerance_mm3,
+        )
+
+        # The source-derived passive-open state itself is safe for the entire
+        # head passage once X has already reached zero.  Extruding each head's
+        # circular projection through the full slider thickness is the exact
+        # continuous axial sweep, not a finite pose sample.
+        passive_open_slider = (
+            cad.locking_slider()
+            .translate((0.05, 0.0, cad.SLIDER_Z))
+            .val()
+        )
+        projected_head_clearances_mm: dict[str, float] = {}
+        for side, stud_x_mm in (
+            ("left", -float(cad.LOCK_STUD_X)),
+            ("right", float(cad.LOCK_STUD_X)),
+        ):
+            projected_head_sweep = cad.axis_cylinder(
+                cad.LOCK_HEAD_DIAMETER,
+                cad.SLIDER_THICKNESS,
+                (stud_x_mm, 0.0, cad.SLIDER_Z),
+            ).val()
+            self.assertLessEqual(
+                overlap_mm3(passive_open_slider, projected_head_sweep),
+                overlap_tolerance_mm3,
+            )
+            projected_head_clearances_mm[side] = float(
+                passive_open_slider.distance(projected_head_sweep)
+            )
+        self.assertGreaterEqual(
+            min(projected_head_clearances_mm.values()), 0.20
+        )
+
+        # A locked slider cannot exist at the seated cam.  It becomes a valid
+        # retention claim only after the separate dock-local -Y withdrawal.
+        seated_locked_overlap_mm3 = overlap_mm3(
+            slider(float(cad.SLIDER_TRAVEL)), cam
+        )
+        locked_at_15_mm = slider(
+            float(cad.SLIDER_TRAVEL), robot_y_mm=-15.0
+        )
+        locked_cam_clearance_at_15_mm = float(locked_at_15_mm.distance(cam))
+        self.assertGreater(seated_locked_overlap_mm3, overlap_tolerance_mm3)
+        self.assertGreaterEqual(locked_cam_clearance_at_15_mm, 0.20)
+
+        diagnostic = {
+            "authority": "exact_occt_source_brep",
+            "first_stud_head_tangent_preseat_mm": (
+                first_head_tangent_preseat_mm
+            ),
+            "first_main_cam_tangent_preseat_mm": (
+                first_main_cam_tangent_preseat_mm
+            ),
+            "main_cam_lead_margin_mm": lead_margin_mm,
+            "head_overlap_0p001mm_after_tangent_mm3": (
+                head_post_tangent_overlaps
+            ),
+            "main_cam_overlap_0p001mm_after_tangent_mm3": (
+                cam_post_tangent_overlap_mm3
+            ),
+            "late_same_z_recenter_overlap_mm3": late_recenter_overlap_mm3,
+            "passive_open_projected_head_clearance_mm": (
+                projected_head_clearances_mm
+            ),
+            "seated_locked_cam_overlap_mm3": seated_locked_overlap_mm3,
+            "locked_cam_clearance_after_15mm_negative_y_mm": (
+                locked_cam_clearance_at_15_mm
+            ),
+            "required_corrected_order": [
+                "coupled_axial_lead_and_x_recenter",
+                "passive_open_head_passage_at_x0",
+                "axial_seat_at_x0",
+                "attach_then_dock_release",
+                "cam_following_negative_y_withdrawal",
+                "q3_lock_only_after_15mm_and_0p20mm_cam_clearance",
+            ],
+            "blockers": [
+                "main_cam_actuation_is_2p15mm_late",
+                "seated_same_z_recenter_intersects_main_cam",
+                "seated_pre_exit_q3_intersects_main_cam",
+                "hash_bound_axial_lead_not_yet_in_this_negative_control",
+            ],
+            "passed": False,
+            "release_ready": False,
+        }
+        self.assertIs(diagnostic["passed"], False, diagnostic)
+        self.assertIs(diagnostic["release_ready"], False, diagnostic)
+
     def test_positive_lock_slider_mass_properties_match_exact_step(self) -> None:
         """Collision tessellation must not define the moving slider inertia."""
 

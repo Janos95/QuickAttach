@@ -124,6 +124,10 @@ DEVELOPMENT_TESTS = (
     ),
     qualified(
         "SimCadPlacementContractTests",
+        "test_current_positive_lock_cam_is_a_fail_closed_sequence_control",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
         "test_positive_lock_slider_mass_properties_match_exact_step",
     ),
     qualified(
