@@ -545,6 +545,333 @@ def _core_capture_source_x_mm(preseat_mm: float) -> float:
             - CORE_CAPTURE_ROUTE_RECENTER_END_PRESEAT_MM
         )
     )
+
+
+CORE_CAM_TAB_LEADING_GEOM_NAME = "qc_col_lock_slider_tab_part_001"
+CORE_CAM_TAB_NONCONTACT_GEOM_NAME = "qc_col_lock_slider_tab_part_000"
+CORE_CAM_TAB_MAIN_GEOM_NAME = "dock_gripper_cam_collision"
+CORE_CAM_TAB_LEAD_GEOM_NAME = "dock_gripper_cam_axial_lead_collision"
+CORE_CAM_TAB_HOLD_GEOM_NAME = "dock_gripper_cam_hold_finger_collision"
+CORE_CAM_TAB_ROOT_GEOM_NAMES = (
+    "dock_gripper_cam_outer_root_lower_collision",
+    "dock_gripper_cam_outer_root_upper_collision",
+)
+CORE_CAM_TAB_CAPTURE_ACTIONS = (
+    "gripper_capture_lateral_align",
+    "gripper_capture_axial_open_side",
+    "gripper_capture_coupled_recenter",
+    "gripper_capture_centered_final",
+)
+CORE_CAM_TAB_FREE_SPACE_ACTIONS = CORE_CAM_TAB_CAPTURE_ACTIONS[:2]
+CORE_CAM_TAB_FUNCTIONAL_ACTIONS = CORE_CAM_TAB_CAPTURE_ACTIONS[2:]
+CORE_CAM_TAB_POINT_TOLERANCE_MM = 0.020
+CORE_CAM_TAB_PROVISIONAL_MAX_PENETRATION_MM = 0.020
+CORE_CAM_TAB_MIN_NORMAL_ALIGNMENT = 0.999
+CORE_CAM_TAB_PASSIVE_OPEN_Q_MM = 0.05000000000000071
+CORE_CAM_TAB_RAMP_CONTACT_START_PRESEAT_MM = 6.346666666666667
+CORE_CAM_TAB_RAMP_END_PRESEAT_MM = 3.2
+CORE_CAM_TAB_LEAD_SEAM_END_PRESEAT_MM = 1.6
+CORE_CAM_TAB_MAIN_EDGE_END_PRESEAT_MM = 0.95
+CORE_CAM_TAB_LEAD_PLANE_SUM_MM = 17.65
+CORE_CAM_TAB_LEAD_NORMAL_CAM_TO_TAB = tuple(
+    value / math.sqrt(2.0) for value in (-1.0, 0.0, -1.0)
+)
+CORE_CAM_TAB_HOLD_NORMAL_CAM_TO_TAB = (-1.0, 0.0, 0.0)
+CORE_CAM_TAB_MAIN_SLOPE = 0.246875
+CORE_CAM_TAB_MAIN_SLOPE_NORMAL_CAM_TO_TAB = (
+    -0.970852159759157,
+    -0.239679126940542,
+    0.0,
+)
+CORE_CAM_TAB_MAIN_TOP_NORMAL_CAM_TO_TAB = (0.0, 1.0, 0.0)
+CORE_CAM_TAB_PRECONTACT_X_GAP_MM = 0.050
+CORE_CAM_TAB_PRECONTACT_NORMAL_GAP_MM = (
+    CORE_CAM_TAB_PRECONTACT_X_GAP_MM / math.sqrt(2.0)
+)
+CORE_CAM_TAB_PRECONTACT_RETAINED_X_GAP_MM = (
+    CORE_CAM_TAB_PRECONTACT_X_GAP_MM
+    - CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
+)
+CORE_CAM_TAB_PRECONTACT_RETAINED_NORMAL_GAP_MM = (
+    CORE_CAM_TAB_PRECONTACT_RETAINED_X_GAP_MM / math.sqrt(2.0)
+)
+CORE_CAM_TAB_STALE_POST_CAPTURE_OVERLAP_MM3 = 9.440000000000005
+
+
+def _core_cam_tab_source_q_max_mm(preseat_mm: float, source_x_mm: float) -> float:
+    """Return the source frictionless capture envelope at a live p/X state."""
+
+    if not (
+        math.isfinite(preseat_mm)
+        and math.isfinite(source_x_mm)
+        and preseat_mm >= 0.0
+    ):
+        raise ValueError("cam capture p/X must be finite and p nonnegative")
+    return max(
+        CORE_CAM_TAB_PASSIVE_OPEN_Q_MM,
+        min(3.0, preseat_mm - source_x_mm - 3.15),
+    )
+
+
+CORE_CAM_TAB_CONTACT_CONTRACT_IDENTITY_PREIMAGE = {
+    "source_generator_sha256": qc.POGO_CAD_SOURCE_SHA256,
+    "positive_lock_cam_contract_sha256": (
+        qc.CORE_DOCK_CAM_CONTRACT_CANONICAL_SHA256
+    ),
+    "positive_lock_slider_step_sha256": qc.POSITIVE_LOCK_SLIDER_STEP_SHA256,
+    "capture_route_contract_identity_sha256": (
+        CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_SHA256
+    ),
+    "leading_tab_geom": CORE_CAM_TAB_LEADING_GEOM_NAME,
+    "cam_geoms": list(qc.CORE_DOCK_CAM_COLLISION_GEOM_NAMES),
+    "provisional_point_and_penetration_tolerance_mm": (
+        CORE_CAM_TAB_POINT_TOLERANCE_MM
+    ),
+}
+CORE_CAM_TAB_CONTACT_CONTRACT_IDENTITY_SHA256 = _canonical_json_sha256(
+    CORE_CAM_TAB_CONTACT_CONTRACT_IDENTITY_PREIMAGE
+)
+
+
+def core_cam_tab_contact_runtime_contract() -> dict[str, Any]:
+    """Publish the exact capture-only cam/tab envelope, fail closed.
+
+    The 20 um point/depth guard is a provisional simulation safety bound.  It
+    is not a friction, load, contact-force, dynamics, or release authority.
+    """
+
+    cam_runtime_contract = qc.positive_lock_cam_runtime_contract()
+    blockers = [
+        "provisional_20um_contact_guard_not_physical_contact_authority",
+        "positive_lock_cam_friction_coefficient_unqualified",
+        "positive_lock_cam_load_capacity_unqualified",
+        "positive_lock_cam_dynamics_unqualified",
+        "free_space_servo_tracking_not_yet_closed",
+        "post_capture_negative_z_slider_return_authority_stale_after_hold_finger_addition",
+    ]
+    return {
+        "schema_version": "1.0",
+        "contract_kind": "capture_only_exact_cam_tab_source_envelope",
+        "frame": "dock_gripper",
+        "contract_identity_digest_preimage": copy.deepcopy(
+            CORE_CAM_TAB_CONTACT_CONTRACT_IDENTITY_PREIMAGE
+        ),
+        "contract_identity_sha256": (
+            CORE_CAM_TAB_CONTACT_CONTRACT_IDENTITY_SHA256
+        ),
+        "source_binding": {
+            "generator_file": {
+                "path": str(qc.POGO_CAD_SOURCE_PATH.relative_to(REPO_ROOT)),
+                "bytes": qc.POGO_CAD_SOURCE_BYTES,
+                "sha256": qc.POGO_CAD_SOURCE_SHA256,
+            },
+            "positive_lock_cam_contract_sha256": (
+                qc.CORE_DOCK_CAM_CONTRACT_CANONICAL_SHA256
+            ),
+            "runtime_cam_geometry_contract_sha256": _canonical_json_sha256(
+                cam_runtime_contract
+            ),
+            "positive_lock_slider_step": {
+                "path": str(qc.POSITIVE_LOCK_SLIDER_STEP.relative_to(REPO_ROOT)),
+                "bytes": qc.POSITIVE_LOCK_SLIDER_STEP.stat().st_size,
+                "sha256": qc.POSITIVE_LOCK_SLIDER_STEP_SHA256,
+            },
+            "capture_route_contract_identity_sha256": (
+                CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_SHA256
+            ),
+        },
+        "runtime_inventory": {
+            "contact_eligible_leading_tab_geom": (
+                CORE_CAM_TAB_LEADING_GEOM_NAME
+            ),
+            "non_contact_tab_geom": CORE_CAM_TAB_NONCONTACT_GEOM_NAME,
+            "main_geom": CORE_CAM_TAB_MAIN_GEOM_NAME,
+            "axial_lead_geom": CORE_CAM_TAB_LEAD_GEOM_NAME,
+            "hold_finger_geom": CORE_CAM_TAB_HOLD_GEOM_NAME,
+            "always_forbidden_root_geoms": list(
+                CORE_CAM_TAB_ROOT_GEOM_NAMES
+            ),
+            "all_cam_geoms": list(qc.CORE_DOCK_CAM_COLLISION_GEOM_NAMES),
+        },
+        "capture_law": {
+            "preseat_formula": "-dock_local_robot_mating_z_mm",
+            "lateral_formula": "dock_local_robot_mating_x_mm",
+            "passive_q_max_formula_mm": "clamp(p-x-3.15,0.05,3.0)",
+            "ramp_contact_start_preseat_mm": (
+                CORE_CAM_TAB_RAMP_CONTACT_START_PRESEAT_MM
+            ),
+            "ramp_end_preseat_mm": CORE_CAM_TAB_RAMP_END_PRESEAT_MM,
+            "passive_open_q_mm": CORE_CAM_TAB_PASSIVE_OPEN_Q_MM,
+            "maximum_live_source_x_error_mm": (
+                CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
+            ),
+        },
+        "phase_policy": {
+            "no_cam_contact_actions": list(CORE_CAM_TAB_FREE_SPACE_ACTIONS),
+            "functional_contact_actions": list(
+                CORE_CAM_TAB_FUNCTIONAL_ACTIONS
+            ),
+            "dock_hold_must_be_active": True,
+            "attach_equality_must_be_inactive": True,
+            "slider_return_is_excluded": True,
+        },
+        "source_surfaces": [
+            {
+                "surface_role": "functional_axial_lead_ramp",
+                "action": "gripper_capture_coupled_recenter",
+                "runtime_pair": [
+                    CORE_CAM_TAB_LEADING_GEOM_NAME,
+                    CORE_CAM_TAB_LEAD_GEOM_NAME,
+                ],
+                "preseat_bounds_mm": [
+                    CORE_CAM_TAB_RAMP_END_PRESEAT_MM,
+                    CORE_CAM_TAB_RAMP_CONTACT_START_PRESEAT_MM,
+                ],
+                "locus": {
+                    "plane": "x+z=17.65mm",
+                    "y_bounds_mm": [0.0, 2.0],
+                    "z_bounds_mm": [-9.6, -6.4],
+                },
+                "normal_cam_to_tab_dock_local": list(
+                    CORE_CAM_TAB_LEAD_NORMAL_CAM_TO_TAB
+                ),
+                "functional_coverage_required": True,
+            },
+            {
+                "surface_role": "functional_hold_finger_face",
+                "action": "gripper_capture_centered_final",
+                "runtime_pair": [
+                    CORE_CAM_TAB_LEADING_GEOM_NAME,
+                    CORE_CAM_TAB_HOLD_GEOM_NAME,
+                ],
+                "preseat_bounds_mm": [0.0, 3.2],
+                "locus": {
+                    "plane": "x=24.05mm",
+                    "y_bounds_mm": [0.0, 2.0],
+                    "z_bounds_mm": [-6.4, -4.15],
+                    "tab_z_bounds_formula_mm": ["-4.8-p", "-3.2-p"],
+                    "accepted_z_is_interval_intersection": True,
+                },
+                "normal_cam_to_tab_dock_local": list(
+                    CORE_CAM_TAB_HOLD_NORMAL_CAM_TO_TAB
+                ),
+                "functional_coverage_required": True,
+            },
+            {
+                "surface_role": "lead_hold_partition_seam_nonfunctional",
+                "action": "gripper_capture_centered_final",
+                "runtime_pair": [
+                    CORE_CAM_TAB_LEADING_GEOM_NAME,
+                    CORE_CAM_TAB_LEAD_GEOM_NAME,
+                ],
+                "preseat_bounds_mm": [1.6, 3.2],
+                "locus": {
+                    "line": "x=24.05mm,z=-6.4mm",
+                    "y_bounds_mm": [0.0, 2.0],
+                },
+                "normal_cone_cam_to_tab": [
+                    list(CORE_CAM_TAB_LEAD_NORMAL_CAM_TO_TAB),
+                    list(CORE_CAM_TAB_HOLD_NORMAL_CAM_TO_TAB),
+                ],
+                "closed_top_cap_positive_z_is_forbidden": True,
+                "functional_coverage_required": False,
+            },
+            {
+                "surface_role": "main_hold_edge_tangency_nonfunctional",
+                "action": "gripper_capture_centered_final",
+                "runtime_pair": [
+                    CORE_CAM_TAB_LEADING_GEOM_NAME,
+                    CORE_CAM_TAB_MAIN_GEOM_NAME,
+                ],
+                "preseat_bounds_mm": [0.0, 0.95],
+                "locus": {
+                    "line": "x=24.05mm,y=0mm",
+                    "z_lower_mm": -4.15,
+                    "z_upper_formula_mm": "-3.2-p",
+                },
+                "normal_cone_cam_to_tab": [
+                    list(CORE_CAM_TAB_MAIN_SLOPE_NORMAL_CAM_TO_TAB),
+                    list(CORE_CAM_TAB_MAIN_TOP_NORMAL_CAM_TO_TAB),
+                ],
+                "functional_coverage_required": False,
+            },
+        ],
+        "provisional_guard": {
+            "point_tolerance_mm": CORE_CAM_TAB_POINT_TOLERANCE_MM,
+            "maximum_penetration_mm": (
+                CORE_CAM_TAB_PROVISIONAL_MAX_PENETRATION_MM
+            ),
+            "minimum_normal_alignment": CORE_CAM_TAB_MIN_NORMAL_ALIGNMENT,
+            "lead_maximum_q_excess_mm": math.sqrt(2.0)
+            * CORE_CAM_TAB_PROVISIONAL_MAX_PENETRATION_MM,
+            "hold_and_main_maximum_q_mm": (
+                CORE_CAM_TAB_PASSIVE_OPEN_Q_MM
+                + CORE_CAM_TAB_PROVISIONAL_MAX_PENETRATION_MM
+            ),
+            "authority": "provisional_simulation_guard_only",
+        },
+        "free_space_endpoint_clearance": {
+            "axial_action_endpoint_preseat_mm": 6.4,
+            "x_axis_gap_mm": CORE_CAM_TAB_PRECONTACT_X_GAP_MM,
+            "lead_normal_gap_mm": CORE_CAM_TAB_PRECONTACT_NORMAL_GAP_MM,
+            "retained_x_gap_at_40um_corridor_mm": (
+                CORE_CAM_TAB_PRECONTACT_RETAINED_X_GAP_MM
+            ),
+            "retained_lead_normal_gap_at_40um_corridor_mm": (
+                CORE_CAM_TAB_PRECONTACT_RETAINED_NORMAL_GAP_MM
+            ),
+        },
+        "post_capture_exclusion": {
+            "excluded_actions": [
+                "gripper_lock_cam_disengagement",
+                "gripper_slider_return_verify",
+                "gripper_physical_lock_confirm",
+            ],
+            "reason": (
+                "negative_z_slider_return_clearance_witness_is_stale_after_"
+                "hold_finger_addition"
+            ),
+            "q3_negative_z_1p2mm_complete_cam_overlap_mm3": (
+                CORE_CAM_TAB_STALE_POST_CAPTURE_OVERLAP_MM3
+            ),
+            "legacy_main_wedge_only_clearance_mm": 0.25,
+            "must_be_reaudited_before_authorization": True,
+            "retired_default_action_kinds": [
+                "axial_disengage",
+                "slider_return",
+                "physical_lock_confirm",
+            ],
+            "custom_injection_abort_reason": (
+                "retired_negative_z_lock_sequence"
+            ),
+            "default_action_sequence_ends_at": (
+                "gripper_dock_release_verify"
+            ),
+        },
+        "evidence_requirements": {
+            "audit_frequency": "after_every_mj_step_before_generic_contact_audit",
+            "raw_contact_force_torque_width": 6,
+            "zero_contact_cannot_pass_functional_coverage": True,
+            "functional_roles_required": [
+                "functional_axial_lead_ramp",
+                "functional_hold_finger_face",
+            ],
+            "all_candidate_contacts_remain_counted": True,
+        },
+        "authority_scope": {
+            "static_geometry_phase_and_locus_authority": True,
+            "provisional_contact_classification_authority": False,
+            "friction_coefficient_authority": False,
+            "load_capacity_authority": False,
+            "contact_force_authority": False,
+            "dynamics_authority": False,
+            "post_capture_release_authority": False,
+            "blockers": blockers,
+            "release_ready": False,
+        },
+        "passed": True,
+        "release_ready": False,
+    }
 ALIGNED_CAPTURE_STATIC_MAX_LATERAL_DEVIATION_M = 0.000205
 CAM_RELIEF_CORRIDOR_M = 0.0005
 CORE_KEEPER_MAX_PENETRATION_MM = 0.020
@@ -1007,31 +1334,6 @@ def _recovery_controller_actions(
             timeout_s=2.0,
         ),
     )
-    lock_stroke = (
-        WorkflowAction(
-            name=f"{tool}_lock_cam_disengagement",
-            kind="axial_disengage",
-            tool=tool,
-            target_q=CORE_LOCK_DISENGAGEMENT_TARGET_Q,
-            joint_waypoints=_core_lock_disengagement_waypoints(),
-            duration_s=0.30,
-            timeout_s=1.5,
-        ),
-        WorkflowAction(
-            name=f"{tool}_slider_return_verify",
-            kind="slider_return",
-            tool=tool,
-            duration_s=LOCKED_SLIDER_SETTLED_DWELL_S,
-            timeout_s=1.5,
-        ),
-        WorkflowAction(
-            name=f"{tool}_physical_lock_confirm",
-            kind="physical_lock_confirm",
-            tool=tool,
-            duration_s=float(PHYSICS_SUBSTEPS_PER_CONTROLLER_STEP) * 0.00025,
-            timeout_s=0.5,
-        ),
-    )
     if tool != "gripper":
         return capture_release
     # Full rack removal remains a separately audited phase-B milestone.
@@ -1039,7 +1341,12 @@ def _recovery_controller_actions(
     # it does not append the retired unverified 55 mm route.
     if include_rack_exit:
         raise ValueError("full rack exit is not yet a validated controller action")
-    return capture_release + lock_stroke
+    # The former -Z disengagement, slider-return and physical-lock suffix is
+    # deliberately absent.  The complete authored cam's hold finger overlaps
+    # the q=3 slider by 9.44 mm^3 after that 1.2 mm motion; the legacy 0.25 mm
+    # scalar measured only the main wedge.  Default production stops honestly
+    # after attached dock release with the physical slider still unlocked.
+    return capture_release
 
 
 def _mesh_assets(
@@ -3167,6 +3474,35 @@ class MatchaWorkflowController:
         # Preserve the published legacy scalar as the main-wedge ID while all
         # physical clearance/contact queries consume the complete roster.
         self.dock_gripper_cam_geom_id = self.dock_gripper_cam_geom_ids[0]
+        self.core_cam_tab_leading_geom_id = int(
+            model.geom(CORE_CAM_TAB_LEADING_GEOM_NAME).id
+        )
+        self.core_cam_tab_noncontact_geom_id = int(
+            model.geom(CORE_CAM_TAB_NONCONTACT_GEOM_NAME).id
+        )
+        self.core_cam_geom_name_by_id = MappingProxyType(
+            {
+                int(model.geom(name).id): name
+                for name in qc.CORE_DOCK_CAM_COLLISION_GEOM_NAMES
+            }
+        )
+        self.core_cam_tab_allowed_contact_indices: set[int] = set()
+        self.core_cam_tab_contact_records: list[dict[str, Any]] = []
+        self.core_cam_tab_audited_substeps = 0
+        self.core_cam_tab_phase_counts = {
+            name: 0 for name in CORE_CAM_TAB_CAPTURE_ACTIONS
+        }
+        self.core_cam_tab_candidate_contact_count = 0
+        self.core_cam_tab_rejected_contact_count = 0
+        self.core_cam_tab_functional_role_counts = {
+            "functional_axial_lead_ramp": 0,
+            "functional_hold_finger_face": 0,
+        }
+        self.core_capture_free_space_samples: list[dict[str, Any]] = []
+        self.core_capture_free_space_phase_counts = {
+            name: 0 for name in CORE_CAM_TAB_FREE_SPACE_ACTIONS
+        }
+        self.current_move_command_smooth = 0.0
         self.action_index = 0
         self.action_started_s = float(data.time)
         self.move_endpoint_dwell_ticks = 0
@@ -3264,6 +3600,15 @@ class MatchaWorkflowController:
             ),
             "slider_tab_geom_ids": self.slider_tab_geom_ids,
             "dock_gripper_cam_geom_id": self.dock_gripper_cam_geom_id,
+            "core_cam_tab_leading_geom_id": (
+                self.core_cam_tab_leading_geom_id
+            ),
+            "core_cam_tab_noncontact_geom_id": (
+                self.core_cam_tab_noncontact_geom_id
+            ),
+            "core_cam_geom_name_by_id": tuple(
+                sorted(self.core_cam_geom_name_by_id.items())
+            ),
         }
 
     def _equality_active(self, name: str) -> bool:
@@ -3525,6 +3870,452 @@ class MatchaWorkflowController:
             )
         )
         return min(distances) * 1000.0, cam_contacts
+
+    def _core_cam_tab_live_kinematics(self) -> dict[str, float]:
+        """Return live dock-frame capture state without mutating physics."""
+
+        dock = self.data.body("dock_gripper")
+        mating = self.data.site("robot_mating_face")
+        dock_rotation = np.asarray(dock.xmat, dtype=np.float64).reshape(3, 3)
+        local_position_mm = dock_rotation.T @ (
+            np.asarray(mating.xpos, dtype=np.float64)
+            - np.asarray(dock.xpos, dtype=np.float64)
+        ) * 1000.0
+        mating_rotation = np.asarray(
+            mating.xmat, dtype=np.float64
+        ).reshape(3, 3)
+        relative_rotation = dock_rotation.T @ mating_rotation
+        orientation_error_rad = math.acos(
+            float(
+                np.clip(
+                    (float(np.trace(relative_rotation)) - 1.0) / 2.0,
+                    -1.0,
+                    1.0,
+                )
+            )
+        )
+        slider_joint = self.model.joint("qc_positive_lock_slider_joint")
+        slider_q_mm = (
+            float(self.data.qpos[int(slider_joint.qposadr[0])]) * 1000.0
+        )
+        preseat_mm = -float(local_position_mm[2])
+        source_x_mm = float(local_position_mm[0])
+        nonnegative_preseat_mm = max(0.0, preseat_mm)
+        return {
+            "preseat_mm": preseat_mm,
+            "source_x_mm": source_x_mm,
+            "transverse_y_mm": float(local_position_mm[1]),
+            "orientation_error_rad": orientation_error_rad,
+            "slider_q_mm": slider_q_mm,
+            "source_q_max_mm": _core_cam_tab_source_q_max_mm(
+                nonnegative_preseat_mm, source_x_mm
+            ),
+            "expected_source_x_mm": _core_capture_source_x_mm(
+                nonnegative_preseat_mm
+            ),
+        }
+
+    @staticmethod
+    def _core_cam_tab_interval_error(
+        value: float, lower: float, upper: float
+    ) -> float:
+        if value < lower:
+            return lower - value
+        if value > upper:
+            return value - upper
+        return 0.0
+
+    @staticmethod
+    def _core_cam_tab_seam_normal_is_valid(normal: np.ndarray) -> bool:
+        """Accept only the source-union lead-to-hold outward normal cone."""
+
+        xz_alignment = float(np.linalg.norm(normal[[0, 2]]))
+        return bool(
+            xz_alignment >= CORE_CAM_TAB_MIN_NORMAL_ALIGNMENT
+            and float(normal[0]) <= 1.0e-12
+            and float(normal[2]) <= 1.0e-12
+            and -float(normal[2]) <= -float(normal[0]) + 1.0e-12
+        )
+
+    @staticmethod
+    def _core_cam_tab_main_edge_normal_is_valid(normal: np.ndarray) -> bool:
+        """Accept the exact main-slope/hold-top convex edge normal cone."""
+
+        xy_alignment = float(np.linalg.norm(normal[:2]))
+        return bool(
+            xy_alignment >= CORE_CAM_TAB_MIN_NORMAL_ALIGNMENT
+            and float(normal[0]) <= 1.0e-12
+            and float(normal[1])
+            >= CORE_CAM_TAB_MAIN_SLOPE * float(normal[0]) - 1.0e-12
+        )
+
+    def _core_cam_tab_contact_record(
+        self, contact_index: int, action: WorkflowAction
+    ) -> dict[str, Any] | None:
+        """Classify and retain one live core-cam contact fail closed."""
+
+        contact = self.data.contact[contact_index]
+        geom_ids = (int(contact.geom[0]), int(contact.geom[1]))
+        cam_id = next(
+            (value for value in geom_ids if value in self.core_cam_geom_name_by_id),
+            None,
+        )
+        if cam_id is None:
+            return None
+        other_id = geom_ids[1] if geom_ids[0] == cam_id else geom_ids[0]
+        cam_name = self.core_cam_geom_name_by_id[cam_id]
+        other_name = self.geom_names[other_id]
+        pair_eligible = bool(
+            other_id == self.core_cam_tab_leading_geom_id
+            and cam_name
+            in {
+                CORE_CAM_TAB_MAIN_GEOM_NAME,
+                CORE_CAM_TAB_LEAD_GEOM_NAME,
+                CORE_CAM_TAB_HOLD_GEOM_NAME,
+            }
+        )
+
+        dock = self.data.body("dock_gripper")
+        dock_rotation = np.asarray(dock.xmat, dtype=np.float64).reshape(3, 3)
+        contact_position_world = np.asarray(contact.pos, dtype=np.float64)
+        contact_position_dock_mm = dock_rotation.T @ (
+            contact_position_world - np.asarray(dock.xpos, dtype=np.float64)
+        ) * 1000.0
+        normal_world = np.asarray(contact.frame[:3], dtype=np.float64)
+        # MuJoCo's frame normal points geom0 -> geom1.  Canonicalize cam -> tab.
+        if geom_ids[0] != cam_id:
+            normal_world = -normal_world
+        normal_dock = dock_rotation.T @ normal_world
+        normal_length = float(np.linalg.norm(normal_dock))
+        if math.isfinite(normal_length) and normal_length > 0.0:
+            normal_dock = normal_dock / normal_length
+        else:
+            normal_dock = np.full(3, np.nan, dtype=np.float64)
+
+        live = self._core_cam_tab_live_kinematics()
+        preseat_mm = float(live["preseat_mm"])
+        source_x_mm = float(live["source_x_mm"])
+        slider_q_mm = float(live["slider_q_mm"])
+        source_q_max_mm = float(live["source_q_max_mm"])
+        point_x, point_y, point_z = (
+            float(value) for value in contact_position_dock_mm
+        )
+        tolerance = CORE_CAM_TAB_POINT_TOLERANCE_MM
+        surface_role = "unclassified_or_forbidden_core_cam_contact"
+        locus_error_mm = math.inf
+        normal_alignment = -math.inf
+        locus_valid = False
+        normal_valid = False
+        q_valid = False
+        functional_coverage_role: str | None = None
+
+        if (
+            pair_eligible
+            and cam_name == CORE_CAM_TAB_LEAD_GEOM_NAME
+            and action.name == "gripper_capture_coupled_recenter"
+            and CORE_CAM_TAB_RAMP_END_PRESEAT_MM - tolerance
+            <= preseat_mm
+            <= CORE_CAM_TAB_RAMP_CONTACT_START_PRESEAT_MM + tolerance
+        ):
+            surface_role = "functional_axial_lead_ramp"
+            locus_error_mm = max(
+                abs(point_x + point_z - CORE_CAM_TAB_LEAD_PLANE_SUM_MM),
+                self._core_cam_tab_interval_error(point_y, 0.0, 2.0),
+                self._core_cam_tab_interval_error(point_z, -9.6, -6.4),
+            )
+            normal_alignment = float(
+                normal_dock
+                @ np.asarray(
+                    CORE_CAM_TAB_LEAD_NORMAL_CAM_TO_TAB, dtype=np.float64
+                )
+            )
+            locus_valid = locus_error_mm <= tolerance
+            normal_valid = normal_alignment >= CORE_CAM_TAB_MIN_NORMAL_ALIGNMENT
+            q_excess_mm = slider_q_mm - source_q_max_mm
+            q_valid = bool(
+                -tolerance <= q_excess_mm
+                <= math.sqrt(2.0)
+                * CORE_CAM_TAB_PROVISIONAL_MAX_PENETRATION_MM
+            )
+            functional_coverage_role = surface_role
+        elif (
+            pair_eligible
+            and cam_name == CORE_CAM_TAB_HOLD_GEOM_NAME
+            and action.name == "gripper_capture_centered_final"
+            and -tolerance <= preseat_mm <= 3.2 + tolerance
+        ):
+            surface_role = "functional_hold_finger_face"
+            tab_lower_z_mm = -4.8 - max(0.0, preseat_mm)
+            tab_upper_z_mm = -3.2 - max(0.0, preseat_mm)
+            locus_error_mm = max(
+                abs(point_x - 24.05),
+                self._core_cam_tab_interval_error(point_y, 0.0, 2.0),
+                self._core_cam_tab_interval_error(
+                    point_z,
+                    max(-6.4, tab_lower_z_mm),
+                    min(-4.15, tab_upper_z_mm),
+                ),
+            )
+            normal_alignment = float(
+                normal_dock
+                @ np.asarray(
+                    CORE_CAM_TAB_HOLD_NORMAL_CAM_TO_TAB, dtype=np.float64
+                )
+            )
+            locus_valid = locus_error_mm <= tolerance
+            normal_valid = normal_alignment >= CORE_CAM_TAB_MIN_NORMAL_ALIGNMENT
+            q_valid = bool(
+                -tolerance
+                <= slider_q_mm
+                <= CORE_CAM_TAB_PASSIVE_OPEN_Q_MM
+                + CORE_CAM_TAB_PROVISIONAL_MAX_PENETRATION_MM
+            )
+            functional_coverage_role = surface_role
+        elif (
+            pair_eligible
+            and cam_name == CORE_CAM_TAB_LEAD_GEOM_NAME
+            and action.name == "gripper_capture_centered_final"
+            and CORE_CAM_TAB_LEAD_SEAM_END_PRESEAT_MM - tolerance
+            <= preseat_mm
+            < CORE_CAM_TAB_RAMP_END_PRESEAT_MM
+        ):
+            surface_role = "lead_hold_partition_seam_nonfunctional"
+            locus_error_mm = max(
+                abs(point_x - 24.05),
+                abs(point_z + 6.4),
+                self._core_cam_tab_interval_error(point_y, 0.0, 2.0),
+            )
+            normal_alignment = float(np.linalg.norm(normal_dock[[0, 2]]))
+            locus_valid = locus_error_mm <= tolerance
+            normal_valid = self._core_cam_tab_seam_normal_is_valid(normal_dock)
+            q_valid = bool(
+                -tolerance
+                <= slider_q_mm
+                <= CORE_CAM_TAB_PASSIVE_OPEN_Q_MM
+                + CORE_CAM_TAB_PROVISIONAL_MAX_PENETRATION_MM
+            )
+        elif (
+            pair_eligible
+            and cam_name == CORE_CAM_TAB_MAIN_GEOM_NAME
+            and action.name == "gripper_capture_centered_final"
+            and -tolerance
+            <= preseat_mm
+            <= CORE_CAM_TAB_MAIN_EDGE_END_PRESEAT_MM + tolerance
+        ):
+            surface_role = "main_hold_edge_tangency_nonfunctional"
+            upper_z_mm = -3.2 - max(0.0, preseat_mm)
+            locus_error_mm = max(
+                abs(point_x - 24.05),
+                abs(point_y),
+                self._core_cam_tab_interval_error(
+                    point_z, -4.15, upper_z_mm
+                ),
+            )
+            normal_alignment = float(np.linalg.norm(normal_dock[:2]))
+            locus_valid = locus_error_mm <= tolerance
+            normal_valid = self._core_cam_tab_main_edge_normal_is_valid(
+                normal_dock
+            )
+            q_valid = bool(
+                -tolerance
+                <= slider_q_mm
+                <= CORE_CAM_TAB_PASSIVE_OPEN_Q_MM
+                + CORE_CAM_TAB_PROVISIONAL_MAX_PENETRATION_MM
+            )
+
+        force = np.zeros(6, dtype=np.float64)
+        mujoco.mj_contactForce(self.model, self.data, contact_index, force)
+        penetration_mm = max(0.0, -float(contact.dist) * 1000.0)
+        force_finite = bool(np.all(np.isfinite(force)))
+        phase_state_valid = bool(
+            action.name in CORE_CAM_TAB_CAPTURE_ACTIONS
+            and self._equality_active("dock_gripper_hold")
+            and not self._equality_active("attach_gripper")
+            and abs(
+                source_x_mm - float(live["expected_source_x_mm"])
+            )
+            <= CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
+            and abs(float(live["transverse_y_mm"])) <= 0.010
+            and float(live["orientation_error_rad"])
+            <= CORE_CAPTURE_ROUTE_ENDPOINT_ORIENTATION_ERROR_RAD
+        )
+        provisional_passed = bool(
+            pair_eligible
+            and surface_role != "unclassified_or_forbidden_core_cam_contact"
+            and phase_state_valid
+            and locus_valid
+            and normal_valid
+            and q_valid
+            and force_finite
+            and float(force[0]) >= -1.0e-12
+            and penetration_mm
+            <= CORE_CAM_TAB_PROVISIONAL_MAX_PENETRATION_MM
+        )
+        return {
+            "physics_substep_count": int(self.physics_substep_count),
+            "sim_time_s": float(self.data.time),
+            "action": action.name,
+            "runtime_pair": [self.geom_names[geom_ids[0]], self.geom_names[geom_ids[1]]],
+            "canonical_pair": [other_name, cam_name],
+            "cam_geom": cam_name,
+            "tab_or_other_geom": other_name,
+            "surface_role": surface_role,
+            "preseat_mm": preseat_mm,
+            "source_x_mm": source_x_mm,
+            "transverse_y_mm": float(live["transverse_y_mm"]),
+            "orientation_error_rad": float(live["orientation_error_rad"]),
+            "slider_q_mm": slider_q_mm,
+            "source_q_max_mm": source_q_max_mm,
+            "source_x_error_mm": (
+                source_x_mm - float(live["expected_source_x_mm"])
+            ),
+            "contact_dist_mm": float(contact.dist) * 1000.0,
+            "penetration_mm": penetration_mm,
+            "contact_position_world_m": [
+                float(value) for value in contact_position_world
+            ],
+            "contact_position_dock_local_mm": [
+                float(value) for value in contact_position_dock_mm
+            ],
+            "contact_normal_raw_world": [
+                float(value) for value in np.asarray(contact.frame[:3], dtype=float)
+            ],
+            "contact_normal_cam_to_tab_dock_local": [
+                float(value) if math.isfinite(float(value)) else None
+                for value in normal_dock
+            ],
+            "contact_frame_3x3": [
+                float(value) for value in np.asarray(contact.frame, dtype=float)
+            ],
+            "contact_friction": [
+                float(value) for value in np.asarray(contact.friction, dtype=float)
+            ],
+            "contact_solref": [
+                float(value) for value in np.asarray(contact.solref, dtype=float)
+            ],
+            "contact_solimp": [
+                float(value) for value in np.asarray(contact.solimp, dtype=float)
+            ],
+            "contact_force_torque_6d": [
+                float(value) if math.isfinite(float(value)) else None
+                for value in force
+            ],
+            "locus_error_mm": (
+                locus_error_mm if math.isfinite(locus_error_mm) else None
+            ),
+            "normal_alignment": (
+                normal_alignment if math.isfinite(normal_alignment) else None
+            ),
+            "q_excess_mm": slider_q_mm - source_q_max_mm,
+            "pair_eligible": pair_eligible,
+            "phase_state_valid": phase_state_valid,
+            "locus_valid": locus_valid,
+            "normal_valid": normal_valid,
+            "q_valid": q_valid,
+            "force_finite": force_finite,
+            "provisional_classification_passed": provisional_passed,
+            "functional_coverage_role": functional_coverage_role,
+        }
+
+    def _audit_core_capture_cam_tab_contacts(
+        self, action: WorkflowAction
+    ) -> None:
+        """Count every core-cam contact before the generic contact audit."""
+
+        self.core_cam_tab_allowed_contact_indices.clear()
+        if action.name not in CORE_CAM_TAB_CAPTURE_ACTIONS:
+            return
+        self.core_cam_tab_audited_substeps += 1
+        self.core_cam_tab_phase_counts[action.name] += 1
+        for contact_index in range(self.data.ncon):
+            record = self._core_cam_tab_contact_record(contact_index, action)
+            if record is None:
+                continue
+            self.core_cam_tab_contact_records.append(record)
+            if bool(record["provisional_classification_passed"]):
+                self.core_cam_tab_candidate_contact_count += 1
+                self.core_cam_tab_allowed_contact_indices.add(contact_index)
+                role = record["functional_coverage_role"]
+                if role is not None:
+                    self.core_cam_tab_functional_role_counts[str(role)] += 1
+            else:
+                self.core_cam_tab_rejected_contact_count += 1
+
+    def _record_core_capture_free_space_tracking(
+        self, action: WorkflowAction
+    ) -> None:
+        """Record every real free-space capture substep before cam contact."""
+
+        if action.name not in CORE_CAM_TAB_FREE_SPACE_ACTIONS:
+            return
+        live = self._core_cam_tab_live_kinematics()
+        if action.name == "gripper_capture_lateral_align":
+            expected_preseat_mm = 55.0
+            expected_x_mm = 0.20 * self.current_move_command_smooth
+        else:
+            expected_preseat_mm = 55.0 - 48.6 * self.current_move_command_smooth
+            expected_x_mm = 0.20
+        q_error = np.asarray(self.data.qpos[self.arm_qpos_ids], dtype=float) - np.asarray(
+            self.data.ctrl[self.arm_actuator_ids], dtype=float
+        )
+        lead_x_gap_mm = (
+            float(live["preseat_mm"])
+            - float(live["source_x_mm"])
+            - 3.15
+            - float(live["slider_q_mm"])
+        )
+        cam_contact_count = sum(
+            1
+            for index in range(self.data.ncon)
+            if any(
+                int(geom_id) in self.core_cam_geom_name_by_id
+                for geom_id in self.data.contact[index].geom
+            )
+        )
+        sample = {
+            "physics_substep_count": int(self.physics_substep_count),
+            "sim_time_s": float(self.data.time),
+            "action": action.name,
+            "command_smooth_fraction": float(self.current_move_command_smooth),
+            "commanded_arm_q_rad": [
+                float(value) for value in self.data.ctrl[self.arm_actuator_ids]
+            ],
+            "observed_arm_q_rad": [
+                float(value) for value in self.data.qpos[self.arm_qpos_ids]
+            ],
+            "observed_arm_qvel_rad_s": [
+                float(value) for value in self.data.qvel[self.arm_dof_ids]
+            ],
+            "max_abs_q_tracking_error_rad": float(np.max(np.abs(q_error))),
+            "expected_preseat_mm": expected_preseat_mm,
+            "observed_preseat_mm": float(live["preseat_mm"]),
+            "preseat_error_mm": float(live["preseat_mm"])
+            - expected_preseat_mm,
+            "expected_x_mm": expected_x_mm,
+            "observed_x_mm": float(live["source_x_mm"]),
+            "x_error_mm": float(live["source_x_mm"]) - expected_x_mm,
+            "transverse_y_mm": float(live["transverse_y_mm"]),
+            "orientation_error_rad": float(live["orientation_error_rad"]),
+            "slider_q_mm": float(live["slider_q_mm"]),
+            "source_q_max_mm": float(live["source_q_max_mm"]),
+            "lead_x_gap_mm": lead_x_gap_mm,
+            "lead_normal_clearance_mm": lead_x_gap_mm / math.sqrt(2.0),
+            "cam_contact_count": cam_contact_count,
+            "finite": bool(
+                all(
+                    math.isfinite(float(value))
+                    for value in (
+                        *live.values(),
+                        expected_preseat_mm,
+                        expected_x_mm,
+                        lead_x_gap_mm,
+                    )
+                )
+                and np.all(np.isfinite(q_error))
+            ),
+        }
+        self.core_capture_free_space_samples.append(sample)
+        self.core_capture_free_space_phase_counts[action.name] += 1
 
     def _capture_pose_is_valid(self, tool: str) -> bool:
         position_error, orientation_error = self._tool_pose_error(tool)
@@ -4274,7 +5065,16 @@ class MatchaWorkflowController:
             and self._capture_pose_is_valid(tool)
         )
 
-    def _allowed_penetrating_contact(self, contact: mujoco.MjContact) -> bool:
+    def _allowed_penetrating_contact(
+        self,
+        contact: mujoco.MjContact,
+        contact_index: int | None = None,
+    ) -> bool:
+        if (
+            contact_index is not None
+            and contact_index in self.core_cam_tab_allowed_contact_indices
+        ):
+            return True
         geom_a = self.geom_names[int(contact.geom[0])]
         geom_b = self.geom_names[int(contact.geom[1])]
         pair = frozenset({geom_a, geom_b})
@@ -4304,7 +5104,7 @@ class MatchaWorkflowController:
             penetration = -float(contact.dist)
             if penetration <= CONTACT_NUMERICAL_EPSILON_M:
                 continue
-            if self._allowed_penetrating_contact(contact):
+            if self._allowed_penetrating_contact(contact, contact_index):
                 continue
             geom_a = self.geom_names[int(contact.geom[0])]
             geom_b = self.geom_names[int(contact.geom[1])]
@@ -4415,6 +5215,8 @@ class MatchaWorkflowController:
             mujoco.mj_step(self.model, self.data)
             self.physics_substep_count += 1
             self._record_route_alignment(action)
+            self._record_core_capture_free_space_tracking(action)
+            self._audit_core_capture_cam_tab_contacts(action)
             self._audit_core_capture_source_corridor(action)
             if self.abort_reason is not None:
                 return
@@ -4487,9 +5289,15 @@ class MatchaWorkflowController:
             self.completed = True
             self.motion_stopped = True
             self.success = (
-                self.locked
-                and self.physical_lock_confirmed
-                and self.attached_tool is not None
+                self.attachment_verified
+                and self.attached_tool == "gripper"
+                and not self.locked
+                and not self.physical_lock_confirmed
+                and all(
+                    count > 0
+                    for count in self.core_cam_tab_functional_role_counts.values()
+                )
+                and self.core_cam_tab_rejected_contact_count == 0
                 and self.forbidden_contact_count == 0
                 and self.abort_reason is None
             )
@@ -4564,6 +5372,7 @@ class MatchaWorkflowController:
         target = np.asarray(action.target_q, dtype=float)
         alpha = min(1.0, max(0.0, elapsed_s / action.duration_s))
         smooth = alpha**3 * (10.0 + alpha * (-15.0 + 6.0 * alpha))
+        self.current_move_command_smooth = float(smooth)
         if action.joint_waypoints:
             route = np.asarray(
                 (tuple(self.action_start_q), *action.joint_waypoints), dtype=float
@@ -4747,207 +5556,22 @@ class MatchaWorkflowController:
     def _command_axial_disengage(
         self, action: WorkflowAction, elapsed_s: float
     ) -> None:
-        """Execute only the audited 1.20 mm -Z cam-disengagement stroke."""
+        """Hard-retired source-negative motion; never take a physics step."""
 
-        if action.tool != "gripper" or action.target_q is None:
-            self._abort("invalid_lock_cam_disengagement_action")
-            return
-        if not (
-            self.attachment_verified
-            and self._equality_active("attach_gripper")
-            and not self._equality_active("dock_gripper_hold")
-        ):
-            self._abort("lock_cam_disengagement_phase_invalid")
-            return
-        target = np.asarray(action.target_q, dtype=float)
-        alpha = min(1.0, max(0.0, elapsed_s / action.duration_s))
-        smooth = alpha**3 * (10.0 + alpha * (-15.0 + 6.0 * alpha))
-        route = np.asarray(
-            (tuple(self.action_start_q), *action.joint_waypoints), dtype=float
-        )
-        route_position = smooth * (len(route) - 1)
-        segment = min(int(math.floor(route_position)), len(route) - 2)
-        segment_alpha = route_position - segment
-        command = (
-            route[segment] + segment_alpha * (route[segment + 1] - route[segment])
-        )
-        self.data.ctrl[self.arm_actuator_ids] = command
-        self._integrate()
-        tracking = float(
-            np.max(np.abs(self.data.qpos[self.arm_qpos_ids] - command))
-        )
-        self.max_tracking_error_rad = max(self.max_tracking_error_rad, tracking)
-        if self.abort_reason is not None or elapsed_s < action.duration_s:
-            return
-        target_error = float(
-            np.max(np.abs(self.data.qpos[self.arm_qpos_ids] - target))
-        )
-        speed = float(np.max(np.abs(self.data.qvel[self.arm_dof_ids])))
-        if target_error > 0.025 or speed > 0.20:
-            return
-        report = self._lock_stroke_report()
-        self.source_axis_withdrawal_evidence = copy.deepcopy(report)
-        if not report["passed"]:
-            self._abort("lock_cam_disengagement_not_verified")
-            return
-        self.bus_connected = False
-        self.lock_confirmation_phase = "cam_disengaged_slider_return_pending"
-        self._advance_action(
-            "source_axis_withdrawal_complete",
-            physical_lock_confirmed=False,
-            **report,
-        )
+        del action, elapsed_s
+        self._abort("retired_negative_z_lock_sequence")
 
     def _command_slider_return(self, action: WorkflowAction) -> None:
-        if action.tool != "gripper" or action.target_q is not None:
-            self._abort("invalid_slider_return_action")
-            return
-        if self.source_axis_withdrawal_evidence is None:
-            self._abort("slider_return_precedes_cam_disengagement")
-            return
-        self.data.ctrl[self.arm_actuator_ids] = self.data.qpos[self.arm_qpos_ids]
-        self._integrate()
-        required_substeps = math.ceil(
-            LOCKED_SLIDER_SETTLED_DWELL_S / float(self.model.opt.timestep)
-        )
-        if (
-            self.abort_reason is not None
-            or self.slider_settled_substeps < required_substeps
-        ):
-            return
-        joint = self.model.joint("qc_positive_lock_slider_joint")
-        slider_q_m = float(self.data.qpos[int(joint.qposadr[0])])
-        slider_qvel_m_s = float(self.data.qvel[int(joint.dofadr[0])])
-        runtime_clearance_mm, cam_contact_count = (
-            self._slider_cam_runtime_clearance()
-        )
-        withdrawal_mm = float(
-            self.source_axis_withdrawal_evidence["withdrawal_mm"]
-        )
-        # Exact audited source geometry has 0.25 mm sample clearance at a
-        # 1.20 mm axial stroke; the 0.05 mm interval-motion allowance yields
-        # the declared 0.20 mm continuous lower bound.
-        exact_sample_clearance_mm = withdrawal_mm - 0.95
-        continuous_clearance_lower_bound_mm = exact_sample_clearance_mm - 0.05
-        sample_array = np.asarray(self.slider_return_samples, dtype="<f8")
-        trajectory_sha256 = hashlib.sha256(sample_array.tobytes()).hexdigest()
-        q_values = sample_array[:, 1]
-        qvel_values = sample_array[:, 2]
-        dwell_samples = sample_array[-required_substeps:]
-        returned = bool(
-            LOCKED_SLIDER_POSITION_BAND_M[0]
-            <= slider_q_m
-            <= LOCKED_SLIDER_POSITION_BAND_M[1]
-            and abs(slider_qvel_m_s) <= LOCKED_SLIDER_SPEED_LIMIT_M_S
-        )
-        cam_clear = bool(
-            cam_contact_count == 0
-            and self.slider_settled_cam_contact_count == 0
-            and runtime_clearance_mm >= 0.0
-            and self.slider_settled_cam_min_clearance_mm >= 0.0
-            and continuous_clearance_lower_bound_mm
-            >= LOCK_CAM_MANUFACTURING_CLEARANCE_MM - 1.0e-9
-        )
-        evidence = {
-            "returned": returned,
-            "cam_clear": cam_clear,
-            "slider_joint_position_mm": slider_q_m * 1000.0,
-            "slider_joint_velocity_mm_s": slider_qvel_m_s * 1000.0,
-            "settled_speed_limit_mm_s": LOCKED_SLIDER_SPEED_LIMIT_M_S * 1000.0,
-            "physics_timestep_s": float(self.model.opt.timestep),
-            "settled_dwell_s": (
-                self.slider_settled_substeps * float(self.model.opt.timestep)
-            ),
-            "settled_dwell_substeps": int(self.slider_settled_substeps),
-            "locked_position_band_mm": [
-                1000.0 * value for value in LOCKED_SLIDER_POSITION_BAND_M
-            ],
-            "trajectory_sample_count": int(len(sample_array)),
-            "trajectory_first_physics_substep_count": int(sample_array[0, 0]),
-            "trajectory_last_physics_substep_count": int(sample_array[-1, 0]),
-            "samples": [
-                [int(substep), float(q_m), float(qvel_m_s)]
-                for substep, q_m, qvel_m_s in self.slider_return_samples
-            ],
-            "trajectory_sha256_le_f64_substep_q_qdot": trajectory_sha256,
-            "trajectory_q_min_mm": float(np.min(q_values) * 1000.0),
-            "trajectory_q_max_mm": float(np.max(q_values) * 1000.0),
-            "trajectory_max_abs_qvel_mm_s": float(
-                np.max(np.abs(qvel_values)) * 1000.0
-            ),
-            "dwell_q_min_mm": float(np.min(dwell_samples[:, 1]) * 1000.0),
-            "dwell_q_max_mm": float(np.max(dwell_samples[:, 1]) * 1000.0),
-            "dwell_max_abs_qvel_mm_s": float(
-                np.max(np.abs(dwell_samples[:, 2])) * 1000.0
-            ),
-            "direct_state_writes_after_physical_capture": 0,
-            "cam_tab_runtime_proxy_clearance_mm": runtime_clearance_mm,
-            "cam_tab_min_clearance_mm": (
-                self.slider_settled_cam_min_clearance_mm
-            ),
-            "cam_tab_contact_count": cam_contact_count,
-            "cam_tab_contact_count_during_settled_dwell": (
-                self.slider_settled_cam_contact_count
-            ),
-            "cam_tab_clearance_mm": exact_sample_clearance_mm,
-            "cam_tab_continuous_clearance_lower_bound_mm": (
-                continuous_clearance_lower_bound_mm
-            ),
-            "cam_clearance_authority": (
-                "hash_pinned_exact_cad_axial_sweep_plus_0.05mm_motion_bound"
-            ),
-            "source_axis": CORE_LOCK_RELEASE_SOURCE_AXIS,
-            "dock_hold_active": self._equality_active("dock_gripper_hold"),
-            "attach_equality_active": self._equality_active("attach_gripper"),
-        }
-        self.slider_return_evidence = copy.deepcopy(evidence)
-        self.lock_candidate_verified = bool(returned and cam_clear)
-        if not self.lock_candidate_verified:
-            self._abort("physical_slider_return_not_verified")
-            return
-        self.lock_confirmation_phase = "slider_returned_lock_commit_pending"
-        self._advance_action(
-            "slider_return_verified",
-            physical_lock_confirmed=False,
-            **evidence,
-        )
+        """Hard-retired source-negative motion; never take a physics step."""
+
+        del action
+        self._abort("retired_negative_z_lock_sequence")
 
     def _command_physical_lock_confirm(self, action: WorkflowAction) -> None:
-        if action.tool != "gripper" or not self.lock_candidate_verified:
-            self._abort("physical_lock_confirmation_without_candidate")
-            return
-        self.data.ctrl[self.arm_actuator_ids] = self.data.qpos[self.arm_qpos_ids]
-        self._integrate()
-        if self.abort_reason is not None:
-            return
-        joint = self.model.joint("qc_positive_lock_slider_joint")
-        slider_q_m = float(self.data.qpos[int(joint.qposadr[0])])
-        slider_qvel_m_s = float(self.data.qvel[int(joint.dofadr[0])])
-        if not (
-            LOCKED_SLIDER_POSITION_BAND_M[0]
-            <= slider_q_m
-            <= LOCKED_SLIDER_POSITION_BAND_M[1]
-            and abs(slider_qvel_m_s) <= LOCKED_SLIDER_SPEED_LIMIT_M_S
-            and not self._equality_active("dock_gripper_hold")
-            and self._equality_active("attach_gripper")
-        ):
-            self._abort("physical_lock_state_drifted_before_confirmation")
-            return
-        self.physical_lock_confirmed = True
-        self.locked = True
-        self.lock_confirmation_phase = (
-            "after_dock_release_axial_cam_disengagement_and_slider_return"
-        )
-        self.first_physical_lock_true_substep = int(self.physics_substep_count)
-        self._advance_action(
-            "physical_lock_confirmed",
-            physical_lock_confirmed=True,
-            dock_hold_active=False,
-            attach_equality_active=True,
-            lock_confirmation_phase=self.lock_confirmation_phase,
-            slider_joint_position_mm=slider_q_m * 1000.0,
-            slider_joint_velocity_mm_s=slider_qvel_m_s * 1000.0,
-        )
+        """Hard-retired source-negative claim; physical lock stays false."""
+
+        del action
+        self._abort("retired_negative_z_lock_sequence")
 
     def _command_hold(self, action: WorkflowAction, elapsed_s: float) -> None:
         self.data.ctrl[self.arm_actuator_ids] = self.data.qpos[self.arm_qpos_ids]
@@ -5026,6 +5650,100 @@ class MatchaWorkflowController:
             and self.core_capture_source_corridor_witness is not None
             and self.core_capture_source_corridor_max_error_mm
             <= CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
+            and self.abort_reason is None
+        )
+        cam_contact_records = copy.deepcopy(self.core_cam_tab_contact_records)
+        cam_contact_observed = len(cam_contact_records) > 0
+        cam_all_phases_observed = all(
+            count > 0 for count in self.core_cam_tab_phase_counts.values()
+        )
+        cam_functional_coverage = all(
+            count > 0
+            for count in self.core_cam_tab_functional_role_counts.values()
+        )
+        cam_contact_evidence_passed = bool(
+            cam_contact_observed
+            and cam_all_phases_observed
+            and cam_functional_coverage
+            and self.core_cam_tab_rejected_contact_count == 0
+            and self.core_cam_tab_candidate_contact_count
+            == len(cam_contact_records)
+            and route_all_endpoints_completed
+            and self.abort_reason is None
+        )
+        cam_penetrations = [
+            float(record["penetration_mm"]) for record in cam_contact_records
+        ]
+        cam_locus_errors = [
+            float(record["locus_error_mm"])
+            for record in cam_contact_records
+            if record["locus_error_mm"] is not None
+        ]
+        cam_normal_forces = [
+            abs(float(record["contact_force_torque_6d"][0]))
+            for record in cam_contact_records
+            if record["contact_force_torque_6d"][0] is not None
+        ]
+
+        free_space_samples = copy.deepcopy(
+            self.core_capture_free_space_samples
+        )
+        free_space_observed = len(free_space_samples) > 0
+        free_space_all_phases_observed = all(
+            count > 0
+            for count in self.core_capture_free_space_phase_counts.values()
+        )
+        free_space_endpoint_actions = {
+            str(record["action"])
+            for record in route_endpoint_records
+            if record.get("action") in CORE_CAM_TAB_FREE_SPACE_ACTIONS
+        }
+        free_space_all_endpoints_completed = free_space_endpoint_actions == set(
+            CORE_CAM_TAB_FREE_SPACE_ACTIONS
+        )
+        maximum_free_q_error = max(
+            (
+                float(record["max_abs_q_tracking_error_rad"])
+                for record in free_space_samples
+            ),
+            default=math.inf,
+        )
+        maximum_free_preseat_error = max(
+            (abs(float(record["preseat_error_mm"])) for record in free_space_samples),
+            default=math.inf,
+        )
+        maximum_free_x_error = max(
+            (abs(float(record["x_error_mm"])) for record in free_space_samples),
+            default=math.inf,
+        )
+        maximum_free_y = max(
+            (abs(float(record["transverse_y_mm"])) for record in free_space_samples),
+            default=math.inf,
+        )
+        maximum_free_orientation = max(
+            (float(record["orientation_error_rad"]) for record in free_space_samples),
+            default=math.inf,
+        )
+        minimum_free_lead_gap = min(
+            (float(record["lead_x_gap_mm"]) for record in free_space_samples),
+            default=-math.inf,
+        )
+        free_space_cam_contacts = sum(
+            int(record["cam_contact_count"]) for record in free_space_samples
+        )
+        free_space_tracking_passed = bool(
+            free_space_observed
+            and free_space_all_phases_observed
+            and free_space_all_endpoints_completed
+            and all(bool(record["finite"]) for record in free_space_samples)
+            and maximum_free_q_error <= CORE_CAPTURE_ROUTE_ENDPOINT_Q_ERROR_RAD
+            and maximum_free_preseat_error <= 0.050
+            and maximum_free_x_error <= CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
+            and maximum_free_y <= 0.010
+            and maximum_free_orientation
+            <= CORE_CAPTURE_ROUTE_ENDPOINT_ORIENTATION_ERROR_RAD
+            and minimum_free_lead_gap >= 0.0
+            and free_space_cam_contacts == 0
             and self.abort_reason is None
         )
         return {
@@ -5135,6 +5853,125 @@ class MatchaWorkflowController:
                     and live_source_corridor_passed
                 ),
             },
+            "core_cam_tab_contact_evidence": {
+                "schema_version": "1.0",
+                "evidence_kind": (
+                    "real_mujoco_per_substep_capture_cam_tab_contacts"
+                ),
+                "runtime_contract_api": (
+                    "core_cam_tab_contact_runtime_contract"
+                ),
+                "contract_identity_sha256": (
+                    CORE_CAM_TAB_CONTACT_CONTRACT_IDENTITY_SHA256
+                ),
+                "physics_timestep_s": float(self.model.opt.timestep),
+                "observed": cam_contact_observed,
+                "audited_substeps": self.core_cam_tab_audited_substeps,
+                "audited_substeps_by_phase": dict(
+                    self.core_cam_tab_phase_counts
+                ),
+                "all_four_capture_phases_observed": cam_all_phases_observed,
+                "raw_contact_records": cam_contact_records,
+                "raw_contact_records_sha256": _canonical_json_sha256(
+                    cam_contact_records
+                ),
+                "candidate_contact_count": (
+                    self.core_cam_tab_candidate_contact_count
+                ),
+                "rejected_contact_count": (
+                    self.core_cam_tab_rejected_contact_count
+                ),
+                "functional_role_counts": dict(
+                    self.core_cam_tab_functional_role_counts
+                ),
+                "functional_coverage_observed": cam_functional_coverage,
+                "zero_contact_cannot_pass": True,
+                "maximum_penetration_mm": max(
+                    cam_penetrations, default=None
+                ),
+                "maximum_locus_error_mm": max(
+                    cam_locus_errors, default=None
+                ),
+                "maximum_abs_normal_force_n": max(
+                    cam_normal_forces, default=None
+                ),
+                "provisional_geometry_classification_passed": (
+                    cam_contact_evidence_passed
+                ),
+                "contact_force_authority": False,
+                "friction_coefficient_authority": False,
+                "dynamics_authority": False,
+                "post_capture_negative_z_and_slider_return_excluded": True,
+                "passed": cam_contact_evidence_passed,
+                "release_ready": False,
+            },
+            "core_capture_free_space_tracking_evidence": {
+                "schema_version": "1.0",
+                "evidence_kind": (
+                    "real_mujoco_per_substep_free_space_servo_tracking"
+                ),
+                "route_contract_identity_sha256": (
+                    CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_SHA256
+                ),
+                "cam_contact_contract_identity_sha256": (
+                    CORE_CAM_TAB_CONTACT_CONTRACT_IDENTITY_SHA256
+                ),
+                "physics_timestep_s": float(self.model.opt.timestep),
+                "observed": free_space_observed,
+                "audited_substeps_by_phase": dict(
+                    self.core_capture_free_space_phase_counts
+                ),
+                "all_free_space_phases_observed": (
+                    free_space_all_phases_observed
+                ),
+                "completed_endpoint_actions": sorted(
+                    free_space_endpoint_actions
+                ),
+                "all_free_space_endpoints_completed": (
+                    free_space_all_endpoints_completed
+                ),
+                "raw_samples": free_space_samples,
+                "raw_samples_sha256": _canonical_json_sha256(
+                    free_space_samples
+                ),
+                "maximum_abs_q_tracking_error_rad": (
+                    maximum_free_q_error if free_space_observed else None
+                ),
+                "maximum_abs_preseat_error_mm": (
+                    maximum_free_preseat_error if free_space_observed else None
+                ),
+                "maximum_abs_x_error_mm": (
+                    maximum_free_x_error if free_space_observed else None
+                ),
+                "maximum_abs_transverse_y_mm": (
+                    maximum_free_y if free_space_observed else None
+                ),
+                "maximum_orientation_error_rad": (
+                    maximum_free_orientation if free_space_observed else None
+                ),
+                "minimum_lead_x_gap_mm": (
+                    minimum_free_lead_gap if free_space_observed else None
+                ),
+                "cam_contact_observation_count": free_space_cam_contacts,
+                "thresholds": {
+                    "maximum_abs_q_tracking_error_rad": (
+                        CORE_CAPTURE_ROUTE_ENDPOINT_Q_ERROR_RAD
+                    ),
+                    "maximum_abs_preseat_error_mm": 0.050,
+                    "maximum_abs_x_error_mm": (
+                        CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
+                    ),
+                    "maximum_abs_transverse_y_mm": 0.010,
+                    "maximum_orientation_error_rad": (
+                        CORE_CAPTURE_ROUTE_ENDPOINT_ORIENTATION_ERROR_RAD
+                    ),
+                    "minimum_lead_x_gap_mm": 0.0,
+                    "maximum_cam_contact_count": 0,
+                },
+                "passed": free_space_tracking_passed,
+                "live_dynamics_authority": False,
+                "release_ready": False,
+            },
             "max_actuator_utilization": dict(self.max_actuator_utilization),
             "action_deadlines_s": {
                 action.name: action.timeout_s for action in self.actions
@@ -5144,6 +5981,8 @@ class MatchaWorkflowController:
             ),
             "global_safety_margin_s": WORKFLOW_GLOBAL_SAFETY_MARGIN_S,
             "journal": list(self.journal),
+            "milestone": "keeper_capture_and_dock_release_slider_unlocked",
+            "physical_lock_intentionally_unclaimed": True,
             "release_ready": False,
         }
 
@@ -5170,7 +6009,7 @@ def run_headless_scenario(
     result["collision_coverage"] = collision_coverage(model)
     result["startup_contact_audit"] = startup_contacts
     result.update(controller.result())
-    result["milestone"] = "capture_lock_and_dock_release"
+    result["milestone"] = "keeper_capture_and_dock_release_slider_unlocked"
     return result
 
 
