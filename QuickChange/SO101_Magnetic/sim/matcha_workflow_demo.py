@@ -604,6 +604,9 @@ CORE_CAM_TAB_MODEL_XML_SHA256 = (
 CORE_CAM_TAB_INITIALIZED_ACTIVE_GEOMETRY_SHA256 = (
     "98d04acb1bbdb614eaa8cd827da7417c82e8f6ecc0e25b93f7e2f573ccf06773"
 )
+CORE_CAM_TAB_COMPILED_MODEL_XML_EQUIVALENT_SHA256 = (
+    "fe3014b0aa0decad9f807f6a96a81a05b5622bed7071bb254d4045658224f94f"
+)
 
 
 def _core_cam_tab_source_q_max_mm(preseat_mm: float, source_x_mm: float) -> float:
@@ -890,6 +893,16 @@ CORE_CAM_TAB_CLASSIFIER_SEMANTICS = {
         "continuous_motion_lipschitz_bound_published": False,
     },
     "evidence_pass_formula": {
+        "actual_model_binding": {
+            "controller_init_snapshot_required": True,
+            "evidence_time_recompute_required": True,
+            "compiled_model_xml_equivalent_digest_must_match_expected": True,
+            "initialized_active_geometry_digest_must_match_expected": True,
+            "controller_init_and_evidence_digests_must_be_identical": True,
+            "active_geometry_state_construction": (
+                "fresh_MjData_then_initialize_and_mj_forward"
+            ),
+        },
         "requires_all_four_capture_phases_sampled": True,
         "requires_both_functional_phases_sampled": True,
         "requires_all_four_route_endpoints_completed": True,
@@ -916,6 +929,9 @@ CORE_CAM_TAB_CONTACT_CONTRACT_IDENTITY_PREIMAGE = {
     ),
     "model_binding": {
         "model_xml_sha256": CORE_CAM_TAB_MODEL_XML_SHA256,
+        "compiled_model_xml_equivalent_sha256": (
+            CORE_CAM_TAB_COMPILED_MODEL_XML_EQUIVALENT_SHA256
+        ),
         "initialized_active_collision_geometry_sha256": (
             CORE_CAM_TAB_INITIALIZED_ACTIVE_GEOMETRY_SHA256
         ),
@@ -938,6 +954,9 @@ def core_cam_tab_contact_runtime_contract() -> dict[str, Any]:
     xml_text, _ = _build_xml_and_assets()
     observed_model_xml_sha256 = hashlib.sha256(xml_text.encode()).hexdigest()
     model = build_model()
+    observed_compiled_model_sha256 = compiled_model_xml_equivalent_sha256(
+        model
+    )
     initialized_data = mujoco.MjData(model)
     initialize(model, initialized_data)
     observed_active_geometry_sha256 = (
@@ -945,6 +964,11 @@ def core_cam_tab_contact_runtime_contract() -> dict[str, Any]:
     )
     if observed_model_xml_sha256 != CORE_CAM_TAB_MODEL_XML_SHA256:
         raise RuntimeError("cam contact authority model XML digest drifted")
+    if (
+        observed_compiled_model_sha256
+        != CORE_CAM_TAB_COMPILED_MODEL_XML_EQUIVALENT_SHA256
+    ):
+        raise RuntimeError("cam contact authority compiled model digest drifted")
     if (
         observed_active_geometry_sha256
         != CORE_CAM_TAB_INITIALIZED_ACTIVE_GEOMETRY_SHA256
@@ -996,6 +1020,12 @@ def core_cam_tab_contact_runtime_contract() -> dict[str, Any]:
         },
         "model_binding": {
             "model_xml_sha256": observed_model_xml_sha256,
+            "compiled_model_xml_equivalent_sha256": (
+                observed_compiled_model_sha256
+            ),
+            "compiled_model_xml_equivalent_digest_api": (
+                "compiled_model_xml_equivalent_sha256"
+            ),
             "initialized_active_collision_geometry_sha256": (
                 observed_active_geometry_sha256
             ),
@@ -3008,6 +3038,88 @@ def initialized_active_collision_geometry_sha256(
     return _canonical_json_sha256(records)
 
 
+def compiled_model_xml_equivalent_sha256(model: mujoco.MjModel) -> str:
+    """Hash the actual passed compiled model, including every public array.
+
+    The source XML digest alone cannot detect a post-build mutation of an
+    ``MjModel``.  This canonical array/scalar inventory is the in-memory,
+    XML-equivalent binding used by controller evidence.  It intentionally
+    covers compiled/derived arrays too, making it stricter than source text.
+    """
+
+    records: list[dict[str, Any]] = []
+    for owner_name, owner in (("model", model), ("option", model.opt)):
+        for attribute in sorted(name for name in dir(owner) if not name.startswith("_")):
+            try:
+                value = getattr(owner, attribute)
+            except (AttributeError, RuntimeError, TypeError):
+                continue
+            record: dict[str, Any] = {
+                "owner": owner_name,
+                "attribute": attribute,
+            }
+            if isinstance(value, np.ndarray):
+                array = np.ascontiguousarray(value)
+                record.update(
+                    {
+                        "kind": "ndarray",
+                        "dtype": array.dtype.str,
+                        "shape": list(array.shape),
+                        "bytes_sha256": hashlib.sha256(
+                            array.tobytes()
+                        ).hexdigest(),
+                    }
+                )
+            elif isinstance(value, (bytes, bytearray)):
+                record.update(
+                    {
+                        "kind": "bytes",
+                        "length": len(value),
+                        "bytes_sha256": hashlib.sha256(bytes(value)).hexdigest(),
+                    }
+                )
+            elif isinstance(value, (bool, int, float, str, np.generic)):
+                scalar = value.item() if isinstance(value, np.generic) else value
+                if isinstance(scalar, float):
+                    scalar = float(scalar).hex()
+                record.update({"kind": "scalar", "value": scalar})
+            else:
+                continue
+            records.append(record)
+    return _canonical_json_sha256(records)
+
+
+def actual_core_cam_model_binding_snapshot(
+    model: mujoco.MjModel,
+) -> dict[str, Any]:
+    """Recompute actual compiled and fresh initialized-geometry bindings."""
+
+    observed_compiled_model_sha256 = compiled_model_xml_equivalent_sha256(
+        model
+    )
+    scratch_data = mujoco.MjData(model)
+    initialize(model, scratch_data)
+    observed_active_geometry_sha256 = (
+        initialized_active_collision_geometry_sha256(model, scratch_data)
+    )
+    return {
+        "observed_compiled_model_xml_equivalent_sha256": (
+            observed_compiled_model_sha256
+        ),
+        "compiled_model_xml_equivalent_matches": bool(
+            observed_compiled_model_sha256
+            == CORE_CAM_TAB_COMPILED_MODEL_XML_EQUIVALENT_SHA256
+        ),
+        "observed_initialized_active_collision_geometry_sha256": (
+            observed_active_geometry_sha256
+        ),
+        "initialized_active_collision_geometry_matches": bool(
+            observed_active_geometry_sha256
+            == CORE_CAM_TAB_INITIALIZED_ACTIVE_GEOMETRY_SHA256
+        ),
+    }
+
+
 def _forward_scratch_arm_configuration(
     model: mujoco.MjModel,
     data: mujoco.MjData,
@@ -3737,6 +3849,59 @@ class MatchaWorkflowController:
     ) -> None:
         self.model = model
         self.data = data
+        initial_model_binding = actual_core_cam_model_binding_snapshot(model)
+        self.core_cam_actual_model_binding = MappingProxyType(
+            {
+                "schema_version": "1.0",
+                "binding_state": (
+                    "controller_init_actual_passed_model_fresh_initialized_scratch"
+                ),
+                "expected_source_model_xml_sha256": (
+                    CORE_CAM_TAB_MODEL_XML_SHA256
+                ),
+                "compiled_model_xml_equivalent_digest_api": (
+                    "compiled_model_xml_equivalent_sha256"
+                ),
+                "expected_compiled_model_xml_equivalent_sha256": (
+                    CORE_CAM_TAB_COMPILED_MODEL_XML_EQUIVALENT_SHA256
+                ),
+                "observed_compiled_model_xml_equivalent_sha256": (
+                    initial_model_binding[
+                        "observed_compiled_model_xml_equivalent_sha256"
+                    ]
+                ),
+                "compiled_model_xml_equivalent_matches": initial_model_binding[
+                    "compiled_model_xml_equivalent_matches"
+                ],
+                "initialized_active_collision_geometry_digest_api": (
+                    "initialized_active_collision_geometry_sha256"
+                ),
+                "initialized_state_construction": (
+                    "fresh_MjData_then_initialize_and_mj_forward"
+                ),
+                "expected_initialized_active_collision_geometry_sha256": (
+                    CORE_CAM_TAB_INITIALIZED_ACTIVE_GEOMETRY_SHA256
+                ),
+                "observed_initialized_active_collision_geometry_sha256": (
+                    initial_model_binding[
+                        "observed_initialized_active_collision_geometry_sha256"
+                    ]
+                ),
+                "initialized_active_collision_geometry_matches": (
+                    initial_model_binding[
+                        "initialized_active_collision_geometry_matches"
+                    ]
+                ),
+                "passed": bool(
+                    initial_model_binding[
+                        "compiled_model_xml_equivalent_matches"
+                    ]
+                    and initial_model_binding[
+                        "initialized_active_collision_geometry_matches"
+                    ]
+                ),
+            }
+        )
         self.actions = actions if actions is not None else _recovery_controller_actions()
         if not self.actions:
             raise ValueError("controller action list cannot be empty")
@@ -6191,12 +6356,17 @@ class MatchaWorkflowController:
                 if record.get("event") == "move_complete"
                 and record.get("action") in CORE_CAPTURE_ROUTE_ACTION_NAMES
             ]
+            actual_model_binding = (
+                self._core_cam_actual_model_binding_evidence()
+            )
             cam_evidence = self._core_cam_tab_contact_evidence_report(
-                route_endpoint_records
+                route_endpoint_records,
+                actual_model_binding,
             )
             free_evidence = (
                 self._core_capture_free_space_tracking_evidence_report(
-                    route_endpoint_records
+                    route_endpoint_records,
+                    actual_model_binding,
                 )
             )
             self.development_geometry_milestone_passed = bool(
@@ -6518,9 +6688,99 @@ class MatchaWorkflowController:
         else:
             self._abort(f"unknown_action:{action.kind}")
 
+    def _core_cam_actual_model_binding_evidence(self) -> dict[str, Any]:
+        """Bind evidence to the live model, not a controller-init echo."""
+
+        initial = dict(self.core_cam_actual_model_binding)
+        current = actual_core_cam_model_binding_snapshot(self.model)
+        compiled_digest_unchanged = bool(
+            initial["observed_compiled_model_xml_equivalent_sha256"]
+            == current["observed_compiled_model_xml_equivalent_sha256"]
+        )
+        active_geometry_digest_unchanged = bool(
+            initial[
+                "observed_initialized_active_collision_geometry_sha256"
+            ]
+            == current[
+                "observed_initialized_active_collision_geometry_sha256"
+            ]
+        )
+        evidence_matches = bool(
+            current["compiled_model_xml_equivalent_matches"]
+            and current["initialized_active_collision_geometry_matches"]
+        )
+        return {
+            "schema_version": "1.0",
+            "binding_state": (
+                "controller_init_and_evidence_recomputed_actual_passed_model"
+            ),
+            "expected_source_model_xml_sha256": CORE_CAM_TAB_MODEL_XML_SHA256,
+            "compiled_model_xml_equivalent_digest_api": (
+                "compiled_model_xml_equivalent_sha256"
+            ),
+            "expected_compiled_model_xml_equivalent_sha256": (
+                CORE_CAM_TAB_COMPILED_MODEL_XML_EQUIVALENT_SHA256
+            ),
+            "initialized_active_collision_geometry_digest_api": (
+                "initialized_active_collision_geometry_sha256"
+            ),
+            "initialized_state_construction": (
+                "fresh_MjData_then_initialize_and_mj_forward"
+            ),
+            "expected_initialized_active_collision_geometry_sha256": (
+                CORE_CAM_TAB_INITIALIZED_ACTIVE_GEOMETRY_SHA256
+            ),
+            "controller_init_observed_compiled_model_xml_equivalent_sha256": (
+                initial["observed_compiled_model_xml_equivalent_sha256"]
+            ),
+            "controller_init_compiled_model_xml_equivalent_matches": initial[
+                "compiled_model_xml_equivalent_matches"
+            ],
+            "controller_init_observed_initialized_active_geometry_sha256": (
+                initial[
+                    "observed_initialized_active_collision_geometry_sha256"
+                ]
+            ),
+            "controller_init_initialized_active_geometry_matches": initial[
+                "initialized_active_collision_geometry_matches"
+            ],
+            "controller_init_passed": bool(initial["passed"]),
+            "evidence_observed_compiled_model_xml_equivalent_sha256": current[
+                "observed_compiled_model_xml_equivalent_sha256"
+            ],
+            "evidence_compiled_model_xml_equivalent_matches": current[
+                "compiled_model_xml_equivalent_matches"
+            ],
+            "evidence_observed_initialized_active_geometry_sha256": current[
+                "observed_initialized_active_collision_geometry_sha256"
+            ],
+            "evidence_initialized_active_geometry_matches": current[
+                "initialized_active_collision_geometry_matches"
+            ],
+            "evidence_recompute_passed": evidence_matches,
+            "compiled_model_digest_unchanged_since_controller_init": (
+                compiled_digest_unchanged
+            ),
+            "active_geometry_digest_unchanged_since_controller_init": (
+                active_geometry_digest_unchanged
+            ),
+            "passed": bool(
+                initial["passed"]
+                and evidence_matches
+                and compiled_digest_unchanged
+                and active_geometry_digest_unchanged
+            ),
+        }
+
     def _core_cam_tab_contact_evidence_report(
-        self, route_endpoint_records: list[dict[str, Any]]
+        self,
+        route_endpoint_records: list[dict[str, Any]],
+        actual_model_binding: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        if actual_model_binding is None:
+            actual_model_binding = (
+                self._core_cam_actual_model_binding_evidence()
+            )
         raw_contacts = copy.deepcopy(self.core_cam_tab_contact_records)
         raw_states = copy.deepcopy(
             self.core_cam_tab_functional_envelope_samples
@@ -6644,7 +6904,8 @@ class MatchaWorkflowController:
             count > 0 for count in self.core_cam_tab_phase_counts.values()
         )
         functional_envelope_passed = bool(
-            functional_phase_counts_consistent
+            bool(actual_model_binding["passed"])
+            and functional_phase_counts_consistent
             and both_functional_phases_observed
             and full_state_continuity
             and exact_pair_gap_closure
@@ -6686,12 +6947,7 @@ class MatchaWorkflowController:
             "contract_identity_sha256": (
                 CORE_CAM_TAB_CONTACT_CONTRACT_IDENTITY_SHA256
             ),
-            "model_binding": {
-                "model_xml_sha256": CORE_CAM_TAB_MODEL_XML_SHA256,
-                "initialized_active_collision_geometry_sha256": (
-                    CORE_CAM_TAB_INITIALIZED_ACTIVE_GEOMETRY_SHA256
-                ),
-            },
+            "model_binding": copy.deepcopy(actual_model_binding),
             "physics_timestep_s": float(self.model.opt.timestep),
             "observed": bool(raw_contacts),
             "audited_substeps": self.core_cam_tab_audited_substeps,
@@ -6806,8 +7062,14 @@ class MatchaWorkflowController:
         }
 
     def _core_capture_free_space_tracking_evidence_report(
-        self, route_endpoint_records: list[dict[str, Any]]
+        self,
+        route_endpoint_records: list[dict[str, Any]],
+        actual_model_binding: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        if actual_model_binding is None:
+            actual_model_binding = (
+                self._core_cam_actual_model_binding_evidence()
+            )
         samples = copy.deepcopy(self.core_capture_free_space_samples)
         observed = bool(samples)
         all_phases_observed = all(
@@ -6847,7 +7109,8 @@ class MatchaWorkflowController:
         )
         cam_contacts = sum(int(record["cam_contact_count"]) for record in samples)
         passed = bool(
-            observed
+            bool(actual_model_binding["passed"])
+            and observed
             and all_phases_observed
             and all_endpoints_completed
             and all(bool(record["finite"]) for record in samples)
@@ -6870,12 +7133,7 @@ class MatchaWorkflowController:
             "cam_contact_contract_identity_sha256": (
                 CORE_CAM_TAB_CONTACT_CONTRACT_IDENTITY_SHA256
             ),
-            "model_binding": {
-                "model_xml_sha256": CORE_CAM_TAB_MODEL_XML_SHA256,
-                "initialized_active_collision_geometry_sha256": (
-                    CORE_CAM_TAB_INITIALIZED_ACTIVE_GEOMETRY_SHA256
-                ),
-            },
+            "model_binding": copy.deepcopy(actual_model_binding),
             "physics_timestep_s": float(self.model.opt.timestep),
             "observed": observed,
             "audited_substeps_by_phase": dict(
@@ -6965,12 +7223,15 @@ class MatchaWorkflowController:
             <= CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
             and self.abort_reason is None
         )
+        actual_model_binding = self._core_cam_actual_model_binding_evidence()
         cam_contact_evidence = self._core_cam_tab_contact_evidence_report(
-            route_endpoint_records
+            route_endpoint_records,
+            actual_model_binding,
         )
         free_space_tracking_evidence = (
             self._core_capture_free_space_tracking_evidence_report(
-                route_endpoint_records
+                route_endpoint_records,
+                actual_model_binding,
             )
         )
         development_geometry_milestone_passed = bool(
@@ -7034,6 +7295,9 @@ class MatchaWorkflowController:
             "attach_equality_active": attach_equality_active,
             "finite_actuator_force": bool(
                 np.all(np.isfinite(self.data.actuator_force))
+            ),
+            "core_cam_actual_model_binding": copy.deepcopy(
+                actual_model_binding
             ),
             "forbidden_contact_count": self.forbidden_contact_count,
             "max_forbidden_penetration_m": self.max_forbidden_penetration_m,
