@@ -10,6 +10,7 @@ does not generate CAD, patch the scene, or mutate the controller.
 from __future__ import annotations
 
 import ast
+import base64
 import copy
 import hashlib
 import importlib.metadata
@@ -122,6 +123,79 @@ POGO_RUNTIME_RELEASE_BLOCKERS = [
     "pogo_damping_unqualified",
 ]
 POSITIVE_LOCK_CAM_RUNTIME_BLOCKERS = [
+    "positive_lock_cam_friction_coefficient_unqualified",
+    "positive_lock_cam_load_capacity_unqualified",
+    "positive_lock_cam_dynamics_unqualified",
+]
+CORE_CAPTURE_ROUTE_SOURCE_STATE_SHA256 = (
+    "3fef8469bf8cbddff822d9a6a1a31de9de2872be4bfe75d87575f01c83b99966"
+)
+CORE_CAPTURE_ROUTE_Q_SHA256 = (
+    "107b40015a76fd55f09681164ae75aa12ae738a7385fba05ab4d94f7f29e40bd"
+)
+CORE_CAPTURE_ROUTE_EMBEDDED_BYTES_SHA256 = (
+    "e91e8699d4ef1d174d73341198e21499cbf615279e4e1a87a6fbe98929f0004c"
+)
+CORE_CAPTURE_ROUTE_ACTIONS = {
+    "gripper_capture_lateral_align": {
+        "row_range": None,
+        "q_count": 2,
+        "waypoint_count": 1,
+        "duration_s": 0.25,
+        "timeout_s": 1.0,
+        "q_sha256": (
+            "39603d9ace7749f1001a27d04d36a4f33e071aff2367b213396c12f94e188299"
+        ),
+        "interval_count": 1,
+        "speed_bound": 0.012,
+        "acceleration_bound": 0.15,
+    },
+    "gripper_capture_axial_open_side": {
+        "row_range": [0, 243],
+        "q_count": 244,
+        "waypoint_count": 243,
+        "duration_s": 1.60,
+        "timeout_s": 3.0,
+        "q_sha256": (
+            "2f06345e62fb5cbb4230bdee741addffba7810a39cb0d5681bad100e4c4f94ca"
+        ),
+        "interval_count": 243,
+        "speed_bound": 0.66,
+        "acceleration_bound": 1.40,
+    },
+    "gripper_capture_coupled_recenter": {
+        "row_range": [243, 259],
+        "q_count": 17,
+        "waypoint_count": 16,
+        "duration_s": 0.50,
+        "timeout_s": 1.5,
+        "q_sha256": (
+            "6df3f9c5e6be3581970694462fa1f2805b121f02db00a3a7d1303ec5ecf27792"
+        ),
+        "interval_count": 16,
+        "speed_bound": 0.12,
+        "acceleration_bound": 0.75,
+    },
+    "gripper_capture_centered_final": {
+        "row_range": [259, 275],
+        "q_count": 17,
+        "waypoint_count": 16,
+        "duration_s": 0.50,
+        "timeout_s": 1.5,
+        "q_sha256": (
+            "f6a6a64c60287807be1196735476b8abc81761e62135c2d50807e94aced63b27"
+        ),
+        "interval_count": 16,
+        "speed_bound": 0.12,
+        "acceleration_bound": 0.75,
+    },
+}
+CORE_CAPTURE_ROUTE_BLOCKERS = [
+    "cam_contact_policy_not_authorized",
+    "live_dynamics_not_validated",
+    "closed_loop_source_law_tracking_not_implemented",
+    "live_mujoco_route_tracking_not_yet_certified",
+    "cam_tab_contact_force_and_depth_not_yet_certified",
     "positive_lock_cam_friction_coefficient_unqualified",
     "positive_lock_cam_load_capacity_unqualified",
     "positive_lock_cam_dynamics_unqualified",
@@ -1131,6 +1205,534 @@ def positive_lock_cam_runtime_contract_errors(
             record, expected_positive_lock_cam_runtime_contract(cad)
         )
     ]
+
+
+def _independent_core_capture_x_mm(preseat_mm: float) -> float:
+    if not math.isfinite(preseat_mm) or preseat_mm < 0.0:
+        raise ValueError("preseat must be finite and nonnegative")
+    if preseat_mm >= 6.4:
+        return 0.20
+    if preseat_mm <= 3.2:
+        return 0.0
+    return 0.20 * (preseat_mm - 3.2) / (6.4 - 3.2)
+
+
+def core_capture_route_contract_errors(
+    record: Any,
+    cad: ModuleType,
+) -> list[str]:
+    """Validate the public route record without consuming reported maxima."""
+
+    errors: list[str] = []
+    if not isinstance(record, dict):
+        return ["route_contract_missing"]
+    expected_keys = {
+        "schema_version",
+        "tool",
+        "frame",
+        "route_kind",
+        "embedded_state_bytes_sha256",
+        "contract_identity_digest_preimage",
+        "contract_identity_sha256",
+        "source_binding",
+        "model_binding",
+        "route_law",
+        "source_states",
+        "source_state_sha256",
+        "q_roster_sha256",
+        "canonical_waypoint_digest_preimage",
+        "canonical_waypoint_sha256",
+        "actions",
+        "endpoint_guard",
+        "live_source_corridor_guard",
+        "dense_fk_evidence",
+        "retired_route_negative",
+        "state_write_contract",
+        "authority_scope",
+        "passed",
+        "release_ready",
+    }
+    if set(record) != expected_keys:
+        errors.append("top_level_keys")
+    if record.get("schema_version") != "1.0":
+        errors.append("schema_version")
+    if record.get("tool") != "gripper" or record.get("frame") != "dock_gripper":
+        errors.append("tool_frame")
+    if record.get("route_kind") != "source_coupled_positive_lock_cam_capture":
+        errors.append("route_kind")
+    serialized = json.dumps(record, default=str)
+    if "/tmp/" in serialized or "core_capture_route_candidate" in serialized:
+        errors.append("temporary_candidate_as_authority")
+
+    expected_generator = _authority_file_record(MAGNETIC_ROOT / "generate_cad.py")
+    expected_cam_sha = canonical_json_sha256(cad.positive_lock_cam_contract())
+    source_binding = record.get("source_binding")
+    if not isinstance(source_binding, dict):
+        source_binding = {}
+        errors.append("source_binding")
+    if source_binding.get("generator_file") != expected_generator:
+        errors.append("source_binding:generator")
+    if source_binding.get("positive_lock_cam_contract_sha256") != expected_cam_sha:
+        errors.append("source_binding:cam_contract")
+    if source_binding.get("route_functions") != {
+        "lateral_x_mm": "positive_lock_cam_capture_lateral_offset_mm",
+        "slider_q_max_mm": "positive_lock_cam_capture_q_max_mm",
+    }:
+        errors.append("source_binding:route_functions")
+    if record.get("embedded_state_bytes_sha256") != (
+        CORE_CAPTURE_ROUTE_EMBEDDED_BYTES_SHA256
+    ):
+        errors.append("embedded_state_bytes_sha256")
+
+    states = record.get("source_states")
+    if not isinstance(states, list) or len(states) != 276:
+        states = []
+        errors.append("source_states:count")
+    else:
+        for index, state in enumerate(states):
+            if not isinstance(state, dict) or set(state) != {
+                "preseat_mm",
+                "source_x_mm",
+                "q_rad",
+            }:
+                errors.append(f"source_states:{index}:shape")
+                continue
+            expected_preseat = round(55.0 - 0.2 * index, 10)
+            if not _number_matches(state.get("preseat_mm"), expected_preseat):
+                errors.append(f"source_states:{index}:preseat")
+            if not _number_matches(
+                state.get("source_x_mm"),
+                _independent_core_capture_x_mm(expected_preseat),
+            ):
+                errors.append(f"source_states:{index}:source_x")
+            q_value = state.get("q_rad")
+            if (
+                not isinstance(q_value, list)
+                or len(q_value) != 5
+                or any(_finite_real(value) is None for value in q_value)
+            ):
+                errors.append(f"source_states:{index}:q")
+    observed_state_sha = canonical_json_sha256(states)
+    observed_q_sha = canonical_json_sha256(
+        [state.get("q_rad") for state in states if isinstance(state, dict)]
+    )
+    if observed_state_sha != CORE_CAPTURE_ROUTE_SOURCE_STATE_SHA256:
+        errors.append("source_state_sha256:recomputed")
+    if record.get("source_state_sha256") != observed_state_sha:
+        errors.append("source_state_sha256:published")
+    if observed_q_sha != CORE_CAPTURE_ROUTE_Q_SHA256:
+        errors.append("q_roster_sha256:recomputed")
+    if record.get("q_roster_sha256") != observed_q_sha:
+        errors.append("q_roster_sha256:published")
+
+    model_binding = record.get("model_binding")
+    if not isinstance(model_binding, dict) or set(model_binding) != {
+        "model_xml_sha256",
+        "initialized_active_collision_geometry_sha256",
+        "physics_timestep_s",
+    }:
+        errors.append("model_binding")
+        model_binding = {}
+    for key in (
+        "model_xml_sha256",
+        "initialized_active_collision_geometry_sha256",
+    ):
+        value = model_binding.get(key)
+        if (
+            not isinstance(value, str)
+            or len(value) != 64
+            or any(character not in "0123456789abcdef" for character in value)
+        ):
+            errors.append(f"model_binding:{key}")
+    if not _number_matches(model_binding.get("physics_timestep_s"), 0.00025):
+        errors.append("model_binding:physics_timestep")
+
+    route_law = record.get("route_law")
+    if route_law != {
+        "preseat_from_fk": "-dock_local_robot_mating_z_mm",
+        "lateral_x_from_fk": "dock_local_robot_mating_x_mm",
+        "transverse_from_fk": "dock_local_robot_mating_y_mm",
+        "orientation_reference": "seated_dock_frame",
+        "x_breakpoints_mm": [[55.0, 0.2], [6.4, 0.2], [3.2, 0.0], [0.0, 0.0]],
+    }:
+        errors.append("route_law")
+
+    expected_identity_preimage = {
+        "source_generator_sha256": expected_generator["sha256"],
+        "positive_lock_cam_contract_sha256": expected_cam_sha,
+        "embedded_state_bytes_sha256": CORE_CAPTURE_ROUTE_EMBEDDED_BYTES_SHA256,
+        "source_state_sha256": CORE_CAPTURE_ROUTE_SOURCE_STATE_SHA256,
+        "q_roster_sha256": CORE_CAPTURE_ROUTE_Q_SHA256,
+        "phase_row_ranges": {
+            name: details["row_range"]
+            for name, details in CORE_CAPTURE_ROUTE_ACTIONS.items()
+            if details["row_range"] is not None
+        },
+        "phase_timing_s": {
+            name: [details["duration_s"], details["timeout_s"]]
+            for name, details in CORE_CAPTURE_ROUTE_ACTIONS.items()
+        },
+        "endpoint_guard": {
+            "q_error_rad": 0.002,
+            "qvel_rad_s": 0.02,
+            "position_error_m": 0.00005,
+            "orientation_error_rad": math.radians(0.1),
+            "dwell_ticks": 4,
+        },
+        "live_source_corridor_max_error_mm": 0.040,
+    }
+    identity_preimage = record.get("contract_identity_digest_preimage")
+    if canonical_json_sha256(identity_preimage) != canonical_json_sha256(
+        expected_identity_preimage
+    ):
+        errors.append("contract_identity:preimage")
+    if record.get("contract_identity_sha256") != canonical_json_sha256(
+        identity_preimage
+    ):
+        errors.append("contract_identity:sha256")
+    waypoint_preimage = record.get("canonical_waypoint_digest_preimage")
+    expected_waypoint_preimage = {
+        "source_binding": source_binding,
+        "model_binding": model_binding,
+        "source_states": states,
+    }
+    if waypoint_preimage != expected_waypoint_preimage:
+        errors.append("canonical_waypoint:preimage")
+    if record.get("canonical_waypoint_sha256") != canonical_json_sha256(
+        waypoint_preimage
+    ):
+        errors.append("canonical_waypoint:sha256")
+
+    actions = record.get("actions")
+    if not isinstance(actions, list) or [
+        item.get("name") if isinstance(item, dict) else None for item in actions
+    ] != list(CORE_CAPTURE_ROUTE_ACTIONS):
+        errors.append("actions:roster")
+        actions = []
+    for action in actions:
+        name = action["name"]
+        expected = CORE_CAPTURE_ROUTE_ACTIONS[name]
+        expected_endpoint_index = (
+            0 if expected["row_range"] is None else expected["row_range"][1]
+        )
+        expected_endpoint = states[expected_endpoint_index]["q_rad"] if states else []
+        for key, value in (
+            ("kind", "move"),
+            ("tool", "gripper"),
+            ("duration_s", expected["duration_s"]),
+            ("timeout_s", expected["timeout_s"]),
+            ("source_row_range_inclusive", expected["row_range"]),
+            ("full_endpoint_inclusive_q_count", expected["q_count"]),
+            ("joint_waypoint_count_excluding_action_start", expected["waypoint_count"]),
+            ("endpoint_q_rad", expected_endpoint),
+            ("q_roster_sha256", expected["q_sha256"]),
+            ("time_scaling", "quintic_10a3_minus_15a4_plus_6a5"),
+            ("zero_commanded_endpoint_velocity", True),
+        ):
+            if action.get(key) != value:
+                errors.append(f"actions:{name}:{key}")
+        kinematics = action.get("command_kinematics")
+        if not isinstance(kinematics, dict):
+            errors.append(f"actions:{name}:command_kinematics")
+            continue
+        if not _number_matches(kinematics.get("controller_dt_s"), 0.005):
+            errors.append(f"actions:{name}:controller_dt")
+        expected_sample_count = int(round(expected["duration_s"] / 0.005)) + 1
+        if kinematics.get("time_sample_count") != expected_sample_count:
+            errors.append(f"actions:{name}:time_sample_count")
+        if not _number_matches(
+            kinematics.get("maximum_abs_joint_speed_bound_rad_s"),
+            expected["speed_bound"],
+        ):
+            errors.append(f"actions:{name}:speed_bound")
+        if not _number_matches(
+            kinematics.get("maximum_abs_joint_acceleration_bound_rad_s2"),
+            expected["acceleration_bound"],
+        ):
+            errors.append(f"actions:{name}:acceleration_bound")
+        speed = _finite_real(kinematics.get("maximum_abs_joint_speed_rad_s"))
+        acceleration = _finite_real(
+            kinematics.get("maximum_abs_joint_acceleration_rad_s2")
+        )
+        if speed is None or speed > expected["speed_bound"]:
+            errors.append(f"actions:{name}:speed")
+        if acceleration is None or acceleration > expected["acceleration_bound"]:
+            errors.append(f"actions:{name}:acceleration")
+        if kinematics.get("passed") is not True:
+            errors.append(f"actions:{name}:passed")
+
+    if record.get("endpoint_guard") != {
+        "maximum_q_error_rad": 0.002,
+        "maximum_abs_qvel_rad_s": 0.02,
+        "maximum_fk_position_error_m": 0.00005,
+        "maximum_fk_orientation_error_rad": math.radians(0.1),
+        "maximum_absolute_source_x_error_mm": 0.040,
+        "required_contiguous_controller_ticks": 4,
+        "advance_on_elapsed_time_only": False,
+    }:
+        errors.append("endpoint_guard")
+    expected_corridor = {
+        "active_after_action": "gripper_capture_lateral_align",
+        "audited_actions": list(CORE_CAPTURE_ROUTE_ACTIONS)[1:],
+        "audit_frequency": "after_every_mj_step",
+        "preseat_formula": "-dock_local_robot_mating_z_mm",
+        "lateral_x_formula": "dock_local_robot_mating_x_mm",
+        "maximum_absolute_source_x_error_mm": 0.040,
+        "bound_provenance_mm": {
+            "continuous_plate_cam_clearance": 0.249902439,
+            "manufacturing_clearance": 0.20,
+            "retained_reserve": 0.009902439,
+            "available_tracking_error": 0.040,
+            "formula": "0.249902439 - 0.20 - 0.009902439 = 0.040",
+        },
+        "violation_abort_reason": "core_capture_source_corridor_violation",
+        "pass_requires": {
+            "audited_substeps_greater_than_zero": True,
+            "all_three_audited_actions_observed": True,
+            "all_four_route_endpoint_events_completed": True,
+            "maximum_error_within_bound": True,
+            "current_abort_absent": True,
+        },
+        "live_dynamics_authority": False,
+    }
+    if record.get("live_source_corridor_guard") != expected_corridor:
+        errors.append("live_source_corridor_guard")
+
+    dense = record.get("dense_fk_evidence")
+    if not isinstance(dense, dict):
+        dense = {}
+        errors.append("dense_fk_evidence")
+    sampling = dense.get("sampling_contract")
+    if not isinstance(sampling, dict) or sampling.get("fractions") != [
+        index / 100.0 for index in range(101)
+    ]:
+        errors.append("dense_fk:sampling")
+    phases = dense.get("phases")
+    if not isinstance(phases, list) or [
+        phase.get("action") if isinstance(phase, dict) else None for phase in phases
+    ] != list(CORE_CAPTURE_ROUTE_ACTIONS):
+        errors.append("dense_fk:phase_roster")
+        phases = []
+    for phase in phases:
+        name = phase["action"]
+        expected = CORE_CAPTURE_ROUTE_ACTIONS[name]
+        if phase.get("interval_count") != expected["interval_count"]:
+            errors.append(f"dense_fk:{name}:interval_count")
+        if phase.get("sample_count") != 101 * expected["interval_count"]:
+            errors.append(f"dense_fk:{name}:sample_count")
+        expected_thresholds = {
+            "maximum_preseat_error_mm": 0.0002 if name.endswith("lateral_align") else 0.00005,
+            "maximum_source_x_error_mm": 0.0003 if name.endswith("lateral_align") else 0.0001,
+            "maximum_abs_transverse_y_mm": 0.010,
+            "maximum_orientation_error_rad": 1.0e-9,
+        }
+        if phase.get("thresholds") != expected_thresholds:
+            errors.append(f"dense_fk:{name}:thresholds")
+        observed = phase.get("observed")
+        if not isinstance(observed, dict):
+            errors.append(f"dense_fk:{name}:observed")
+        else:
+            for key, limit in expected_thresholds.items():
+                value = _finite_real(observed.get(key))
+                if value is None or value > limit:
+                    errors.append(f"dense_fk:{name}:{key}")
+        if phase.get("passed") is not True:
+            errors.append(f"dense_fk:{name}:passed")
+    if dense.get("passed") is not True:
+        errors.append("dense_fk:passed")
+
+    retired = record.get("retired_route_negative")
+    if not isinstance(retired, dict):
+        retired = {}
+        errors.append("retired_route_negative")
+    required_retired = {
+        "name": "constant_x_plus_0p20_then_same_z_recenter",
+        "overlap_authority": "independent_exact_OCCT_recomputation_required",
+        "violates_source_piecewise_x_law": True,
+        "single_global_action_crosses_velocity_kinks": True,
+        "rejected": True,
+    }
+    for key, value in required_retired.items():
+        if retired.get(key) != value:
+            errors.append(f"retired_route_negative:{key}")
+    overlaps = retired.get("complete_source_cam_overlap_mm3")
+    if not isinstance(overlaps, dict) or any(
+        (_finite_real(value) or 0.0) <= 1.0e-6 for value in overlaps.values()
+    ) or set(overlaps) != {"slider_q_0p00mm", "slider_q_0p05mm"}:
+        errors.append("retired_route_negative:overlap")
+    retired_kinematics = retired.get("retired_single_action_command_kinematics")
+    if not isinstance(retired_kinematics, dict) or (
+        retired_kinematics.get(
+            "rejected_for_nonzero_velocity_at_source_law_breakpoints"
+        )
+        is not True
+    ):
+        errors.append("retired_route_negative:kinematics")
+
+    if record.get("state_write_contract") != {
+        "arm_command_target": "data.ctrl",
+        "direct_pogo_qpos_writes_after_initialization": 0,
+        "direct_slider_qpos_writes_after_initialization": 0,
+        "validation_method": "independent_ast_and_callgraph_required",
+    }:
+        errors.append("state_write_contract")
+    if record.get("authority_scope") != {
+        "static_source_route_and_fk_authority": True,
+        "live_tracking_authority": False,
+        "contact_force_authority": False,
+        "friction_coefficient_authority": False,
+        "load_capacity_authority": False,
+        "dynamics_authority": False,
+        "blockers": CORE_CAPTURE_ROUTE_BLOCKERS,
+        "release_ready": False,
+    }:
+        errors.append("authority_scope")
+    expected_pass = bool(
+        dense.get("passed") is True
+        and actions
+        and all(
+            action.get("command_kinematics", {}).get("passed") is True
+            for action in actions
+        )
+    )
+    if record.get("passed") is not expected_pass:
+        errors.append("passed")
+    if record.get("release_ready") is not False:
+        errors.append("release_ready")
+    return errors
+
+
+def core_capture_route_result_errors(
+    result: Any,
+    contract: dict[str, Any],
+) -> list[str]:
+    """Check fail-honest live reporting; this never grants dynamics authority."""
+
+    errors: list[str] = []
+    if not isinstance(result, dict):
+        return ["route_result_missing"]
+    alignment = result.get("route_alignment")
+    if not isinstance(alignment, dict):
+        return ["route_alignment_missing"]
+    if alignment.get("method") != (
+        "source_coupled_positive_lock_cam_four_phase_dense_fk_ik_waypoints"
+    ):
+        errors.append("method")
+    if alignment.get("runtime_contract_api") != "core_capture_route_runtime_contract":
+        errors.append("runtime_contract_api")
+    for result_key, contract_key in (
+        ("contract_identity_sha256", "contract_identity_sha256"),
+        ("source_state_sha256", "source_state_sha256"),
+        ("q_roster_sha256", "q_roster_sha256"),
+        ("embedded_state_bytes_sha256", "embedded_state_bytes_sha256"),
+    ):
+        if alignment.get(result_key) != contract.get(contract_key):
+            errors.append(result_key)
+    action_names = list(CORE_CAPTURE_ROUTE_ACTIONS)
+    if alignment.get("phase_actions") != action_names:
+        errors.append("phase_actions")
+    endpoint_records = alignment.get("phase_endpoint_journal_evidence")
+    if not isinstance(endpoint_records, list):
+        endpoint_records = []
+        errors.append("endpoint_records")
+    completed_actions = {
+        item.get("action")
+        for item in endpoint_records
+        if isinstance(item, dict) and item.get("event") == "move_complete"
+    }
+    all_endpoints = completed_actions == set(action_names)
+    if alignment.get("completed_endpoint_actions") != sorted(completed_actions):
+        errors.append("completed_endpoint_actions")
+    if alignment.get("all_four_endpoints_completed") is not all_endpoints:
+        errors.append("all_four_endpoints_completed")
+
+    live = alignment.get("live_source_corridor")
+    if not isinstance(live, dict):
+        return [*errors, "live_source_corridor"]
+    counts = live.get("audited_substeps_by_phase")
+    audited_names = action_names[1:]
+    if not isinstance(counts, dict) or set(counts) != set(audited_names):
+        counts = {}
+        errors.append("corridor:phase_counts")
+    numeric_counts = [
+        value for value in counts.values() if isinstance(value, int) and value >= 0
+    ]
+    if len(numeric_counts) != len(audited_names):
+        errors.append("corridor:phase_count_values")
+    audited_substeps = live.get("audited_substeps")
+    if not isinstance(audited_substeps, int) or audited_substeps < 0:
+        errors.append("corridor:audited_substeps")
+        audited_substeps = -1
+    elif audited_substeps != sum(numeric_counts):
+        errors.append("corridor:audited_substep_sum")
+    observed = audited_substeps > 0
+    all_phases = bool(counts) and all(value > 0 for value in numeric_counts)
+    if live.get("observed") is not observed:
+        errors.append("corridor:observed")
+    if live.get("all_three_phases_observed") is not all_phases:
+        errors.append("corridor:all_phases")
+    if not _number_matches(live.get("maximum_allowed_error_mm"), 0.040):
+        errors.append("corridor:maximum_allowed_error")
+    if live.get("violation_abort_reason") != (
+        "core_capture_source_corridor_violation"
+    ):
+        errors.append("corridor:abort_reason")
+    if live.get("live_dynamics_authority") is not False:
+        errors.append("corridor:dynamics_authority")
+    maximum_error = _finite_real(live.get("maximum_absolute_error_mm"))
+    witness = live.get("witness")
+    witness_valid = isinstance(witness, dict)
+    if witness_valid:
+        preseat = _finite_real(witness.get("preseat_mm"))
+        observed_x = _finite_real(witness.get("observed_x_mm"))
+        expected_x = _finite_real(witness.get("expected_source_x_mm"))
+        signed_error = _finite_real(witness.get("signed_error_mm"))
+        absolute_error = _finite_real(witness.get("absolute_error_mm"))
+        if None in (preseat, observed_x, expected_x, signed_error, absolute_error):
+            witness_valid = False
+        else:
+            independently_expected_x = _independent_core_capture_x_mm(
+                max(0.0, float(preseat))
+            )
+            witness_valid = bool(
+                abs(float(expected_x) - independently_expected_x) <= 1.0e-12
+                and abs(float(signed_error) - (float(observed_x) - independently_expected_x))
+                <= 1.0e-12
+                and abs(float(absolute_error) - abs(float(signed_error))) <= 1.0e-12
+                and maximum_error is not None
+                and abs(float(maximum_error) - float(absolute_error)) <= 1.0e-12
+                and witness.get("action") in audited_names
+            )
+    if observed and not witness_valid:
+        errors.append("corridor:witness")
+    if not observed and witness is not None:
+        errors.append("corridor:unobserved_witness")
+    expected_live_pass = bool(
+        observed
+        and all_phases
+        and all_endpoints
+        and witness_valid
+        and maximum_error is not None
+        and maximum_error <= 0.040
+        and result.get("abort_reason") is None
+    )
+    if live.get("passed") is not expected_live_pass:
+        errors.append("corridor:passed")
+    measured_lateral = _finite_real(
+        alignment.get("measured_max_lateral_deviation_m")
+    )
+    relief = _finite_real(alignment.get("cam_relief_corridor_m"))
+    expected_alignment_pass = bool(
+        expected_live_pass
+        and measured_lateral is not None
+        and relief is not None
+        and measured_lateral <= relief
+    )
+    if alignment.get("passed") is not expected_alignment_pass:
+        errors.append("route_alignment:passed")
+    if result.get("release_ready") is not False:
+        errors.append("release_ready")
+    return errors
 
 
 def expected_pogo_dynamic_evidence(
@@ -3094,6 +3696,593 @@ class PositiveLockCamRuntimeAuthorityTests(unittest.TestCase):
             self.assertEqual(observed[0], expected_preseat_mm)
             self.assertAlmostEqual(observed[1], 0.0, places=12)
             self.assertAlmostEqual(observed[2], passive_open_q_mm, places=12)
+
+
+class CoreCaptureRouteRuntimeAuthorityTests(unittest.TestCase):
+    """Independently bind the four-phase p/X route and fail-honest live guard."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.cad = import_file(
+            MAGNETIC_ROOT / "generate_cad.py",
+            "core_capture_route_cad_authority",
+            "core capture route CAD authority",
+        )
+        cls.demo = import_file(
+            MATCHA_DEMO,
+            "core_capture_route_runtime_authority",
+            "core capture route runtime authority",
+        )
+        cls.contract = cls.demo.core_capture_route_runtime_contract()
+
+    @staticmethod
+    def _reseal(mutated: dict[str, Any]) -> None:
+        states = mutated["source_states"]
+        mutated["source_state_sha256"] = canonical_json_sha256(states)
+        mutated["q_roster_sha256"] = canonical_json_sha256(
+            [state["q_rad"] for state in states]
+        )
+        mutated["canonical_waypoint_digest_preimage"] = {
+            "source_binding": mutated["source_binding"],
+            "model_binding": mutated["model_binding"],
+            "source_states": states,
+        }
+        mutated["canonical_waypoint_sha256"] = canonical_json_sha256(
+            mutated["canonical_waypoint_digest_preimage"]
+        )
+        identity = mutated["contract_identity_digest_preimage"]
+        identity["source_generator_sha256"] = mutated["source_binding"][
+            "generator_file"
+        ]["sha256"]
+        identity["positive_lock_cam_contract_sha256"] = mutated[
+            "source_binding"
+        ]["positive_lock_cam_contract_sha256"]
+        identity["embedded_state_bytes_sha256"] = mutated[
+            "embedded_state_bytes_sha256"
+        ]
+        identity["source_state_sha256"] = mutated["source_state_sha256"]
+        identity["q_roster_sha256"] = mutated["q_roster_sha256"]
+        mutated["contract_identity_sha256"] = canonical_json_sha256(identity)
+
+    def test_route_contract_and_result_mutations_fail_closed(self) -> None:
+        baseline = self.contract
+        self.assertEqual(
+            core_capture_route_contract_errors(baseline, self.cad), []
+        )
+
+        mutations: dict[str, dict[str, Any]] = {}
+        mutations["old_constant_plus_0p20"] = copy.deepcopy(baseline)
+        for state in mutations["old_constant_plus_0p20"]["source_states"]:
+            state["source_x_mm"] = 0.20
+        self._reseal(mutations["old_constant_plus_0p20"])
+
+        mutations["late_recenter"] = copy.deepcopy(baseline)
+        mutations["late_recenter"]["source_states"][260]["source_x_mm"] = 0.01
+        self._reseal(mutations["late_recenter"])
+
+        mutations["self_attested_p"] = copy.deepcopy(baseline)
+        mutations["self_attested_p"]["source_states"][100]["preseat_mm"] += 0.5
+        self._reseal(mutations["self_attested_p"])
+
+        mutations["shifted_route"] = copy.deepcopy(baseline)
+        mutations["shifted_route"]["source_states"][120]["q_rad"][1] += 0.01
+        self._reseal(mutations["shifted_route"])
+
+        mutations["rotated_route"] = copy.deepcopy(baseline)
+        mutations["rotated_route"]["source_states"][200]["q_rad"][4] += 0.02
+        self._reseal(mutations["rotated_route"])
+
+        mutations["altered_source_digest"] = copy.deepcopy(baseline)
+        mutations["altered_source_digest"]["source_binding"]["generator_file"][
+            "sha256"
+        ] = "0" * 64
+        self._reseal(mutations["altered_source_digest"])
+
+        mutations["temporary_candidate_authority"] = copy.deepcopy(baseline)
+        mutations["temporary_candidate_authority"]["source_binding"][
+            "candidate_path"
+        ] = "/tmp/core_capture_route_candidate.json"
+
+        mutations["single_global_action"] = copy.deepcopy(baseline)
+        mutations["single_global_action"]["actions"] = [
+            mutations["single_global_action"]["actions"][1]
+        ]
+
+        mutations["missing_recenter_phase"] = copy.deepcopy(baseline)
+        mutations["missing_recenter_phase"]["actions"].pop(2)
+
+        mutations["nonzero_breakpoint_velocity"] = copy.deepcopy(baseline)
+        mutations["nonzero_breakpoint_velocity"]["actions"][2][
+            "zero_commanded_endpoint_velocity"
+        ] = False
+
+        mutations["deadline_widened"] = copy.deepcopy(baseline)
+        mutations["deadline_widened"]["actions"][2]["timeout_s"] = 15.0
+
+        mutations["corridor_widened"] = copy.deepcopy(baseline)
+        mutations["corridor_widened"]["live_source_corridor_guard"][
+            "maximum_absolute_source_x_error_mm"
+        ] = 0.041
+
+        mutations["dense_threshold_widened"] = copy.deepcopy(baseline)
+        mutations["dense_threshold_widened"]["dense_fk_evidence"]["phases"][
+            2
+        ]["thresholds"]["maximum_source_x_error_mm"] = 0.01
+
+        mutations["direct_slider_write"] = copy.deepcopy(baseline)
+        mutations["direct_slider_write"]["state_write_contract"][
+            "direct_slider_qpos_writes_after_initialization"
+        ] = 1
+
+        mutations["friction_laundering"] = copy.deepcopy(baseline)
+        mutations["friction_laundering"]["authority_scope"][
+            "friction_coefficient_authority"
+        ] = True
+
+        mutations["release_promotion"] = copy.deepcopy(baseline)
+        mutations["release_promotion"]["release_ready"] = True
+        mutations["release_promotion"]["authority_scope"]["release_ready"] = True
+
+        for name, mutated in mutations.items():
+            with self.subTest(name=name):
+                self.assertNotEqual(
+                    core_capture_route_contract_errors(mutated, self.cad),
+                    [],
+                )
+
+        model = self.demo.build_model()
+        data = self.demo.mujoco.MjData(model)
+        self.demo.initialize(model, data)
+        controller = self.demo.MatchaWorkflowController(model, data)
+        honest_initial = controller.result()
+        self.assertEqual(
+            core_capture_route_result_errors(honest_initial, baseline), []
+        )
+        initial_live = honest_initial["route_alignment"]["live_source_corridor"]
+        self.assertIs(initial_live["observed"], False)
+        self.assertIs(initial_live["passed"], False)
+        self.assertIs(honest_initial["route_alignment"]["passed"], False)
+
+        complete = copy.deepcopy(honest_initial)
+        endpoint_records = [
+            {"event": "move_complete", "action": name}
+            for name in CORE_CAPTURE_ROUTE_ACTIONS
+        ]
+        complete_alignment = complete["route_alignment"]
+        complete_alignment["phase_endpoint_journal_evidence"] = endpoint_records
+        complete_alignment["completed_endpoint_actions"] = sorted(
+            CORE_CAPTURE_ROUTE_ACTIONS
+        )
+        complete_alignment["all_four_endpoints_completed"] = True
+        complete_alignment["measured_max_lateral_deviation_m"] = 1.0e-5
+        live = complete_alignment["live_source_corridor"]
+        live.update(
+            {
+                "observed": True,
+                "audited_substeps": 3,
+                "audited_substeps_by_phase": {
+                    name: 1 for name in list(CORE_CAPTURE_ROUTE_ACTIONS)[1:]
+                },
+                "all_three_phases_observed": True,
+                "maximum_absolute_error_mm": 0.005,
+                "witness": {
+                    "action": "gripper_capture_coupled_recenter",
+                    "preseat_mm": 4.0,
+                    "observed_x_mm": 0.055,
+                    "expected_source_x_mm": 0.05,
+                    "signed_error_mm": 0.005,
+                    "absolute_error_mm": 0.005,
+                },
+                "passed": True,
+            }
+        )
+        complete_alignment["passed"] = True
+        self.assertEqual(core_capture_route_result_errors(complete, baseline), [])
+
+        result_mutations: dict[str, dict[str, Any]] = {}
+        result_mutations["zero_sample_false_green"] = copy.deepcopy(honest_initial)
+        result_mutations["zero_sample_false_green"]["route_alignment"][
+            "live_source_corridor"
+        ]["passed"] = True
+        result_mutations["zero_sample_false_green"]["route_alignment"][
+            "passed"
+        ] = True
+        result_mutations["missing_phase_substep"] = copy.deepcopy(complete)
+        result_mutations["missing_phase_substep"]["route_alignment"][
+            "live_source_corridor"
+        ]["audited_substeps_by_phase"]["gripper_capture_coupled_recenter"] = 0
+        result_mutations["missing_endpoint"] = copy.deepcopy(complete)
+        result_mutations["missing_endpoint"]["route_alignment"][
+            "phase_endpoint_journal_evidence"
+        ].pop()
+        result_mutations["self_attested_x"] = copy.deepcopy(complete)
+        result_mutations["self_attested_x"]["route_alignment"][
+            "live_source_corridor"
+        ]["witness"]["expected_source_x_mm"] = 0.055
+        result_mutations["result_threshold_widened"] = copy.deepcopy(complete)
+        result_mutations["result_threshold_widened"]["route_alignment"][
+            "live_source_corridor"
+        ]["maximum_allowed_error_mm"] = 0.041
+        result_mutations["old_method"] = copy.deepcopy(complete)
+        result_mutations["old_method"]["route_alignment"]["method"] = (
+            "constant_x_plus_0p20_same_z_recenter"
+        )
+        result_mutations["abort_laundered"] = copy.deepcopy(complete)
+        result_mutations["abort_laundered"]["abort_reason"] = "forbidden_collision"
+        for name, mutated in result_mutations.items():
+            with self.subTest(result=name):
+                self.assertNotEqual(
+                    core_capture_route_result_errors(mutated, baseline), []
+                )
+
+    def test_compiled_route_replays_dense_fk_actions_and_per_step_guard(self) -> None:
+        demo = self.demo
+        contract = self.contract
+        self.assertEqual(core_capture_route_contract_errors(contract, self.cad), [])
+
+        # Decode the embedded little-endian authority independently and bind
+        # it to both public JSON rosters and the frozen external-review pins.
+        raw = base64.b64decode(demo._CORE_CAPTURE_ROUTE_STATE_BASE64, validate=True)
+        self.assertEqual(
+            hashlib.sha256(raw).hexdigest(),
+            CORE_CAPTURE_ROUTE_EMBEDDED_BYTES_SHA256,
+        )
+        values = np.frombuffer(raw, dtype="<f8")
+        self.assertEqual(values.shape, (276 * 7,))
+        rows = values.reshape(276, 7)
+        decoded_states = [
+            {
+                "preseat_mm": float(row[0]),
+                "source_x_mm": float(row[1]),
+                "q_rad": [float(value) for value in row[2:]],
+            }
+            for row in rows
+        ]
+        self.assertEqual(decoded_states, contract["source_states"])
+        self.assertEqual(
+            canonical_json_sha256(decoded_states),
+            CORE_CAPTURE_ROUTE_SOURCE_STATE_SHA256,
+        )
+        self.assertEqual(
+            canonical_json_sha256([state["q_rad"] for state in decoded_states]),
+            CORE_CAPTURE_ROUTE_Q_SHA256,
+        )
+
+        source_capture = self.cad.positive_lock_cam_contract()["passive_capture"]
+        self.assertEqual(
+            source_capture["lateral_offset_breakpoints_mm"],
+            [[6.4, 0.2], [3.2, 0.0], [0.0, 0.0]],
+        )
+        for state in decoded_states:
+            preseat = float(state["preseat_mm"])
+            independently_expected_x = _independent_core_capture_x_mm(preseat)
+            self.assertAlmostEqual(
+                float(state["source_x_mm"]), independently_expected_x, places=12
+            )
+            self.assertAlmostEqual(
+                float(self.cad.positive_lock_cam_capture_lateral_offset_mm(preseat)),
+                independently_expected_x,
+                places=12,
+            )
+
+        model = demo.build_model()
+        mujoco = demo.mujoco
+        data = mujoco.MjData(model)
+        demo.initialize(model, data)
+        xml_text, _ = demo._build_xml_and_assets()
+        self.assertEqual(
+            contract["model_binding"]["model_xml_sha256"],
+            hashlib.sha256(xml_text.encode()).hexdigest(),
+        )
+        self.assertEqual(
+            contract["model_binding"][
+                "initialized_active_collision_geometry_sha256"
+            ],
+            demo.initialized_active_collision_geometry_sha256(model, data),
+        )
+
+        actual_actions = demo._core_capture_move_actions()
+        self.assertEqual(
+            [action.name for action in actual_actions],
+            list(CORE_CAPTURE_ROUTE_ACTIONS),
+        )
+        starts = {
+            "gripper_capture_lateral_align": [
+                float(value) for value in demo.DOCK_PRE_CAPTURE_Q["gripper"]
+            ],
+            "gripper_capture_axial_open_side": decoded_states[0]["q_rad"],
+            "gripper_capture_coupled_recenter": decoded_states[243]["q_rad"],
+            "gripper_capture_centered_final": decoded_states[259]["q_rad"],
+        }
+        for action, published in zip(
+            actual_actions, contract["actions"], strict=True
+        ):
+            expected = CORE_CAPTURE_ROUTE_ACTIONS[action.name]
+            self.assertEqual(action.duration_s, expected["duration_s"])
+            self.assertEqual(action.timeout_s, expected["timeout_s"])
+            self.assertEqual(list(action.target_q), published["endpoint_q_rad"])
+            route = np.asarray(
+                (tuple(starts[action.name]), *action.joint_waypoints),
+                dtype=np.float64,
+            )
+            times = np.arange(
+                0.0,
+                action.duration_s + 0.0025,
+                0.005,
+                dtype=np.float64,
+            )
+            commands: list[np.ndarray] = []
+            sample_hasher = hashlib.sha256()
+            for sample_index, time_s in enumerate(times):
+                alpha = min(1.0, max(0.0, float(time_s) / action.duration_s))
+                smooth = alpha**3 * (10.0 + alpha * (-15.0 + 6.0 * alpha))
+                position = smooth * (len(route) - 1)
+                segment = min(int(math.floor(position)), len(route) - 2)
+                fraction = position - segment
+                command = route[segment] + fraction * (
+                    route[segment + 1] - route[segment]
+                )
+                commands.append(command)
+                sample_hasher.update(struct.pack("<Id", sample_index, float(time_s)))
+                sample_hasher.update(np.asarray(command, dtype="<f8").tobytes())
+            command_array = np.asarray(commands)
+            velocity = np.diff(command_array, axis=0) / 0.005
+            acceleration = np.diff(velocity, axis=0) / 0.005
+            observed_speed = float(np.max(np.abs(velocity)))
+            observed_acceleration = float(np.max(np.abs(acceleration)))
+            reported = published["command_kinematics"]
+            self.assertAlmostEqual(
+                observed_speed,
+                float(reported["maximum_abs_joint_speed_rad_s"]),
+                places=14,
+            )
+            self.assertAlmostEqual(
+                observed_acceleration,
+                float(reported["maximum_abs_joint_acceleration_rad_s2"]),
+                places=12,
+            )
+            self.assertEqual(
+                sample_hasher.hexdigest(), reported["command_sample_sha256"]
+            )
+            self.assertLessEqual(observed_speed, expected["speed_bound"])
+            self.assertLessEqual(
+                observed_acceleration, expected["acceleration_bound"]
+            )
+
+        arm_qpos = np.asarray(
+            [model.joint(name).qposadr[0] for name in demo.ARM_JOINTS], dtype=int
+        )
+        dock = data.body("dock_gripper")
+        dock_position = np.asarray(dock.xpos, dtype=np.float64).copy()
+        dock_rotation = np.asarray(dock.xmat, dtype=np.float64).reshape(3, 3).copy()
+        fractions = [index / 100.0 for index in range(101)]
+        phase_states = [
+            (
+                "gripper_capture_lateral_align",
+                [
+                    (55.0, 0.0, starts["gripper_capture_lateral_align"]),
+                    (
+                        decoded_states[0]["preseat_mm"],
+                        decoded_states[0]["source_x_mm"],
+                        decoded_states[0]["q_rad"],
+                    ),
+                ],
+                True,
+            ),
+            (
+                "gripper_capture_axial_open_side",
+                [
+                    (state["preseat_mm"], state["source_x_mm"], state["q_rad"])
+                    for state in decoded_states[0:244]
+                ],
+                False,
+            ),
+            (
+                "gripper_capture_coupled_recenter",
+                [
+                    (state["preseat_mm"], state["source_x_mm"], state["q_rad"])
+                    for state in decoded_states[243:260]
+                ],
+                False,
+            ),
+            (
+                "gripper_capture_centered_final",
+                [
+                    (state["preseat_mm"], state["source_x_mm"], state["q_rad"])
+                    for state in decoded_states[259:276]
+                ],
+                False,
+            ),
+        ]
+        published_phases = {
+            phase["action"]: phase
+            for phase in contract["dense_fk_evidence"]["phases"]
+        }
+        for action_name, states, alignment_phase in phase_states:
+            maxima = {
+                "maximum_preseat_error_mm": 0.0,
+                "maximum_source_x_error_mm": 0.0,
+                "maximum_abs_transverse_y_mm": 0.0,
+                "maximum_orientation_error_rad": 0.0,
+            }
+            previous_preseat = math.inf
+            monotone = True
+            hasher = hashlib.sha256()
+            hasher.update(action_name.encode())
+            hasher.update(b"\0")
+            for interval_index, (start, end) in enumerate(
+                zip(states[:-1], states[1:], strict=True)
+            ):
+                start_q = np.asarray(start[2], dtype=np.float64)
+                end_q = np.asarray(end[2], dtype=np.float64)
+                for fraction_index, fraction in enumerate(fractions):
+                    q_value = start_q + fraction * (end_q - start_q)
+                    data.qpos[arm_qpos] = q_value
+                    mujoco.mj_forward(model, data)
+                    local_mm = (
+                        np.asarray(data.site("robot_mating_face").xpos) - dock_position
+                    ) @ dock_rotation * 1000.0
+                    observed_preseat = -float(local_mm[2])
+                    expected_preseat = float(
+                        start[0] + fraction * (end[0] - start[0])
+                    )
+                    expected_x = (
+                        float(start[1] + fraction * (end[1] - start[1]))
+                        if alignment_phase
+                        else _independent_core_capture_x_mm(
+                            max(0.0, observed_preseat)
+                        )
+                    )
+                    relative_rotation = dock_rotation.T @ np.asarray(
+                        data.site("robot_mating_face").xmat
+                    ).reshape(3, 3)
+                    sine = 0.5 * np.asarray(
+                        [
+                            relative_rotation[2, 1] - relative_rotation[1, 2],
+                            relative_rotation[0, 2] - relative_rotation[2, 0],
+                            relative_rotation[1, 0] - relative_rotation[0, 1],
+                        ]
+                    )
+                    angle = math.atan2(
+                        float(np.linalg.norm(sine)),
+                        (float(np.trace(relative_rotation)) - 1.0) / 2.0,
+                    )
+                    maxima["maximum_preseat_error_mm"] = max(
+                        maxima["maximum_preseat_error_mm"],
+                        abs(observed_preseat - expected_preseat),
+                    )
+                    maxima["maximum_source_x_error_mm"] = max(
+                        maxima["maximum_source_x_error_mm"],
+                        abs(float(local_mm[0]) - expected_x),
+                    )
+                    maxima["maximum_abs_transverse_y_mm"] = max(
+                        maxima["maximum_abs_transverse_y_mm"], abs(float(local_mm[1]))
+                    )
+                    maxima["maximum_orientation_error_rad"] = max(
+                        maxima["maximum_orientation_error_rad"], angle
+                    )
+                    if observed_preseat > previous_preseat + 1.0e-9:
+                        monotone = False
+                    previous_preseat = observed_preseat
+                    hasher.update(
+                        struct.pack(
+                            "<IIddddd",
+                            interval_index,
+                            fraction_index,
+                            fraction,
+                            observed_preseat,
+                            float(local_mm[0]),
+                            float(local_mm[1]),
+                            angle,
+                        )
+                    )
+            published = published_phases[action_name]
+            self.assertEqual(
+                hasher.hexdigest(), published["sample_sha256"], action_name
+            )
+            for key, value in maxima.items():
+                self.assertAlmostEqual(
+                    value, float(published["observed"][key]), places=14, msg=action_name
+                )
+            if not alignment_phase:
+                self.assertTrue(monotone, action_name)
+
+        # Exact-source negative: the retired same-Z +0.20->0 recenter cuts the
+        # complete cam at both nominal q=0 and passive q=0.05 mm.
+        source_cam = self.cad.positive_lock_cam().val()
+        old_overlaps: dict[str, float] = {}
+        for key, q_mm in (("slider_q_0p00mm", 0.0), ("slider_q_0p05mm", 0.05)):
+            slider = self.cad.locking_slider().translate(
+                (
+                    q_mm + 0.20,
+                    0.0,
+                    self.cad.SLIDER_Z - self.cad.PLATE_THICKNESS,
+                )
+            ).val()
+            intersection = slider.intersect(source_cam)
+            old_overlaps[key] = math.fsum(
+                float(solid.Volume()) for solid in intersection.Solids()
+            )
+        for key, value in old_overlaps.items():
+            self.assertAlmostEqual(
+                value,
+                float(
+                    contract["retired_route_negative"][
+                        "complete_source_cam_overlap_mm3"
+                    ][key]
+                ),
+                places=9,
+            )
+            self.assertGreater(value, 1.0e-6)
+
+        source = MATCHA_DEMO.read_text()
+        integrate_source = inspect.getsource(demo.MatchaWorkflowController._integrate)
+        self.assertEqual(integrate_source.count("mujoco.mj_step"), 1)
+        self.assertEqual(
+            integrate_source.count("_audit_core_capture_source_corridor"), 1
+        )
+        self.assertLess(
+            integrate_source.index("mujoco.mj_step"),
+            integrate_source.index("_audit_core_capture_source_corridor"),
+        )
+        self.assertLess(
+            integrate_source.index("_audit_core_capture_source_corridor"),
+            integrate_source.index("_audit_contacts"),
+        )
+        corridor_source = inspect.getsource(
+            demo.MatchaWorkflowController._audit_core_capture_source_corridor
+        )
+        for required in (
+            'self.data.site("robot_mating_face")',
+            'self.data.body("dock_gripper")',
+            "_core_capture_source_x_mm",
+            "CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM",
+            'self._abort("core_capture_source_corridor_violation")',
+        ):
+            self.assertIn(required, corridor_source)
+        self.assertNotIn("journal", corridor_source)
+        allowed_source = inspect.getsource(
+            demo.MatchaWorkflowController._allowed_penetrating_contact
+        )
+        self.assertNotIn("cam_geom", allowed_source)
+        self.assertNotIn("cam_collision", allowed_source)
+        move_source = inspect.getsource(demo.MatchaWorkflowController._command_move)
+        self.assertIn("alpha**3 * (10.0 + alpha * (-15.0 + 6.0 * alpha))", move_source)
+        self.assertIn("CORE_CAPTURE_ROUTE_ENDPOINT_DWELL_TICKS", move_source)
+        self.assertIn("self.move_endpoint_dwell_ticks", move_source)
+
+        tree = ast.parse(source, filename=str(MATCHA_DEMO))
+        controller_node = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.ClassDef)
+            and node.name == "MatchaWorkflowController"
+        )
+        direct_state_writes: list[str] = []
+        for node in ast.walk(controller_node):
+            targets: list[ast.AST] = []
+            if isinstance(node, ast.Assign):
+                targets = list(node.targets)
+            elif isinstance(node, ast.AnnAssign):
+                targets = [node.target]
+            elif isinstance(node, ast.AugAssign):
+                targets = [node.target]
+            for target in targets:
+                if target_state_field(target) in {"qpos", "qvel"}:
+                    direct_state_writes.append(ast.unparse(target))
+        self.assertEqual(direct_state_writes, [])
+
+        fresh_data = mujoco.MjData(model)
+        demo.initialize(model, fresh_data)
+        initial_result = demo.MatchaWorkflowController(model, fresh_data).result()
+        self.assertEqual(
+            core_capture_route_result_errors(initial_result, contract), []
+        )
+        self.assertIs(
+            initial_result["route_alignment"]["live_source_corridor"]["passed"],
+            False,
+        )
+        self.assertIs(initial_result["release_ready"], False)
 
 
 FORBIDDEN_STATE_FIELDS = {"qpos", "qvel", "time", "eq_data"}

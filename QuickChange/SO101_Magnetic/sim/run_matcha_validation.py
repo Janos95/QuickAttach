@@ -76,6 +76,14 @@ DEVELOPMENT_TESTS = (
         "test_compiled_cam_union_matches_source_on_all_three_docks",
     ),
     qualified(
+        "CoreCaptureRouteRuntimeAuthorityTests",
+        "test_route_contract_and_result_mutations_fail_closed",
+    ),
+    qualified(
+        "CoreCaptureRouteRuntimeAuthorityTests",
+        "test_compiled_route_replays_dense_fk_actions_and_per_step_guard",
+    ),
+    qualified(
         "ControllerSourceSafetyTests",
         "test_controller_call_graph_never_teleports_physical_state",
     ),
