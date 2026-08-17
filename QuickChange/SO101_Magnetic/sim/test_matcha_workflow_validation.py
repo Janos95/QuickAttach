@@ -3356,11 +3356,12 @@ def _core_cam_actual_model_binding_errors(
         "initialized_active_collision_geometry_sha256"
     ]
     if observations is None:
+        errors.append("model_binding:observations_missing")
         observations = {
-            "controller_init_compiled": expected_compiled,
-            "controller_init_active": expected_active,
-            "evidence_compiled": expected_compiled,
-            "evidence_active": expected_active,
+            "controller_init_compiled": "",
+            "controller_init_active": "",
+            "evidence_compiled": "",
+            "evidence_active": "",
         }
     if set(observations) != {
         "controller_init_compiled", "controller_init_active",
@@ -3641,6 +3642,8 @@ def core_cam_tab_result_errors(
     )
     if (replay_model is None) != (replay_mujoco is None):
         errors.append("envelope:replay_authority_incomplete")
+    elif envelope_states and replay_model is None:
+        errors.append("envelope:replay_authority_missing")
     elif replay_model is not None and replay_mujoco is not None:
         for state_index, state in enumerate(envelope_states):
             replay_errors = _core_cam_functional_state_replay_errors(
@@ -3991,6 +3994,17 @@ def core_cam_tab_result_errors(
         errors.append("result:development_geometry_milestone_passed")
     if result.get("success") is not False:
         errors.append("result:success_must_remain_false")
+    expected_physical_cam_authority = bool(
+        evidence.get("contact_force_authority") is True
+        and evidence.get("friction_coefficient_authority") is True
+        and evidence.get("dynamics_authority") is True
+    )
+    if result.get("physical_cam_authority_ready") is not (
+        expected_physical_cam_authority
+    ):
+        errors.append("result:physical_cam_authority_ready")
+    if result.get("locked") is not False:
+        errors.append("result:locked")
     if result.get("physical_lock_confirmed") is not False:
         errors.append("result:physical_lock_confirmed")
     if result.get("release_ready") is not False:
@@ -6843,6 +6857,15 @@ class CoreCamTabContactCheckpointATests(unittest.TestCase):
             ),
             [],
         )
+        self.assertIn(
+            "model_binding:observations_missing",
+            core_cam_tab_result_errors(
+                result,
+                contract,
+                replay_model=model,
+                replay_mujoco=self.demo.mujoco,
+            ),
+        )
         self.assertIs(result["core_cam_tab_contact_evidence"]["observed"], False)
         self.assertIs(result["core_cam_tab_contact_evidence"]["passed"], False)
         self.assertIs(
@@ -6870,6 +6893,12 @@ class CoreCamTabContactCheckpointATests(unittest.TestCase):
         ] = True
         result_mutations["physical_lock_claimed"] = copy.deepcopy(result)
         result_mutations["physical_lock_claimed"]["physical_lock_confirmed"] = True
+        result_mutations["locked_claimed"] = copy.deepcopy(result)
+        result_mutations["locked_claimed"]["locked"] = True
+        result_mutations["cam_authority_promoted"] = copy.deepcopy(result)
+        result_mutations["cam_authority_promoted"][
+            "physical_cam_authority_ready"
+        ] = True
         result_mutations["release_promoted"] = copy.deepcopy(result)
         result_mutations["release_promoted"]["release_ready"] = True
         result_mutations["binding_echo_changed"] = copy.deepcopy(result)
@@ -7003,6 +7032,18 @@ class CoreCamTabContactCheckpointATests(unittest.TestCase):
                 state, replay_model, demo.mujoco
             ),
             [],
+        )
+        replay_digests = self._independent_model_digests(replay_model)
+        replay_result = replay_controller.result()
+        self.assertIn(
+            "envelope:replay_authority_missing",
+            core_cam_tab_result_errors(
+                replay_result,
+                contract,
+                model_binding_observations=self._binding_observations(
+                    replay_digests, replay_digests
+                ),
+            ),
         )
         state_mutations: dict[str, dict[str, Any]] = {}
         state_mutations["qpos_changed"] = copy.deepcopy(state)
@@ -7197,6 +7238,73 @@ class CoreCamTabContactCheckpointATests(unittest.TestCase):
         self.assertIn("core_cam_tab_allowed_contact_indices", allowed_source)
         self.assertIn("contact_index", allowed_source)
         self.assertNotIn("startswith", allowed_source)
+
+    def test_result_helper_requires_external_binding_and_replay_authority(
+        self,
+    ) -> None:
+        """Reject omitted independent inputs and retired lock promotion."""
+
+        demo = self.demo
+        model = demo.build_model()
+        data = demo.mujoco.MjData(model)
+        demo.initialize(model, data)
+        controller = demo.MatchaWorkflowController(model, data)
+        digests = self._independent_model_digests(model)
+        observations = self._binding_observations(digests, digests)
+        result = controller.result()
+        self.assertEqual(
+            core_cam_tab_result_errors(
+                result,
+                self.contract,
+                model_binding_observations=observations,
+                replay_model=model,
+                replay_mujoco=demo.mujoco,
+            ),
+            [],
+        )
+        self.assertIn(
+            "model_binding:observations_missing",
+            core_cam_tab_result_errors(
+                result,
+                self.contract,
+                replay_model=model,
+                replay_mujoco=demo.mujoco,
+            ),
+        )
+
+        for field in ("physical_cam_authority_ready", "locked"):
+            mutated = copy.deepcopy(result)
+            mutated[field] = True
+            with self.subTest(promoted_field=field):
+                self.assertNotEqual(
+                    core_cam_tab_result_errors(
+                        mutated,
+                        self.contract,
+                        model_binding_observations=observations,
+                        replay_model=model,
+                        replay_mujoco=demo.mujoco,
+                    ),
+                    [],
+                )
+
+        controller.physics_substep_count = 1
+        data.time = float(model.opt.timestep)
+        controller._record_core_cam_tab_functional_envelope(
+            controller.actions[2], []
+        )
+        nonempty_result = controller.result()
+        self.assertTrue(
+            nonempty_result["core_cam_tab_contact_evidence"]
+            ["functional_phase_envelope"]["raw_states"]
+        )
+        self.assertIn(
+            "envelope:replay_authority_missing",
+            core_cam_tab_result_errors(
+                nonempty_result,
+                self.contract,
+                model_binding_observations=observations,
+            ),
+        )
 
     def test_retired_negative_z_suffix_and_complete_cam_overlap_stay_red(
         self,
