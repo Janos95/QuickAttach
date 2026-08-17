@@ -1,9 +1,9 @@
 {
   "authorities": {
     "cad_generator": {
-      "bytes": 57128,
+      "bytes": 60415,
       "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-      "sha256": "7f7d0bbf99a4e06add7fc183a23f53bdcc56859375ba640115eb61986f774998"
+      "sha256": "baf63afb535b229bc8a233d56d6992ed73f9f40df02ff33eb987d738a1560e0b"
     },
     "calibrated_robot_xml": {
       "bytes": 13921,
@@ -11,9 +11,9 @@
       "sha256": "d75253eb568e8a7214db9c631ab7bed4217f608a26f7276ebe9a7636cac82580"
     },
     "core_cad_manifest": {
-      "bytes": 8751,
+      "bytes": 9571,
       "path": "QuickChange/SO101_Magnetic/exports/core_cad_manifest.json",
-      "sha256": "b43450f7ca11b38347f4989ae668a9ad392f2ea94187809d29d72cc38bfe149a"
+      "sha256": "bb88d9f324ee514151c1ba87c4eb29b4b29869810d49ab30e3c1f143b08f499a"
     },
     "core_exports": [
       {
@@ -32,9 +32,9 @@
         "sha256": "5dfe8ceee800063a188b2491578811f88e46ca0f4548120254d81b9ecf548a48"
       },
       {
-        "bytes": 3309398,
+        "bytes": 3304071,
         "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_retrofit_assembly.step",
-        "sha256": "f212ec0736413844da47df8897a606361b5d9530d81902114804107bdb9704b1"
+        "sha256": "e09bafe2632b795bf04c4fec10bb55b6561d7fcd50309ee6f14ee590e9e0a4c3"
       }
     ],
     "fixed_gripper_stl_crosscheck": {
@@ -53,9 +53,9 @@
       "sha256": "b7f9d59f7991f425fff784eab07f0bf65471903dd6d6177e7cb109bebcd02b35"
     },
     "validator": {
-      "bytes": 63677,
+      "bytes": 69581,
       "path": "QuickChange/SO101_Magnetic/sim/validate_cad_clearance.py",
-      "sha256": "fe9d64f6c334308e2f0b826707cdeaa28d5b8b51f2c30cca491e76e01bfd5818"
+      "sha256": "233e81c20f06bcf97460256c423364caa921df285fd51574a769631b2dd3ff66"
     }
   },
   "axial_capture_sweep": {
@@ -101,9 +101,9 @@
   "core_cad_manifest_validation": {
     "errors": [],
     "manifest": {
-      "bytes": 8751,
+      "bytes": 9571,
       "path": "QuickChange/SO101_Magnetic/exports/core_cad_manifest.json",
-      "sha256": "b43450f7ca11b38347f4989ae668a9ad392f2ea94187809d29d72cc38bfe149a"
+      "sha256": "bb88d9f324ee514151c1ba87c4eb29b4b29869810d49ab30e3c1f143b08f499a"
     },
     "passed": true
   },
@@ -218,9 +218,9 @@
       "robot_plate_is_single_valid_solid": true,
       "robot_plate_retains_minimum_volume_fraction": true,
       "slider_lobe_ligament_preserved": true,
-      "slider_source_bounds_preserved": true,
-      "slider_source_volume_preserved": true,
-      "stud_keyhole_centres_aligned": true,
+      "slider_source_bounds_match_swept_neck_release": true,
+      "slider_source_volume_matches_swept_neck_release": true,
+      "stud_keyhole_full_travel_is_clear_and_retained": true,
       "stud_well_ligament_preserved": true,
       "unlocked_cam_gap_preserved": true
     },
@@ -228,6 +228,872 @@
     "keyhole_neck_width_mm": 4.25,
     "locked_slider_cam_overlap_volume_mm3": 5.135937500000003,
     "passed": true,
+    "positive_lock_keyhole_contract": {
+      "head_to_slider_axial_gap_mm": 0.20000000000000018,
+      "keyhole_entry_diameter_mm": 6.5,
+      "minimum_radial_head_retention_overlap_mm": 0.875,
+      "minimum_radial_shoulder_clearance_mm": 0.125,
+      "neck_radius_mm": 2.125,
+      "neck_width_mm": 4.25,
+      "shoulder_path_centerline_x_offsets_mm": [
+        -3.0,
+        0.0
+      ],
+      "shoulder_path_kind": "capsule",
+      "shoulder_path_overall_length_mm": 7.25,
+      "shoulder_path_overall_x_offsets_mm": [
+        -5.125,
+        2.125
+      ],
+      "slider_locked_translation_mm": [
+        3.0,
+        0.0,
+        0.0
+      ],
+      "slider_travel_mm": 3.0,
+      "stud_centres_x_mm": [
+        -12.0,
+        12.0
+      ],
+      "stud_head_diameter_mm": 6.0,
+      "stud_shoulder_diameter_mm": 4.0
+    },
+    "positive_lock_travel": {
+      "checks": {
+        "all_sampled_shoulder_intersections_are_zero": true,
+        "continuous_capsule_radial_clearance_is_positive": true,
+        "locked_neck_retains_each_head": true,
+        "sampled_clearance_matches_continuous_capsule_bound": true,
+        "unlocked_entry_passes_each_head": true
+      },
+      "continuous_minimum_shoulder_clearance_mm": 0.125,
+      "locked_projected_head_retention_volume_mm3": {
+        "left": 4.149293812932414,
+        "right": 12.190289700424891
+      },
+      "maximum_sampled_shoulder_overlap_volume_mm3": 0.0,
+      "method": "occt_brep_boolean_distance_plus_exact_capsule_containment",
+      "minimum_sampled_shoulder_clearance_mm": 0.1249999999999994,
+      "observations": [
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 1.2499999999999993,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 1.2499999999999993,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.0
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 1.2123349849196399,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 1.2123349849196399,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.05
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 1.1750105685930166,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 1.1750105685930166,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.1
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 1.1380389044777663,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 1.1380389044777663,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.15
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 1.1014326079015,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 1.1014326079015,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.2
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 1.06520476912936,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 1.06520476912936,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.25
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 1.0293689659782355,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 1.0293689659782355,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.3
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.9939392758322138,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.9939392758322138,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.35
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.9589302868958216,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.9589302868958216,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.4
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.9243571085023242,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.9243571085023242,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.45
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.8902353802738534,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.8902353802738534,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.5
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.8565812799088027,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.8565812799088027,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.55
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.8234115293495733,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.8234115293495733,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.6
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.7907433990610403,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.7907433990610403,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.65
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.7585947101271415,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.7585947101271415,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.7
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.7269838338501603,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.7269838338501603,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.75
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.6959296885154095,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.6959296885154095,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.8
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.6654517329633772,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.6654517329633772,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.85
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.6355699565930978,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.6355699565930978,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.9
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.606304865405201,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.606304865405201,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 0.95
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.5776774636818885,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.5776774636818885,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.0
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.5497092308951952,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.5497092308951952,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.05
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.522422093435364,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.522422093435364,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.1
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.49583839075960967,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.49583839075960967,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.15
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.4699808355791339,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.4699808355791339,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.2
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.4448724677305502,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.4448724677305502,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.25
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.4205366014182769,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.4205366014182769,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.3
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.39699676556816,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.39699676556816,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.35
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.37427663710084474,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.37427663710084474,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.4
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.3523999670169973,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.3523999670169973,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.45
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.33139049928583303,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.33139049928583303,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.5
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.311271882643606,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.311271882643606,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.55
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.29206757553908,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.29206757553908,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.6
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.273800744607203,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.273800744607203,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.65
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.2564941572082448,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.2564941572082448,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.7
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.24017006873443006,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.24017006873443006,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.75
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.22485010555594398,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.22485010555594398,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.8
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.2105551446482785,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.2105551446482785,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.85
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.19730519110788172,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.19730519110788172,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.9
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.18511925491683884,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.18511925491683884,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 1.95
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.17401522845333223,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.17401522845333223,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.0
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.16400976635635126,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.16400976635635126,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.05
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.15511816943395126,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.15511816943395126,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.1
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.14735427434855763,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.14735427434855763,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.15
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.14073035081527613,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.14073035081527613,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.2
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.13525700800638282,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.13525700800638282,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.25
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.13094311176508067,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.13094311176508067,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.3
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.12779571409421742,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.12779571409421742,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.35
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.12581999620296996,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.12581999620296996,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.4
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.12501922617068803,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.12501922617068803,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.45
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.5
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.55
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.6
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.65
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.7
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.75
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.8
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.85
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.9
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.125,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 2.95
+        },
+        {
+          "sides": {
+            "left": {
+              "shoulder_clearance_mm": 0.1249999999999994,
+              "shoulder_overlap_volume_mm3": 0.0
+            },
+            "right": {
+              "shoulder_clearance_mm": 0.12499999999999994,
+              "shoulder_overlap_volume_mm3": 0.0
+            }
+          },
+          "slider_offset_mm": 3.0
+        }
+      ],
+      "passed": true,
+      "sample_count": 61,
+      "sample_end_mm": 3.0,
+      "sample_start_mm": 0.0,
+      "sample_step_mm": 0.05,
+      "sampled_offsets_sha256": "7bd9adcc23970b6f52960f158a030f555e65435e97e0fe34b34e96a3cdc41766",
+      "shoulder_z_bounds_mm": [
+        4.5,
+        9.5
+      ],
+      "slider_translation_axis": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "slider_z_bounds_mm": [
+        4.7,
+        6.300000000000001
+      ],
+      "source_frame": "robot_plate_native_mm",
+      "unlocked_projected_head_overlap_volume_mm3": {
+        "left": 0.0,
+        "right": 0.0
+      }
+    },
     "pre_full_depth_relief_baseline_volume_mm3": 21130.316397677383,
     "relief_contract": {
       "bounds_native_mm": {
@@ -286,7 +1152,7 @@
     ],
     "slider_bbox_native_mm": {
       "x_mm": [
-        -16.4,
+        -15.974062500000002,
         24.0
       ],
       "y_mm": [
@@ -299,7 +1165,7 @@
       ]
     },
     "slider_travel_mm": 3.0,
-    "slider_volume_mm3": 237.20848051509753,
+    "slider_volume_mm3": 220.12468083955645,
     "stud_centres_xy_mm": [
       [
         -12.0,
@@ -807,6 +1673,9 @@
     "minimum_stud_to_cam_x_margin_mm": 1.0,
     "numeric_distance_tolerance_mm": 0.001,
     "overlap_volume_tolerance_mm3": 1e-06,
+    "positive_lock_minimum_radial_head_retention_overlap_mm": 0.875,
+    "positive_lock_minimum_radial_shoulder_clearance_mm": 0.125,
+    "positive_lock_travel_sample_step_mm": 0.05,
     "robot_plate_cam_required_clearance_mm": 0.5,
     "robot_plate_cam_sample_step_mm": 0.1,
     "robot_plate_minimum_functional_ligament_mm": 5.0,
@@ -820,7 +1689,7 @@
   "validation": {
     "all_source_hashes_present": true,
     "failed_pair_result_count": 0,
-    "machine_json_canonical_sha256_without_this_field": "890b0216d9cedf81d405d553e96881c5d2c61bd4a4d1bfbd18a315d1bf506ffc",
+    "machine_json_canonical_sha256_without_this_field": "56bc32ed1980c8b0befa4906aec00bf35ca53bf2573cd977ab3417324fe1a9d6",
     "pair_result_count": 37
   },
   "withdrawal_sweep": {

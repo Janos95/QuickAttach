@@ -93,6 +93,36 @@
         0.0
       ]
     },
+    "positive_lock_keyhole": {
+      "slider_travel_mm": 3.0,
+      "slider_locked_translation_mm": [
+        3.0,
+        0.0,
+        0.0
+      ],
+      "stud_centres_x_mm": [
+        -12.0,
+        12.0
+      ],
+      "keyhole_entry_diameter_mm": 6.5,
+      "shoulder_path_kind": "capsule",
+      "shoulder_path_centerline_x_offsets_mm": [
+        -3.0,
+        0.0
+      ],
+      "shoulder_path_overall_x_offsets_mm": [
+        -5.125,
+        2.125
+      ],
+      "shoulder_path_overall_length_mm": 7.25,
+      "neck_width_mm": 4.25,
+      "neck_radius_mm": 2.125,
+      "stud_shoulder_diameter_mm": 4.0,
+      "minimum_radial_shoulder_clearance_mm": 0.125,
+      "stud_head_diameter_mm": 6.0,
+      "minimum_radial_head_retention_overlap_mm": 0.875,
+      "head_to_slider_axial_gap_mm": 0.20000000000000018
+    },
     "positive_lock_cam": {
       "polygon_xy_mm": [
         [
@@ -200,6 +230,36 @@
   "positive_lock": {
     "type": "internal keyhole slider, spring locked, passively cammed open by dock",
     "travel": 3.0,
+    "keyhole_contract": {
+      "slider_travel_mm": 3.0,
+      "slider_locked_translation_mm": [
+        3.0,
+        0.0,
+        0.0
+      ],
+      "stud_centres_x_mm": [
+        -12.0,
+        12.0
+      ],
+      "keyhole_entry_diameter_mm": 6.5,
+      "shoulder_path_kind": "capsule",
+      "shoulder_path_centerline_x_offsets_mm": [
+        -3.0,
+        0.0
+      ],
+      "shoulder_path_overall_x_offsets_mm": [
+        -5.125,
+        2.125
+      ],
+      "shoulder_path_overall_length_mm": 7.25,
+      "neck_width_mm": 4.25,
+      "neck_radius_mm": 2.125,
+      "stud_shoulder_diameter_mm": 4.0,
+      "minimum_radial_shoulder_clearance_mm": 0.125,
+      "stud_head_diameter_mm": 6.0,
+      "minimum_radial_head_retention_overlap_mm": 0.875,
+      "head_to_slider_axial_gap_mm": 0.20000000000000018
+    },
     "studs": "2 x McMaster 90318A720, M3, 4 mm shoulder dia, 5 mm shoulder length",
     "stud_retention": "2 x rear-loaded DIN 934 M3 nuts, 5.5 mm AF x 2.4 mm",
     "slider_material": "1.5-1.6 mm 304 stainless steel; printed copy for fit checks only",
@@ -267,6 +327,6 @@
     "generic_tool_plate": 24.62,
     "stock_gripper_tool_plate": 25.12,
     "passive_dock": 21.76,
-    "lock_slider": 0.24
+    "lock_slider": 0.22
   }
 }

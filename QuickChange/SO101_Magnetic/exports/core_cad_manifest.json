@@ -51,6 +51,36 @@
         }
       ]
     },
+    "positive_lock_keyhole": {
+      "head_to_slider_axial_gap_mm": 0.20000000000000018,
+      "keyhole_entry_diameter_mm": 6.5,
+      "minimum_radial_head_retention_overlap_mm": 0.875,
+      "minimum_radial_shoulder_clearance_mm": 0.125,
+      "neck_radius_mm": 2.125,
+      "neck_width_mm": 4.25,
+      "shoulder_path_centerline_x_offsets_mm": [
+        -3.0,
+        0.0
+      ],
+      "shoulder_path_kind": "capsule",
+      "shoulder_path_overall_length_mm": 7.25,
+      "shoulder_path_overall_x_offsets_mm": [
+        -5.125,
+        2.125
+      ],
+      "slider_locked_translation_mm": [
+        3.0,
+        0.0,
+        0.0
+      ],
+      "slider_travel_mm": 3.0,
+      "stud_centres_x_mm": [
+        -12.0,
+        12.0
+      ],
+      "stud_head_diameter_mm": 6.0,
+      "stud_shoulder_diameter_mm": 4.0
+    },
     "robot_plate_cam_relief": {
       "bounds_native_mm": {
         "x": [
@@ -112,10 +142,10 @@
       "sha256": "d049abac30a46e681d8ae9a6c7fc064376984620c20e5dafb23e5197e4b828f3"
     },
     {
-      "bytes": 6335,
+      "bytes": 7970,
       "path": "QuickChange/SO101_Magnetic/exports/design_parameters.json",
       "role": "design_parameters",
-      "sha256": "38518a23085e0e6e90de93737dde43610464cd406ff4dd3bd2cea7bb4c7f4801"
+      "sha256": "81ac7a5994dd1d8ecf8ab410da18293fae5943e722a1f09a13ac753040669126"
     },
     {
       "bytes": 347,
@@ -178,28 +208,28 @@
       "sha256": "65fa1597a9a908a8dc0f4fcd087d848c26b54411816c2db94588d459f9c17999"
     },
     {
-      "bytes": 99584,
+      "bytes": 94504,
       "path": "QuickChange/SO101_Magnetic/exports/so101_positive_lock_slider.step",
       "role": "exact_cad_step",
-      "sha256": "0d0f77a772172963fdc3a63470ff936cfd52c4e4b96db78a1cdf6cc4f14eb7f1"
+      "sha256": "37771b10b4fe82614f0f7b460d44cdc81ea8505b4e6c7ac7b20a1f413b7ca848"
     },
     {
-      "bytes": 91884,
+      "bytes": 98284,
       "path": "QuickChange/SO101_Magnetic/exports/so101_positive_lock_slider.stl",
       "role": "tessellated_mesh_export",
-      "sha256": "b73b52244741f97213eb86f6706cea2a417c731a1f6da47ec2604a36e0067685"
+      "sha256": "75384cc6ab23a5e1bb45b51bbe82d95eeb26ecf192d2657d2b1bac6c188b6d44"
     },
     {
-      "bytes": 18823,
+      "bytes": 18552,
       "path": "QuickChange/SO101_Magnetic/exports/so101_positive_lock_slider_profile.dxf",
       "role": "fabrication_profile_dxf",
-      "sha256": "1fa42f24121b8d4d8b663d7ffefe12e61d5aacada197108e55b54c622b9725af"
+      "sha256": "94f07e6278ef395413ad8ecf2b55711b549b3b4a74ecbeea5b992e9d0ce4cbcd"
     },
     {
-      "bytes": 1011094,
+      "bytes": 1005767,
       "path": "QuickChange/SO101_Magnetic/exports/so101_quick_change_assembly.step",
       "role": "complete_assembly_step",
-      "sha256": "e0f78fdd54fa03e5760196db24ed0d7e3c3ffc94c3c0a86da5a26352c50f9f4b"
+      "sha256": "9d1296d293e7075b02e5804babcc0715862f5441e6eb4c7d6c94aad50560cec3"
     },
     {
       "bytes": 363394,
@@ -214,10 +244,10 @@
       "sha256": "dc6456400ce2f0e3d6101b44cc9e55f88c8565b6be3e6d3e731d14b9110506c9"
     },
     {
-      "bytes": 3309398,
+      "bytes": 3304071,
       "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_retrofit_assembly.step",
       "role": "complete_assembly_step",
-      "sha256": "f212ec0736413844da47df8897a606361b5d9530d81902114804107bdb9704b1"
+      "sha256": "e09bafe2632b795bf04c4fec10bb55b6561d7fcd50309ee6f14ee590e9e0a4c3"
     },
     {
       "bytes": 249124,
@@ -269,11 +299,11 @@
     }
   ],
   "generator": {
-    "bytes": 57128,
+    "bytes": 60415,
     "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-    "sha256": "7f7d0bbf99a4e06add7fc183a23f53bdcc56859375ba640115eb61986f774998"
+    "sha256": "baf63afb535b229bc8a233d56d6992ed73f9f40df02ff33eb987d738a1560e0b"
   },
-  "inventory_sha256": "caa5651d64ebb9380842217cceb129abe243830c4be2c4be4119032e8b83474d",
+  "inventory_sha256": "2728b8363faca872bf879c9e2bbd081224ebdc95a5d5be5f24c2df7b5d04280b",
   "schema_version": "1.0",
   "units": "mm"
 }

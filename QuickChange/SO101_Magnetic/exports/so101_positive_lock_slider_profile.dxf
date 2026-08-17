@@ -553,7 +553,7 @@ $SPLINESEGS
   9
 $HANDSEED
   5
-4B
+49
   9
 $SURFTAB1
  70
@@ -1119,166 +1119,6 @@ CLASSES
   0
 CLASS
   1
-ACDBDICTIONARYWDFLT
-  2
-AcDbDictionaryWithDefault
-  3
-ObjectDBX Classes
- 90
-0
- 91
-0
-280
-0
-281
-0
-  0
-CLASS
-  1
-SUN
-  2
-AcDbSun
-  3
-SCENEOE
- 90
-1153
- 91
-0
-280
-0
-281
-0
-  0
-CLASS
-  1
-VISUALSTYLE
-  2
-AcDbVisualStyle
-  3
-ObjectDBX Classes
- 90
-4095
- 91
-0
-280
-0
-281
-0
-  0
-CLASS
-  1
-MATERIAL
-  2
-AcDbMaterial
-  3
-ObjectDBX Classes
- 90
-1153
- 91
-0
-280
-0
-281
-0
-  0
-CLASS
-  1
-SCALE
-  2
-AcDbScale
-  3
-ObjectDBX Classes
- 90
-1153
- 91
-0
-280
-0
-281
-0
-  0
-CLASS
-  1
-TABLESTYLE
-  2
-AcDbTableStyle
-  3
-ObjectDBX Classes
- 90
-4095
- 91
-0
-280
-0
-281
-0
-  0
-CLASS
-  1
-MLEADERSTYLE
-  2
-AcDbMLeaderStyle
-  3
-ACDB_MLEADERSTYLE_CLASS
- 90
-4095
- 91
-0
-280
-0
-281
-0
-  0
-CLASS
-  1
-DICTIONARYVAR
-  2
-AcDbDictionaryVar
-  3
-ObjectDBX Classes
- 90
-0
- 91
-0
-280
-0
-281
-0
-  0
-CLASS
-  1
-CELLSTYLEMAP
-  2
-AcDbCellStyleMap
-  3
-ObjectDBX Classes
- 90
-1152
- 91
-0
-280
-0
-281
-0
-  0
-CLASS
-  1
-MENTALRAYRENDERSETTINGS
-  2
-AcDbMentalRayRenderSettings
-  3
-SCENEOE
- 90
-1024
- 91
-0
-280
-0
-281
-0
-  0
-CLASS
-  1
 ACDBDETAILVIEWSTYLE
   2
 AcDbDetailViewStyle
@@ -1295,41 +1135,9 @@ ObjectDBX Classes
   0
 CLASS
   1
-ACDBSECTIONVIEWSTYLE
+ACDBDICTIONARYWDFLT
   2
-AcDbSectionViewStyle
-  3
-ObjectDBX Classes
- 90
-1025
- 91
-0
-280
-0
-281
-0
-  0
-CLASS
-  1
-RASTERVARIABLES
-  2
-AcDbRasterVariables
-  3
-ISM
- 90
-0
- 91
-0
-280
-0
-281
-0
-  0
-CLASS
-  1
-LAYOUT
-  2
-AcDbLayout
+AcDbDictionaryWithDefault
   3
 ObjectDBX Classes
  90
@@ -1357,6 +1165,198 @@ ObjectDBX Classes
 281
 0
   0
+CLASS
+  1
+ACDBSECTIONVIEWSTYLE
+  2
+AcDbSectionViewStyle
+  3
+ObjectDBX Classes
+ 90
+1025
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+CELLSTYLEMAP
+  2
+AcDbCellStyleMap
+  3
+ObjectDBX Classes
+ 90
+1152
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+DICTIONARYVAR
+  2
+AcDbDictionaryVar
+  3
+ObjectDBX Classes
+ 90
+0
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+LAYOUT
+  2
+AcDbLayout
+  3
+ObjectDBX Classes
+ 90
+0
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+MATERIAL
+  2
+AcDbMaterial
+  3
+ObjectDBX Classes
+ 90
+1153
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+MENTALRAYRENDERSETTINGS
+  2
+AcDbMentalRayRenderSettings
+  3
+SCENEOE
+ 90
+1024
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+MLEADERSTYLE
+  2
+AcDbMLeaderStyle
+  3
+ACDB_MLEADERSTYLE_CLASS
+ 90
+4095
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+RASTERVARIABLES
+  2
+AcDbRasterVariables
+  3
+ISM
+ 90
+0
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+SCALE
+  2
+AcDbScale
+  3
+ObjectDBX Classes
+ 90
+1153
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+SUN
+  2
+AcDbSun
+  3
+SCENEOE
+ 90
+1153
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+TABLESTYLE
+  2
+AcDbTableStyle
+  3
+ObjectDBX Classes
+ 90
+4095
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+VISUALSTYLE
+  2
+AcDbVisualStyle
+  3
+ObjectDBX Classes
+ 90
+4095
+ 91
+0
+280
+0
+281
+0
+  0
 ENDSEC
   0
 SECTION
@@ -1377,7 +1377,7 @@ AcDbSymbolTable
   0
 VPORT
   5
-47
+45
 330
 8
 100
@@ -1397,7 +1397,7 @@ AcDbViewportTableRecord
  21
 1.0
  12
-3.8000000000000007
+4.012968749999999
  22
 0.0
  13
@@ -1425,7 +1425,7 @@ AcDbViewportTableRecord
  37
 0.0
  40
-20.200000000000003
+19.98703125
  41
 1.34
  42
@@ -1725,7 +1725,7 @@ ACAD
   0
 APPID
   5
-48
+46
 330
 3
 100
@@ -1739,7 +1739,7 @@ HATCHBACKGROUNDCOLOR
   0
 APPID
   5
-49
+47
 330
 3
 100
@@ -2095,9 +2095,9 @@ AcDbArc
  50
 33.055731150852694
  51
-326.9442688491473
+154.58140309757624
   0
-LINE
+ARC
   5
 31
 330
@@ -2107,21 +2107,23 @@ AcDbEntity
   8
 0
 100
-AcDbLine
+AcDbCircle
  10
--8.31218221708276
+-15.0
  20
--2.399999999999936
+0.0
  30
 1.6
- 11
-8.312182217082764
- 21
--2.399999999999938
- 31
-1.6
+ 40
+2.125
+100
+AcDbArc
+ 50
+90.0
+ 51
+117.28277286041933
   0
-ARC
+LINE
   5
 32
 330
@@ -2131,123 +2133,23 @@ AcDbEntity
   8
 0
 100
-AcDbCircle
+AcDbLine
  10
-12.0
+-15.0
  20
-0.0
+2.125
  30
 1.6
- 40
-4.4
-100
-AcDbArc
- 50
--146.94426884914725
- 51
--27.035691789411466
+ 11
+-14.45903944661325
+ 21
+2.1249999999999996
+ 31
+1.6
   0
-LINE
+ARC
   5
 33
-330
-17
-100
-AcDbEntity
-  8
-0
-100
-AcDbLine
- 10
-15.919183588453132
- 20
--1.999999999999955
- 30
-1.6
- 11
-24.0
- 21
--2.0
- 31
-1.6
-  0
-LINE
-  5
-34
-330
-17
-100
-AcDbEntity
-  8
-0
-100
-AcDbLine
- 10
-24.0
- 20
--2.0
- 30
-1.6
- 11
-24.0
- 21
-2.0
- 31
-1.6
-  0
-LINE
-  5
-35
-330
-17
-100
-AcDbEntity
-  8
-0
-100
-AcDbLine
- 10
-24.0
- 20
-2.0
- 30
-1.6
- 11
-15.919183588453132
- 21
-1.9999999999999543
- 31
-1.6
-  0
-ARC
-  5
-36
-330
-17
-100
-AcDbEntity
-  8
-0
-100
-AcDbCircle
- 10
-12.0
- 20
-0.0
- 30
-1.6
- 40
-4.4
-100
-AcDbArc
- 50
-27.03569178941149
- 51
-146.94426884914725
-  0
-ARC
-  5
-37
 330
 17
 100
@@ -2273,7 +2175,7 @@ AcDbArc
   0
 LINE
   5
-38
+34
 330
 17
 100
@@ -2289,15 +2191,15 @@ AcDbLine
  30
 1.6
  11
--15.15
+-15.0
  21
 -2.125
  31
 1.6
   0
-LINE
+ARC
   5
-39
+35
 330
 17
 100
@@ -2305,23 +2207,25 @@ AcDbEntity
   8
 0
 100
-AcDbLine
+AcDbCircle
  10
--15.15
+-15.0
  20
--2.125
+0.0
  30
 1.6
- 11
--15.15
- 21
--0.7999999999999984
- 31
-1.6
+ 40
+2.125
+100
+AcDbArc
+ 50
+242.71722713958064
+ 51
+270.0
   0
 ARC
   5
-3A
+36
 330
 17
 100
@@ -2337,13 +2241,111 @@ AcDbCircle
  30
 1.6
  40
-3.25
+4.4
 100
 AcDbArc
  50
-165.74996730219644
+205.41859690242376
  51
-194.25003269780356
+326.9442688491473
+  0
+LINE
+  5
+37
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbLine
+ 10
+-8.31218221708276
+ 20
+-2.399999999999936
+ 30
+1.6
+ 11
+8.312182217082764
+ 21
+-2.399999999999938
+ 31
+1.6
+  0
+ARC
+  5
+38
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbCircle
+ 10
+12.0
+ 20
+0.0
+ 30
+1.6
+ 40
+4.4
+100
+AcDbArc
+ 50
+-146.94426884914725
+ 51
+-27.035691789411466
+  0
+LINE
+  5
+39
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbLine
+ 10
+15.919183588453132
+ 20
+-1.999999999999955
+ 30
+1.6
+ 11
+24.0
+ 21
+-2.0
+ 31
+1.6
+  0
+LINE
+  5
+3A
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbLine
+ 10
+24.0
+ 20
+-2.0
+ 30
+1.6
+ 11
+24.0
+ 21
+2.0
+ 31
+1.6
   0
 LINE
   5
@@ -2357,19 +2359,19 @@ AcDbEntity
 100
 AcDbLine
  10
--15.15
+24.0
  20
-0.7999999999999992
+2.0
  30
 1.6
  11
--15.15
+15.919183588453132
  21
-2.125
+1.9999999999999543
  31
 1.6
   0
-LINE
+ARC
   5
 3C
 330
@@ -2379,19 +2381,21 @@ AcDbEntity
   8
 0
 100
-AcDbLine
+AcDbCircle
  10
--15.15
+12.0
  20
-2.125
+0.0
  30
 1.6
- 11
--14.45903944661325
- 21
-2.1249999999999996
- 31
-1.6
+ 40
+4.4
+100
+AcDbArc
+ 50
+27.03569178941149
+ 51
+146.94426884914725
   0
 LINE
   5
@@ -2537,13 +2541,13 @@ AcDbLine
  30
 1.6
  11
-8.85
+9.0
  21
 -2.125
  31
 1.6
   0
-LINE
+ARC
   5
 43
 330
@@ -2553,21 +2557,23 @@ AcDbEntity
   8
 0
 100
-AcDbLine
+AcDbCircle
  10
-8.85
+9.0
  20
--2.125
+0.0
  30
 1.6
- 11
-8.85
- 21
--0.7999999999999984
- 31
-1.6
+ 40
+2.125
+100
+AcDbArc
+ 50
+90.0
+ 51
+270.0
   0
-ARC
+LINE
   5
 44
 330
@@ -2577,59 +2583,9 @@ AcDbEntity
   8
 0
 100
-AcDbCircle
- 10
-12.0
- 20
-0.0
- 30
-1.6
- 40
-3.25
-100
-AcDbArc
- 50
-165.74996730219644
- 51
-194.25003269780356
-  0
-LINE
-  5
-45
-330
-17
-100
-AcDbEntity
-  8
-0
-100
 AcDbLine
  10
-8.85
- 20
-0.7999999999999992
- 30
-1.6
- 11
-8.85
- 21
-2.125
- 31
-1.6
-  0
-LINE
-  5
-46
-330
-17
-100
-AcDbEntity
-  8
-0
-100
-AcDbLine
- 10
-8.85
+9.0
  20
 2.125
  30
@@ -3631,7 +3587,7 @@ CREATED_BY_EZDXF
   3
 WRITTEN_BY_EZDXF
 350
-4A
+48
   0
 DICTIONARYVAR
   5
@@ -3647,7 +3603,7 @@ DictionaryVariables
   0
 DICTIONARYVAR
   5
-4A
+48
 330
 2D
 100
