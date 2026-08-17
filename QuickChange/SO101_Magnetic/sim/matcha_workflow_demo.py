@@ -3377,9 +3377,9 @@ def initial_contact_report(model: mujoco.MjModel, data: mujoco.MjData) -> dict[s
 class MatchaWorkflowController:
     """Fail-closed real-dynamics controller for the first recovery milestone.
 
-    This checkpoint intentionally stops after one complete gripper capture and
-    rack exit.  The same finite-deadline action and contact-audit machinery is
-    used by the remaining matcha process actions as they are restored.
+    This checkpoint intentionally stops after gripper capture and dock release
+    with the positive-lock slider still unlocked.  The same finite-deadline
+    action and contact-audit machinery is used as later actions are restored.
     """
 
     def __init__(
