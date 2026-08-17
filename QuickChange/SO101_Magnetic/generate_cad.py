@@ -146,8 +146,9 @@ ROBOT_STUD_WELL_BOTTOM_Z = 2.8
 
 # The 4 mm ENIG targets must never bear on the printed robot face around the
 # much smaller press-fit pogo pilots.  A shallow face relief clears each pad
-# while retaining more than 9 mm of backed wing thickness and the full-length
-# reamed pilot below it.
+# while retaining the shallow surface webs measured by the fit contract. The
+# legacy straight pilot below it is not retention authority; the official
+# stepped barb/knurl mounting section remains an explicit release blocker.
 POGO_PAD_RELIEF_DIAMETER = 4.6
 POGO_PAD_RELIEF_DEPTH = 0.35
 
