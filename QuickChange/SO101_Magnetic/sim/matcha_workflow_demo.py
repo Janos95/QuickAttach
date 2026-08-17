@@ -785,16 +785,97 @@ CORE_CAM_TAB_CLASSIFIER_SEMANTICS = {
         "state_index": "physics_substep_count_after_mj_step",
         "actions": list(CORE_CAM_TAB_FUNCTIONAL_ACTIONS),
         "complete_cam_distance": {
-            "method": "mj_geomDistance_leading_tab_to_each_exact_cam_geom",
+            "method": (
+                "minimum_live_contact_dist_else_mj_geomDistance_for_each_"
+                "of_two_slider_tabs_by_five_exact_cam_geoms"
+            ),
             "maximum_distance_m": CORE_CAM_TAB_DISTANCE_MAXDIST_M,
             "signed_distance_units": "mm",
-            "closest_points_world_order": ["leading_tab", "cam_component"],
-            "minimum_recomputed_over_exact_five_component_roster": True,
+            "closest_points_world_order": ["slider_tab", "cam_component"],
+            "minimum_recomputed_over_exact_two_by_five_pair_roster": True,
+            "pair_class_clearance_rules": {
+                "noncontact_tab_part_000_all_cam_components_minimum_mm": (
+                    -CORE_CAM_TAB_NUMERICAL_EPSILON_MM
+                ),
+                "either_tab_to_outer_root_minimum_mm": (
+                    -CORE_CAM_TAB_NUMERICAL_EPSILON_MM
+                ),
+                "leading_tab_part_001_to_main_lead_hold_minimum_mm": (
+                    -CORE_CAM_TAB_PROVISIONAL_MAX_PENETRATION_MM
+                ),
+                "negative_without_live_contact": "unresolved_and_failed",
+                "distance_cutoff_or_nonfinite": "unresolved_and_failed",
+            },
         },
         "per_state_count_partition": (
             "eligible_plus_rejected_equals_all_observed_cam_tab_contacts;"
             "functional_plus_nonfunctional_equals_eligible"
         ),
+        "lossless_replay_state_fields": [
+            "qpos",
+            "qvel",
+            "mocap_pos",
+            "mocap_quat_wxyz",
+            "all_named_equality_active_states",
+        ],
+        "replay_world_pose_fields_sign_canonical_wxyz": [
+            "dock_gripper_body",
+            "robot_mating_face_site",
+            "robot_plate_frame_body",
+            "qc_positive_lock_slider_body",
+            "both_slider_tab_geoms",
+        ],
+        "state_continuity": {
+            "state_index_formula": "physics_substep_count_after_mj_step",
+            "adjacent_state_index_delta": 1,
+            "adjacent_sim_time_delta": "model.opt.timestep",
+            "sim_time_absolute_tolerance_s": 1.0e-12,
+            "allowed_action_progression": [
+                "same_functional_action",
+                "gripper_capture_coupled_recenter_to_gripper_capture_centered_final",
+            ],
+        },
+        "sampled_coordinate_jump_rules": {
+            "gripper_capture_coupled_recenter_formula_mm": (
+                "(abs(delta_p)+abs(delta_x)+abs(delta_q))/sqrt(2)"
+            ),
+            "gripper_capture_centered_final_formula_mm": (
+                "abs(delta_x)+abs(delta_q)"
+            ),
+            "maximum_mm": 0.010,
+        },
+        "nonaccumulating_running_minimum_rules": {
+            "preseat_mm": "p<=running_min_prior_p+0.020",
+            "post_first_functional_lead_slider_q_mm": (
+                "q<=running_min_prior_post_lead_q+0.020"
+            ),
+            "tolerance_mm": CORE_CAM_TAB_POINT_TOLERANCE_MM,
+        },
+        "joint_and_phase_envelopes": {
+            "compiled_slider_joint_range_mm": [0.0, 3.0],
+            "joint_range_numeric_tolerance_mm": (
+                CORE_CAM_TAB_NUMERICAL_EPSILON_MM
+            ),
+            "recenter_preseat_bounds_mm": [3.2, 6.4],
+            "preseat_bounds_tolerance_mm": CORE_CAM_TAB_POINT_TOLERANCE_MM,
+            "recenter_q_upper_formula_mm": (
+                "min(3.0+numeric_epsilon,qmax+sqrt(2)*0.020)"
+            ),
+            "centered_final_preseat_bounds_mm": [0.0, 3.2],
+            "centered_final_q_upper_mm": (
+                CORE_CAM_TAB_PASSIVE_OPEN_Q_MM
+                + CORE_CAM_TAB_PROVISIONAL_MAX_PENETRATION_MM
+            ),
+            "source_x_error_maximum_mm": (
+                CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
+            ),
+            "absolute_transverse_y_maximum_mm": 0.010,
+            "orientation_error_maximum_rad": (
+                CORE_CAPTURE_ROUTE_ENDPOINT_ORIENTATION_ERROR_RAD
+            ),
+            "dock_hold_active": True,
+            "attach_equality_active": False,
+        },
         "functional_surface_state_rule": (
             "lead_for_recenter_when_p_le_6.346666666666667_and_hold_for_"
             "centered_final;each_state_requires_either_exact_valid_contact_"
@@ -4848,11 +4929,14 @@ class MatchaWorkflowController:
         )
         if action.name == "gripper_capture_coupled_recenter":
             q_envelope_state_passed = bool(
-                -CORE_CAM_TAB_POINT_TOLERANCE_MM
+                -CORE_CAM_TAB_NUMERICAL_EPSILON_MM
                 <= slider_q_mm
-                <= source_q_max_mm
-                + math.sqrt(2.0)
-                * CORE_CAM_TAB_PROVISIONAL_MAX_PENETRATION_MM
+                <= min(
+                    3.0 + CORE_CAM_TAB_NUMERICAL_EPSILON_MM,
+                    source_q_max_mm
+                    + math.sqrt(2.0)
+                    * CORE_CAM_TAB_PROVISIONAL_MAX_PENETRATION_MM,
+                )
             )
             phase_range_valid = bool(
                 CORE_CAM_TAB_RAMP_END_PRESEAT_MM
@@ -4863,7 +4947,7 @@ class MatchaWorkflowController:
             )
         else:
             q_envelope_state_passed = bool(
-                -CORE_CAM_TAB_POINT_TOLERANCE_MM
+                -CORE_CAM_TAB_NUMERICAL_EPSILON_MM
                 <= slider_q_mm
                 <= CORE_CAM_TAB_PASSIVE_OPEN_Q_MM
                 + CORE_CAM_TAB_PROVISIONAL_MAX_PENETRATION_MM
