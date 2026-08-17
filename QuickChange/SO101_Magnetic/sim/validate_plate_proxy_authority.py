@@ -342,6 +342,41 @@ def validate_component_record(
     if reported_voids.get("inventory_sha256") != voids.get("inventory_sha256"):
         errors.append("functional void inventory mismatch")
 
+    known_witnesses = generator.evaluate_known_undercoverage_witnesses(
+        component_id, boxes, parameters
+    )
+    reported_witnesses = record.get(
+        "known_undercoverage_regression_witnesses", {}
+    )
+    if not known_witnesses["passed"]:
+        errors.append("known first-pass undercoverage witness regressed")
+    if reported_witnesses.get("witness_inventory_sha256") != known_witnesses.get(
+        "witness_inventory_sha256"
+    ):
+        errors.append("known undercoverage witness inventory mismatch")
+    reported_results = reported_witnesses.get("results", [])
+    if len(reported_results) != len(known_witnesses["results"]):
+        errors.append("known undercoverage witness result count mismatch")
+    else:
+        for observed, reported_result in zip(
+            known_witnesses["results"], reported_results, strict=True
+        ):
+            if (
+                observed["name"] != reported_result.get("name")
+                or observed["point_mm"] != reported_result.get("point_mm")
+                or not _equivalent_float(
+                    float(observed["proxy_distance_float64_candidate_upper_mm"]),
+                    float(
+                        reported_result.get(
+                            "proxy_distance_float64_candidate_upper_mm", math.nan
+                        )
+                    ),
+                    tolerance=2.0e-9,
+                )
+            ):
+                errors.append("known undercoverage witness evidence mismatch")
+                break
+
     boundary: dict[str, Any] | None = None
     if recompute_boundary:
         source_to_proxy = generator.certify_source_to_proxy_surface(
@@ -397,6 +432,7 @@ def validate_component_record(
         "component_id": component_id,
         "exact_subset_recomputed": subset,
         "functional_voids_recomputed": voids,
+        "known_undercoverage_witnesses_recomputed": known_witnesses,
         "boundary_recomputed": boundary,
         "release_octree_rebuilt": release_rebuild_octree,
         "errors": errors,

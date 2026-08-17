@@ -77,6 +77,29 @@ class PlateProxyConstructionKernelTests(unittest.TestCase):
         self.assertTrue(record["no_false_negative_neighbourhood_exclusion"])
         self.assertEqual(record["selected_cell_count"], 2)
 
+    def test_original_red_point_regressions_are_named_and_fail_when_uncovered(self) -> None:
+        self.assertEqual(
+            set(generator.KNOWN_FIRST_PASS_UNDERCOVERAGE_WITNESSES),
+            {"robot_plate", "generic_tool_plate"},
+        )
+        parameters = generator.OctreeParameters()
+        for component_id, declared in (
+            generator.KNOWN_FIRST_PASS_UNDERCOVERAGE_WITNESSES.items()
+        ):
+            with self.subTest(component_id=component_id):
+                self.assertEqual(len(declared), 1)
+                point = np.asarray(declared[0]["point_mm"], dtype=np.float64)
+                covered = np.asarray([[point - 0.05, point + 0.05]])
+                passing = generator.evaluate_known_undercoverage_witnesses(
+                    component_id, covered, parameters
+                )
+                self.assertTrue(passing["passed"])
+                uncovered = covered + np.asarray([1.0, 0.0, 0.0])
+                failing = generator.evaluate_known_undercoverage_witnesses(
+                    component_id, uncovered, parameters
+                )
+                self.assertFalse(failing["passed"])
+
     def test_greedy_merge_preserves_exact_cell_union(self) -> None:
         records = np.asarray(
             [

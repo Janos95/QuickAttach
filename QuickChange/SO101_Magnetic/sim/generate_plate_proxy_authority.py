@@ -72,6 +72,25 @@ MAX_ADAPTIVE_SURFACE_PATCHES = 3_000_000
 FRAME_POSITION_TOLERANCE_MM = 1.0e-12
 PROGRESS_ENVIRONMENT_VARIABLE = "PLATE_PROXY_PROGRESS"
 
+# These coordinates are the deterministic finite witnesses that made the
+# original coarse proxy fail.  They are not substituted for the complete
+# adaptive cover; keeping them in the report makes a regression at either
+# delicate feature immediately legible.
+KNOWN_FIRST_PASS_UNDERCOVERAGE_WITNESSES = {
+    "robot_plate": (
+        {
+            "name": "horn_counterbore_thin_wall_first_pass_red",
+            "point_mm": [-6.190502161016662, -3.667577114764999, 6.5],
+        },
+    ),
+    "generic_tool_plate": (
+        {
+            "name": "electrical_wing_outer_corner_first_pass_red",
+            "point_mm": [-36.0, -12.0, 9.5],
+        },
+    ),
+}
+
 
 def _progress(message: str) -> None:
     if os.environ.get(PROGRESS_ENVIRONMENT_VARIABLE) == "1":
@@ -590,6 +609,42 @@ def _proxy_point_distances_float64(
         for offset in range(0, len(points), chunk_size)
     ]
     return np.concatenate(parts) if parts else np.empty(0, dtype=np.float64)
+
+
+def evaluate_known_undercoverage_witnesses(
+    component_id: str,
+    boxes_mm: np.ndarray,
+    parameters: OctreeParameters,
+) -> dict[str, Any]:
+    """Re-evaluate the two original finite reds against a finished proxy."""
+
+    declared = KNOWN_FIRST_PASS_UNDERCOVERAGE_WITNESSES.get(component_id)
+    if declared is None:
+        raise KeyError(component_id)
+    points = np.asarray([record["point_mm"] for record in declared], dtype=np.float64)
+    distances = _proxy_point_distances_float64(
+        boxes_mm, points, chunk_size=parameters.query_chunk_size
+    )
+    results: list[dict[str, Any]] = []
+    for record, distance in zip(declared, distances, strict=True):
+        guarded = float(distance + parameters.source_faceting_bound_mm)
+        results.append(
+            {
+                "name": record["name"],
+                "point_mm": record["point_mm"],
+                "proxy_distance_float64_candidate_upper_mm": float(distance),
+                "proxy_distance_plus_source_faceting_mm": guarded,
+                "internal_boundary_target_mm": parameters.internal_boundary_target_mm,
+                "passed": guarded <= parameters.internal_boundary_target_mm + 1.0e-12,
+            }
+        )
+    return {
+        "method": "original_red_point_float64_candidate_upper_replay",
+        "finite_witnesses_do_not_replace_complete_surface_certificate": True,
+        "witness_inventory_sha256": _canonical_sha256(declared),
+        "results": results,
+        "passed": all(record["passed"] for record in results),
+    }
 
 
 def _scan_source_patches_for_undercoverage(
@@ -1750,6 +1805,9 @@ def build_component_record(
     voids = evaluate_functional_voids(
         spec.component_id, SignedFcpwMesh(source_triangles), boxes_mm
     )
+    known_witnesses = evaluate_known_undercoverage_witnesses(
+        spec.component_id, boxes_mm, params
+    )
     boundary = {
         "threshold_mm": params.boundary_threshold_mm,
         "source_to_proxy": source_to_proxy,
@@ -1783,12 +1841,14 @@ def build_component_record(
         "runtime_piece_inventory": _boxes_inventory(boxes_mm),
         "exact_subset_certificate": construction["exact_subset"],
         "bidirectional_boundary_certificate": boundary,
+        "known_undercoverage_regression_witnesses": known_witnesses,
         "functional_void_results": voids,
         "wall_seconds_observed": time.monotonic() - started,
     }
     record["passed"] = bool(
         record["exact_subset_certificate"]["passed"]
         and boundary["passed"]
+        and known_witnesses["passed"]
         and voids["passed"]
     )
     return record
