@@ -591,7 +591,7 @@ def _scan_source_patches_for_undercoverage(
     boxes_mm: np.ndarray,
     parameters: OctreeParameters,
 ) -> tuple[np.ndarray, dict[str, Any]]:
-    """Partition the complete surface into certified-safe or definite-red patches.
+    """Partition the complete surface into safe leaves or refinement patches.
 
     Safe leaves use an upper distance plus their physical covering radius.
     Refinement seeds use a lower distance, so float32/FCPW rounding cannot
@@ -603,10 +603,11 @@ def _scan_source_patches_for_undercoverage(
 
     proxy = SignedFcpwMesh(_proxy_triangle_mesh(boxes_mm))
     pending = np.ascontiguousarray(source_triangles, dtype=np.float64)
-    red_parts: list[np.ndarray] = []
+    refinement_parts: list[np.ndarray] = []
     digest = hashlib.sha256()
     safe_leaf_count = 0
     red_leaf_count = 0
+    unresolved_seed_leaf_count = 0
     maximum_safe_upper = 0.0
     maximum_red_lower = 0.0
     worst_red_point: list[float] | None = None
@@ -614,7 +615,13 @@ def _scan_source_patches_for_undercoverage(
     for iteration in range(48):
         if not len(pending):
             break
-        if safe_leaf_count + red_leaf_count + len(pending) > parameters.max_adaptive_surface_patches:
+        if (
+            safe_leaf_count
+            + red_leaf_count
+            + unresolved_seed_leaf_count
+            + len(pending)
+            > parameters.max_adaptive_surface_patches
+        ):
             raise RuntimeError("adaptive source scan exceeded fail-closed patch cap")
         centroids = np.mean(pending, axis=1)
         radii = np.max(
@@ -634,6 +641,10 @@ def _scan_source_patches_for_undercoverage(
         if np.any(safe & red):
             raise RuntimeError("source patch classified simultaneously safe and red")
         ambiguous = ~(safe | red)
+        unresolved_seed = ambiguous & (
+            radii <= parameters.source_witness_covering_radius_mm + 1.0e-12
+        )
+        subdivide = ambiguous & ~unresolved_seed
         if np.any(safe):
             safe_centroids = np.ascontiguousarray(centroids[safe], dtype="<f8")
             safe_radii = np.ascontiguousarray(radii[safe], dtype="<f8")
@@ -648,7 +659,7 @@ def _scan_source_patches_for_undercoverage(
             )
         if np.any(red):
             selected = np.ascontiguousarray(pending[red])
-            red_parts.append(selected)
+            refinement_parts.append(selected)
             digest.update(b"red")
             digest.update(np.ascontiguousarray(centroids[red], dtype="<f8").tobytes())
             digest.update(np.ascontiguousarray(distance_lower[red], dtype="<f8").tobytes())
@@ -658,25 +669,51 @@ def _scan_source_patches_for_undercoverage(
             if local_value > maximum_red_lower:
                 maximum_red_lower = local_value
                 worst_red_point = centroids[red][local].tolist()
+        if np.any(unresolved_seed):
+            selected = np.ascontiguousarray(pending[unresolved_seed])
+            refinement_parts.append(selected)
+            digest.update(b"unresolved_seed")
+            digest.update(
+                np.ascontiguousarray(
+                    centroids[unresolved_seed], dtype="<f8"
+                ).tobytes()
+            )
+            digest.update(
+                np.ascontiguousarray(
+                    distance_upper[unresolved_seed], dtype="<f8"
+                ).tobytes()
+            )
+            digest.update(
+                np.ascontiguousarray(radii[unresolved_seed], dtype="<f8").tobytes()
+            )
+            unresolved_seed_leaf_count += len(selected)
         iterations.append(
             {
                 "iteration": iteration,
                 "evaluated_patch_count": len(pending),
                 "certified_safe_patch_count": int(np.count_nonzero(safe)),
                 "certificate_red_patch_count": int(np.count_nonzero(red)),
-                "ambiguous_refined_patch_count": int(np.count_nonzero(ambiguous)),
+                "unresolved_refinement_seed_patch_count": int(
+                    np.count_nonzero(unresolved_seed)
+                ),
+                "ambiguous_subdivided_patch_count": int(
+                    np.count_nonzero(subdivide)
+                ),
                 "maximum_safe_candidate_bound_mm": float(np.max(safe_upper)),
                 "maximum_certificate_red_lower_plus_faceting_mm": float(
                     np.max(red_lower)
                 ),
             }
         )
-        uncertain = pending[ambiguous]
+        uncertain = pending[subdivide]
         if not len(uncertain):
             pending = np.empty((0, 3, 3), dtype=np.float64)
             break
         if (
-            safe_leaf_count + red_leaf_count + 2 * len(uncertain)
+            safe_leaf_count
+            + red_leaf_count
+            + unresolved_seed_leaf_count
+            + 2 * len(uncertain)
             > parameters.max_adaptive_surface_patches
         ):
             raise RuntimeError(
@@ -685,9 +722,9 @@ def _scan_source_patches_for_undercoverage(
         pending = _split_triangle_longest_edge(uncertain)
     if len(pending):
         raise RuntimeError("adaptive source scan did not terminate")
-    red_patches = (
-        np.concatenate(red_parts, axis=0)
-        if red_parts
+    refinement_patches = (
+        np.concatenate(refinement_parts, axis=0)
+        if refinement_parts
         else np.empty((0, 3, 3), dtype=np.float64)
     )
     result = {
@@ -698,15 +735,19 @@ def _scan_source_patches_for_undercoverage(
         "internal_boundary_target_mm": parameters.internal_boundary_target_mm,
         "complete_surface_partition": True,
         "certified_safe_patch_count": safe_leaf_count,
-            "certificate_red_patch_count": red_leaf_count,
+        "certificate_red_patch_count": red_leaf_count,
+        "unresolved_refinement_seed_patch_count": unresolved_seed_leaf_count,
+        "unresolved_refinement_seed_radius_mm": (
+            parameters.source_witness_covering_radius_mm
+        ),
         "maximum_certified_safe_upper_mm": maximum_safe_upper,
-            "maximum_certificate_red_lower_plus_faceting_mm": maximum_red_lower,
-            "worst_certificate_red_point_mm": worst_red_point,
+        "maximum_certificate_red_lower_plus_faceting_mm": maximum_red_lower,
+        "worst_certificate_red_point_mm": worst_red_point,
         "partition_sha256": digest.hexdigest(),
         "iteration_records": iterations,
-        "passed": red_leaf_count == 0,
+        "passed": red_leaf_count == 0 and unresolved_seed_leaf_count == 0,
     }
-    return red_patches, result
+    return refinement_patches, result
 
 
 def _finite_certificate_red_seed_patches(
@@ -1085,7 +1126,7 @@ def build_adaptive_subset_boxes(
 
     for adaptive_index in range(6):
         pass_index = adaptive_index + 1
-        red_patches, surface_scan = _scan_source_patches_for_undercoverage(
+        refinement_patches, surface_scan = _scan_source_patches_for_undercoverage(
             triangles, boxes_mm, parameters
         )
         pass_record: dict[str, Any] = {
@@ -1093,7 +1134,7 @@ def build_adaptive_subset_boxes(
             "mode": "complete_adaptive_surface_partition",
             "surface_scan": surface_scan,
         }
-        if not len(red_patches):
+        if not len(refinement_patches):
             final_surface_scan = surface_scan
             pass_record["selected_unresolved_cell_count"] = 0
             pass_record["refinement"] = {
@@ -1107,12 +1148,12 @@ def build_adaptive_subset_boxes(
         )
         selected_mask = _cells_near_triangle_patches(
             unresolved_mm_current,
-            red_patches,
+            refinement_patches,
             parameters.targeted_refinement_radius_mm,
         )
         selected_count = int(np.count_nonzero(selected_mask))
         if selected_count == 0:
-            raise RuntimeError("definite red source patches selected no octree cells")
+            raise RuntimeError("surface refinement patches selected no octree cells")
         total_selected_unresolved += selected_count
         targeted_accepted, targeted_margins, targeted_unresolved, refinement = (
             _targeted_refine_cells(
@@ -1138,8 +1179,8 @@ def build_adaptive_subset_boxes(
             )
         boxes_mm = _integer_boxes_to_mm(merged, root_min, leaf_size)
         pass_record["selected_unresolved_cell_count"] = selected_count
-        pass_record["red_patch_geometry_sha256"] = hashlib.sha256(
-            np.ascontiguousarray(red_patches, dtype="<f8").tobytes()
+        pass_record["refinement_patch_geometry_sha256"] = hashlib.sha256(
+            np.ascontiguousarray(refinement_patches, dtype="<f8").tobytes()
         ).hexdigest()
         pass_record["refinement"] = refinement
         pass_record["proxy_box_count_after_pass"] = len(merged)
@@ -1327,6 +1368,9 @@ def _certificate_from_surface_scan(
         "release_threshold_mm": parameters.boundary_threshold_mm,
         "certified_safe_patch_count": scan["certified_safe_patch_count"],
         "certificate_red_patch_count": scan["certificate_red_patch_count"],
+        "unresolved_refinement_seed_patch_count": scan[
+            "unresolved_refinement_seed_patch_count"
+        ],
         "source_faceting_bound_mm": parameters.source_faceting_bound_mm,
         "certified_upper_bound_mm": certified,
         "complete_source_surface_partition": scan["complete_surface_partition"],
@@ -1335,6 +1379,7 @@ def _certificate_from_surface_scan(
         "finite_witness_maximum_is_not_the_bound": True,
         "passed": bool(
             int(scan["certificate_red_patch_count"]) == 0
+            and int(scan["unresolved_refinement_seed_patch_count"]) == 0
             and scan["passed"]
             and certified <= parameters.internal_boundary_target_mm + 1.0e-12
             and certified <= parameters.boundary_threshold_mm + 1.0e-12
