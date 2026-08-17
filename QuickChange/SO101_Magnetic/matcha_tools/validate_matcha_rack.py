@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a fail-closed exact-clearance report for the matcha tool rack.
+"""Generate a fail-closed exact-clearance report for the two-bay matcha rack.
 
 The fast path uses a continuous swept-AABB lower bound for every named rigid
 tool component against every named rack component, including adjacent bays.
@@ -8,9 +8,9 @@ FCPW tessellated-mesh screen.  Intended support/stop tangencies then receive a
 small OCCT B-rep distance and overlap-volume diagnostic.  FCPW is explicitly a
 screen; it is never promoted to exact STEP authority.
 
-The stock-gripper bay is intentionally unresolved in this package.  Therefore
-the report can prove the spoon and whisk paths while remaining
-``release_ready=false`` for the complete three-tool rack.
+The stock gripper and moving jaw remain on the separate core quick-change dock.
+This report hash-pins that scope boundary but makes no claim that the matcha
+keeper profile covers the moving jaw.
 """
 
 from __future__ import annotations
@@ -51,6 +51,14 @@ EXPECTED_EXPORT_ROLES = {
     "rack_step": 1,
     "rack_stl": 1,
 }
+
+CORE_STOCK_GRIPPER_AUTHORITY_PATHS = (
+    REPO_ROOT / "QuickChange/SO101_Magnetic/generate_cad.py",
+    REPO_ROOT / "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_tool_plate.step",
+    REPO_ROOT / "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_retrofit_assembly.step",
+    REPO_ROOT / "QuickChange/SO101_Magnetic/exports/so101_passive_tool_dock.step",
+    REPO_ROOT / "Simulation/SO101/assets/moving_jaw_so101_v1.stl",
+)
 
 
 def _canonical_bytes(value: Any) -> bytes:
@@ -461,7 +469,7 @@ def build_report(*, require_exports: bool) -> dict[str, Any]:
     ):
         components = cad.build_tool(tool)
         states = _tool_states(tool)
-        bay_x = (cad.RACK_BAY_NAMES.index(bay) - 1) * cad.RACK_BAY_PITCH
+        bay_x = cad.rack_bay_x(bay)
         inventories[f"{tool}_components"] = _inventory_record(
             component.name for component in components
         )
@@ -540,23 +548,18 @@ def build_report(*, require_exports: bool) -> dict[str, Any]:
     )
 
     export_ok, export_errors, manifest, artifact_records = _manifest_closure()
-    blockers = [
-        {
-            "code": "stock_gripper_keeper_geometry_unresolved",
-            "detail": "gripper bay position exists, but no exact official-gripper/keeper swept-clearance authority is present",
-        }
-    ]
-    if require_exports and not export_ok:
+    blockers: list[dict[str, str]] = []
+    if not export_ok:
         blockers.extend({"code": error, "detail": "canonical export closure failed"} for error in export_errors)
     tool_validation_passed = pair_closure["passed"] and all(
         result["passed"] for result in tool_results.values()
     )
-    release_ready = False  # Stock-gripper blocker is deliberately fail-closed.
+    release_ready = tool_validation_passed and export_ok
     return {
         "schema_version": SCHEMA_VERSION,
         "units": "mm",
         "release_ready": release_ready,
-        "passed": release_ready and tool_validation_passed and export_ok,
+        "passed": release_ready,
         "tool_validation_passed": tool_validation_passed,
         "blockers": blockers,
         "authorities": {
@@ -565,6 +568,15 @@ def build_report(*, require_exports: bool) -> dict[str, Any]:
             "quick_change_interface_generator": _file_record(cad.BASE_GENERATOR),
             "fcpw_role": "toleranced_mesh_screen_only",
             "occt_role": "STEP import/tessellation and six critical B-rep tangency diagnostics",
+        },
+        "scope_boundary": {
+            "matcha_rack_bays": list(cad.RACK_BAY_NAMES),
+            "normal_gripper_included_in_matcha_rack": False,
+            "normal_gripper_authority": "separate_core_stock_adapter_and_passive_dock_package",
+            "normal_gripper_authority_files": [
+                _file_record(path) for path in CORE_STOCK_GRIPPER_AUTHORITY_PATHS
+            ],
+            "claim_boundary": "this report validates only spoon and whisk against the two-bay matcha rack; it does not claim the matcha keeper fits the moving jaw",
         },
         "input_artifacts": {
             "required": require_exports,
@@ -602,11 +614,12 @@ def validate_report_structure(report: dict[str, Any]) -> list[str]:
         "tool_path_results",
         "collision_pair_closure",
         "pair_results",
+        "scope_boundary",
     }
     if not required.issubset(report):
         errors.append(f"missing_top_level_keys:{sorted(required - set(report))}")
     closure = report.get("collision_pair_closure", {})
-    if closure.get("expected_count") != 1458:
+    if closure.get("expected_count") != 1026:
         errors.append("unexpected_pair_inventory_count")
     if closure.get("evaluated_count") != closure.get("unique_count"):
         errors.append("pair_inventory_not_unique")
@@ -660,10 +673,26 @@ def validate_report_structure(report: dict[str, Any]) -> list[str]:
             errors.append(f"intentional_contact_count_mismatch:{semantic}:{observed.get(semantic)}")
     if observed.get("unresolved_forbidden_pair", 0):
         errors.append("unresolved_forbidden_pairs_present")
-    if not any(blocker.get("code") == "stock_gripper_keeper_geometry_unresolved" for blocker in report.get("blockers", [])):
-        errors.append("stock_gripper_blocker_missing")
-    if report.get("release_ready") or report.get("passed"):
-        errors.append("report_must_remain_release_red_until_stock_gripper_closes")
+    scope = report.get("scope_boundary", {})
+    if scope.get("matcha_rack_bays") != ["spoon", "whisk"]:
+        errors.append("matcha_rack_scope_is_not_exactly_two_bays")
+    if scope.get("normal_gripper_included_in_matcha_rack") is not False:
+        errors.append("normal_gripper_scope_not_isolated")
+    authority_records = scope.get("normal_gripper_authority_files", [])
+    expected_core_records = [_file_record(path) for path in CORE_STOCK_GRIPPER_AUTHORITY_PATHS]
+    if authority_records != expected_core_records:
+        errors.append("core_stock_gripper_authority_hash_mismatch")
+    if any(blocker.get("code") == "stock_gripper_keeper_geometry_unresolved" for blocker in report.get("blockers", [])):
+        errors.append("obsolete_stock_gripper_matcha_keeper_blocker_present")
+    expected_release_ready = bool(
+        report.get("tool_validation_passed")
+        and report.get("input_artifacts", {}).get("closure_passed")
+        and closure.get("passed")
+    )
+    if report.get("release_ready") != expected_release_ready:
+        errors.append("release_ready_not_recomputed")
+    if report.get("passed") != report.get("release_ready"):
+        errors.append("passed_not_equal_release_ready")
     return errors
 
 

@@ -19,19 +19,25 @@ class MatchaRackValidationTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.report = rack_validation.build_report(require_exports=False)
 
-    def test_complete_pair_inventory_and_expected_release_blocker(self) -> None:
+    def test_complete_pair_inventory_and_explicit_gripper_scope_boundary(self) -> None:
         report = self.report
         self.assertTrue(report["tool_validation_passed"])
-        self.assertFalse(report["release_ready"])
-        self.assertFalse(report["passed"])
-        self.assertEqual(report["collision_pair_closure"]["expected_count"], 1458)
-        self.assertEqual(report["collision_pair_closure"]["evaluated_count"], 1458)
+        self.assertEqual(
+            report["release_ready"], report["input_artifacts"]["closure_passed"]
+        )
+        self.assertEqual(report["passed"], report["release_ready"])
+        self.assertEqual(report["collision_pair_closure"]["expected_count"], 1026)
+        self.assertEqual(report["collision_pair_closure"]["evaluated_count"], 1026)
         self.assertEqual(report["collision_pair_closure"]["failed_count"], 0)
         self.assertTrue(report["collision_pair_closure"]["passed"])
-        self.assertEqual(
+        self.assertNotIn(
+            "stock_gripper_keeper_geometry_unresolved",
             [blocker["code"] for blocker in report["blockers"]],
-            ["stock_gripper_keeper_geometry_unresolved"],
         )
+        scope = report["scope_boundary"]
+        self.assertEqual(scope["matcha_rack_bays"], ["spoon", "whisk"])
+        self.assertFalse(scope["normal_gripper_included_in_matcha_rack"])
+        self.assertEqual(len(scope["normal_gripper_authority_files"]), 5)
         self.assertEqual(rack_validation.validate_report_structure(report), [])
 
     def test_only_six_exact_named_intended_contacts_exist(self) -> None:
@@ -74,7 +80,7 @@ class MatchaRackValidationTests(unittest.TestCase):
             for record in self.report["pair_results"]
             if record["semantic_evaluation"] == "forbidden_pair_continuous_clearance"
         ]
-        self.assertEqual(len(forbidden), 1452)
+        self.assertEqual(len(forbidden), 1020)
         self.assertFalse(
             any(
                 record["semantic_evaluation"] == "unresolved_forbidden_pair"

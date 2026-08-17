@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the two matcha tools and their three-bay passive rack.
+"""Generate the two matcha tools and their two-bay passive rack.
 
 All authored dimensions are millimetres.  The coupling plate and every
 coupling-side datum come directly from ``../generate_cad.py``; this module does
@@ -76,7 +76,7 @@ RACK_WALL_CLEARANCE = 0.50
 RACK_REAR_CLEARANCE = 0.30
 RACK_PCB_LOWER_RAIL_CLEARANCE = 0.30
 RACK_BAY_PITCH = 96.0
-RACK_BAY_NAMES = ("gripper", "spoon", "whisk")
+RACK_BAY_NAMES = ("spoon", "whisk")
 
 
 def _load_interface_module():
@@ -713,14 +713,18 @@ def _dock_parts() -> dict[str, cq.Workplane]:
 
 
 def build_rack() -> dict[str, cq.Workplane]:
-    """Return a named three-bay rack with a common cross-beam and two feet."""
+    """Return a named two-bay matcha rack with a common beam and two feet.
+
+    The stock gripper remains on the separate, existing core quick-change dock;
+    it is deliberately outside this rack's collision and release authority.
+    """
 
     result: dict[str, cq.Workplane] = {}
     for bay_index, bay_name in enumerate(RACK_BAY_NAMES):
-        x_shift = (bay_index - 1) * RACK_BAY_PITCH
+        x_shift = rack_bay_x(bay_name)
         for part_name, shape in _dock_parts().items():
             result[f"dock_{bay_name}_{part_name}"] = shape.translate((x_shift, 0.0, 0.0))
-    beam_width = 2.0 * RACK_BAY_PITCH + 92.0
+    beam_width = (len(RACK_BAY_NAMES) - 1) * RACK_BAY_PITCH + 92.0
     result["rack_cross_beam"] = (
         cq.Workplane("XY")
         .box(beam_width, 10.0, 18.0, centered=(True, True, False))
@@ -733,6 +737,13 @@ def build_rack() -> dict[str, cq.Workplane]:
             .translate((x, 17.0, -16.0))
         )
     return result
+
+
+def rack_bay_x(bay_name: str) -> float:
+    """Return the centred rack X datum for a named matcha bay."""
+
+    bay_index = RACK_BAY_NAMES.index(bay_name)
+    return (bay_index - (len(RACK_BAY_NAMES) - 1) / 2.0) * RACK_BAY_PITCH
 
 
 def _shape_compound(components: Iterable[Component]) -> cq.Workplane:
@@ -804,7 +815,7 @@ def generate_exports(output_dir: Path = EXPORT_DIR) -> dict[str, object]:
     rack_parts = build_rack()
     rack_compound = _wp(cq.Compound.makeCompound([shape.val() for shape in rack_parts.values()]))
     for suffix in ("step", "stl"):
-        path = output_dir / f"so101_matcha_three_bay_rack.{suffix}"
+        path = output_dir / f"so101_matcha_two_bay_rack.{suffix}"
         _export_workplane(rack_compound, path)
         emitted.append(path)
 
@@ -818,9 +829,9 @@ def generate_exports(output_dir: Path = EXPORT_DIR) -> dict[str, object]:
             return "printable_body_step"
         if "printed_body.stl" in name:
             return "printable_body_stl"
-        if "three_bay_rack.step" in name:
+        if "two_bay_rack.step" in name:
             return "rack_step"
-        if "three_bay_rack.stl" in name:
+        if "two_bay_rack.stl" in name:
             return "rack_stl"
         raise RuntimeError(f"unclassified generated artifact: {path}")
 
@@ -864,6 +875,7 @@ def generate_exports(output_dir: Path = EXPORT_DIR) -> dict[str, object]:
             "rear_clearance_mm": RACK_REAR_CLEARANCE,
             "pcb_lower_rail_clearance_mm": RACK_PCB_LOWER_RAIL_CLEARANCE,
             "insertion_y_mm": [RACK_INSERTION_START_Y, RACK_SEATED_Y],
+            "stock_gripper_scope": "separate core quick-change dock; not part of this rack",
         },
         "files": [],
     }
@@ -881,7 +893,7 @@ def generate_exports(output_dir: Path = EXPORT_DIR) -> dict[str, object]:
 
 def _argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Generate the SO-101 spoon, actuated whisk, and three-bay matcha rack CAD package."
+        description="Generate the SO-101 spoon, actuated whisk, and two-bay matcha rack CAD package."
     )
     parser.add_argument(
         "--check-only",

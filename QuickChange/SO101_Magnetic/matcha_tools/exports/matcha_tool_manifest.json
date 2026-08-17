@@ -1,0 +1,114 @@
+{
+  "files": [
+    {
+      "bytes": 19287,
+      "path": "exports/so101_matcha_spoon_mass_ledger.json",
+      "role": "mass_ledger",
+      "sha256": "576bec2226d22644feb0d2a196c795804f5f0e6dd947562dccfd0ff9cb4cc2a4"
+    },
+    {
+      "bytes": 440794,
+      "path": "exports/so101_matcha_spoon_printed_body.step",
+      "role": "printable_body_step",
+      "sha256": "49a59ac395fb7b036595acbb2077c487135ab632164ce6c644f0fca874ebf88f"
+    },
+    {
+      "bytes": 570684,
+      "path": "exports/so101_matcha_spoon_printed_body.stl",
+      "role": "printable_body_stl",
+      "sha256": "6324a7a5327e67de14500cf2ff9b701e7c0ab3735209ff0d0a4ecd66235cd88f"
+    },
+    {
+      "bytes": 800341,
+      "path": "exports/so101_matcha_spoon_tool_assembly.step",
+      "role": "complete_rigid_assembly_step",
+      "sha256": "6e245cac049b92217f192fac7c5600fcf6a905c28f8b3ad732e634f707321173"
+    },
+    {
+      "bytes": 311265,
+      "path": "exports/so101_matcha_two_bay_rack.step",
+      "role": "rack_step",
+      "sha256": "26620dc94076ab786d4fd4e14238b682fe13e9d1e756467583f01bcd302fcfa8"
+    },
+    {
+      "bytes": 11484,
+      "path": "exports/so101_matcha_two_bay_rack.stl",
+      "role": "rack_stl",
+      "sha256": "547eac6a8e62dd47cdbf5e30f8b2b797ed4eb6e3f6a8a76b1ea03a1b93e7b478"
+    },
+    {
+      "bytes": 27397,
+      "path": "exports/so101_matcha_whisk_mass_ledger.json",
+      "role": "mass_ledger",
+      "sha256": "9403fd9a3ec6474fe152b636526c378695e5c8e044eafa1ff963a8b287369fc0"
+    },
+    {
+      "bytes": 324318,
+      "path": "exports/so101_matcha_whisk_printed_body.step",
+      "role": "printable_body_step",
+      "sha256": "9bbc905e2c1df105ac2ad817b21229c244abe1d8933dd0777daecd4be8f05df2"
+    },
+    {
+      "bytes": 497684,
+      "path": "exports/so101_matcha_whisk_printed_body.stl",
+      "role": "printable_body_stl",
+      "sha256": "3085abdaa0ebc12e70678f5880176ccf151b2cb20adcdf3f638b2c9358a78218"
+    },
+    {
+      "bytes": 790199,
+      "path": "exports/so101_matcha_whisk_tool_assembly.step",
+      "role": "complete_rigid_assembly_step",
+      "sha256": "88697e3f12624262360cf73097122a6ea04a22bffae1ca45e7f846dc50c4692b"
+    }
+  ],
+  "generator": {
+    "path": "generate_matcha_tool_cad.py",
+    "sha256": "72a8e3737b8ef4839cb416122217f9e335cd61288d77938d25293309b3c36eb6"
+  },
+  "interface_authority": {
+    "construction": "unmodified tool_plate(stock_gripper=False)",
+    "path": "QuickChange/SO101_Magnetic/generate_cad.py",
+    "sha256": "67398a17cf6c4729475ffbd453e021a5d743a2dab89defc18e215bde998708fb"
+  },
+  "rack": {
+    "bay_names": [
+      "spoon",
+      "whisk"
+    ],
+    "bay_pitch_mm": 96.0,
+    "insertion_y_mm": [
+      -80.0,
+      0.0
+    ],
+    "pcb_lower_rail_clearance_mm": 0.3,
+    "rear_clearance_mm": 0.3,
+    "stock_gripper_scope": "separate core quick-change dock; not part of this rack",
+    "wall_clearance_mm": 0.5
+  },
+  "schema_version": "1.0",
+  "tools": {
+    "matcha_spoon": {
+      "assembly_path": "exports/so101_matcha_spoon_tool_assembly.step",
+      "bus_address": null,
+      "component_count": 22,
+      "mass_ledger_path": "exports/so101_matcha_spoon_mass_ledger.json",
+      "tool_id": 21
+    },
+    "matcha_whisk": {
+      "assembly_path": "exports/so101_matcha_whisk_tool_assembly.step",
+      "bus_address": 7,
+      "component_count": 32,
+      "mass_ledger_path": "exports/so101_matcha_whisk_mass_ledger.json",
+      "tool_id": 22
+    }
+  },
+  "units": "mm",
+  "whisk_mechanism": {
+    "compliance_limits_mm": [
+      -5.05,
+      0.05
+    ],
+    "compliance_travel_mm": 5.1,
+    "eccentric_mm": 4.0
+  }
+}

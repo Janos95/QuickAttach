@@ -8,8 +8,11 @@ powered SO-101 magnetic quick changer:
 | Matcha dose spoon | 21 | none | 0.70-0.85 mL stainless dosing cup |
 | Actuated matcha whisk | 22 | 7 | eccentric-drive replaceable brush |
 
-The existing stock gripper remains the third tool.  The rack reserves bays in
-the order `gripper`, `spoon`, `whisk` at 96 mm pitch.
+The existing stock gripper remains the third tool, but stays on the separate
+core quick-change dock and stock-adapter package.  This add-on rack has only
+`spoon` and `whisk` bays at 96 mm pitch.  That boundary is intentional: the
+recovered official fixed-body STEP does not include the moving jaw, so this
+keeper must not be presented as exact authority for the whole gripper.
 
 ## Geometry authority
 
@@ -66,7 +69,7 @@ certificates.
 
 ## Rack status
 
-The source includes a three-bay rack with 0.50 mm wall clearance and 0.30 mm
+The source includes a two-bay matcha rack with 0.50 mm wall clearance and 0.30 mm
 rear-face clearance around the complete spoon and whisk envelopes.  The left
 lower rail ends 0.30 mm outboard of the FR-4 board, preventing the board edge
 from becoming a support land. Lower
@@ -74,11 +77,10 @@ ledges are tangent to the coupling face; upper ledges act only on the plate's
 outer lands.  The passive lock cam stays below the tool face and acts on the
 robot-side slider.
 
-The gripper bay is presently a reserved position, not a clearance claim.  The
-official stock-gripper body overhangs the adapter plate, so its keeper geometry
-must be validated independently before the rack is released for fabrication.
-This package will fail closed in the forthcoming exact rack report rather than
-silently applying the spoon/whisk rail profile to that overhang.
+The gripper is not a reserved matcha-rack bay.  Its existing core adapter,
+passive dock, retrofit assembly and moving-jaw mesh are hash-pinned in the
+matcha report as an external scope boundary.  The report makes no claim that
+the spoon/whisk keeper profile fits the gripper overhang.
 
 ## Seconds-scale source checks
 
@@ -108,9 +110,9 @@ including adjacent bays and all seven whisk mechanism extrema.  The fast path
 uses a rigorous continuous swept-AABB lower bound.  Only the six exact named
 plate/ledge and plate/stop tangencies use an FCPW mesh screen followed by OCCT
 B-rep distance and overlap-volume diagnostics.  FCPW is screening evidence,
-not STEP clearance authority.  The generated report remains
-`release_ready=false` until the official stock-gripper body and a compatible
-keeper are closed over the same path.
+not STEP clearance authority.  This report covers only the two matcha bays;
+normal-gripper release remains the responsibility of the separate core
+quick-change package.
 
 ## Reproducible exports
 
@@ -133,5 +135,5 @@ inventory.  It does not hash itself or create a circular manifest dependency.
 Generated STEP/STL assemblies, JSON ledgers, the single canonical hash-pinned
 `exports/matcha_tool_manifest.json`, and the
 exact rack-sweep report are intentionally produced only after this source
-checkpoint is reviewed.  Until those artifacts and the stock-gripper bay are
-green, this CAD is for simulation dry runs and fit coupons—not fabrication.
+checkpoint is reviewed.  Until those artifacts are green, this CAD is for
+simulation dry runs and fit coupons—not fabrication.
