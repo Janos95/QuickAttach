@@ -79,6 +79,10 @@ DEVELOPMENT_TESTS = (
         "test_each_dock_stop_matches_its_exact_source_bounds_and_core_holes",
     ),
     qualified(
+        "BoundedDynamicSmokeTests",
+        "test_real_substep_capture_lock_and_release_is_collision_safe",
+    ),
+    qualified(
         "FcpwFastGateContractTests",
         "test_fcpw_version_and_candidate_input_guards_are_fail_closed",
     ),

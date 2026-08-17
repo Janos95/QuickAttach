@@ -777,6 +777,72 @@ class SimCadPlacementContractTests(unittest.TestCase):
         self.assertNotEqual(observed_bounds["gripper"], observed_bounds["spoon"])
 
 
+class BoundedDynamicSmokeTests(unittest.TestCase):
+    def test_real_substep_capture_lock_and_release_is_collision_safe(self) -> None:
+        require_path(MATCHA_DEMO, "matcha workflow simulator")
+        result_process = subprocess.run(
+            [
+                sys.executable,
+                str(MATCHA_DEMO),
+                "--headless",
+                "--max-steps",
+                "20000",
+            ],
+            cwd=HERE,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=30,
+        )
+        self.assertEqual(result_process.returncode, 0, result_process.stderr)
+        result = json.loads(result_process.stdout)
+        self.assertEqual(result.get("milestone"), "capture_lock_and_dock_release")
+        self.assertIs(result.get("completed"), True, result)
+        self.assertIsNone(result.get("abort_reason"), result)
+        self.assertIs(result.get("motion_stopped"), True, result)
+        self.assertGreater(int(result.get("physics_substep_count", 0)), 0, result)
+        self.assertGreater(float(result.get("sim_time_s", 0.0)), 0.0, result)
+        self.assertEqual(int(result.get("forbidden_contact_count", -1)), 0, result)
+        self.assertEqual(float(result.get("max_forbidden_penetration_m", -1.0)), 0.0)
+        self.assertIsNone(result.get("first_forbidden_pair"), result)
+        self.assertEqual(result.get("attached_tool"), "gripper", result)
+        self.assertIs(result.get("bus_connected"), True, result)
+        self.assertIs(result.get("handshake_achieved"), True, result)
+        self.assertIs(result.get("physical_lock_confirmed"), True, result)
+        self.assertIs(result.get("lock_candidate_verified"), True, result)
+        self.assertIs(result.get("locked"), True, result)
+        self.assertEqual(
+            result.get("live_pogo_signals"), ["data", "ground", "id", "power"], result
+        )
+        self.assertIs(result.get("four_signal_bus_live"), True, result)
+        self.assertIs(result.get("dock_hold_active"), False, result)
+        self.assertIs(result.get("attach_equality_active"), True, result)
+        self.assertIs(result.get("finite_actuator_force"), True, result)
+        utilization = result.get("max_actuator_utilization")
+        self.assertIsInstance(utilization, dict, result)
+        self.assertTrue(utilization, result)
+        for joint, value in utilization.items():
+            numeric = float(value)
+            self.assertTrue(math.isfinite(numeric), joint)
+            self.assertGreaterEqual(numeric, 0.0, joint)
+            self.assertLessEqual(numeric, 1.0 + 1.0e-12, joint)
+        coverage = result.get("collision_coverage")
+        self.assertIsInstance(coverage, dict, result)
+        self.assertTrue(
+            coverage.get("complete", coverage.get("collision_coverage_complete")),
+            coverage,
+        )
+        self.assertEqual(
+            coverage.get("missing_collision_bodies", coverage.get("missing_bodies", [])),
+            [],
+            coverage,
+        )
+        startup = result.get("startup_contact_audit")
+        self.assertIsInstance(startup, dict, result)
+        self.assertIs(startup.get("passed"), True, startup)
+        self.assertEqual(int(startup.get("penetration_count", -1)), 0, startup)
+
+
 def box_triangles(
     minimum: tuple[float, float, float], maximum: tuple[float, float, float]
 ) -> np.ndarray:
