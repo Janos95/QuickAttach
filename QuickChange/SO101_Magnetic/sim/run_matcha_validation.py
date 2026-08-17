@@ -40,6 +40,22 @@ DEVELOPMENT_TESTS = (
         "test_recovery_config_is_fail_closed_and_declares_occt_free_fast_gate",
     ),
     qualified(
+        "PogoInterfaceAuthorityContractTests",
+        "test_pure_pogo_authority_schema_accepts_only_complete_evidence",
+    ),
+    qualified(
+        "PogoInterfaceAuthorityContractTests",
+        "test_pogo_authority_rejects_simplified_mounting_and_runtime_models",
+    ),
+    qualified(
+        "PogoInterfaceAuthorityContractTests",
+        "test_pogo_authority_rejects_hash_and_nominal_only_first_mate_controls",
+    ),
+    qualified(
+        "PogoInterfaceAuthorityContractTests",
+        "test_production_pogo_authority_is_hash_bound_physical_and_qualified",
+    ),
+    qualified(
         "ControllerSourceSafetyTests",
         "test_controller_call_graph_never_teleports_physical_state",
     ),
@@ -226,6 +242,10 @@ PRODUCTION_INPUTS = (
     HERE / "validate_matcha_payload_proxy_report.py",
     HERE / "matcha_payload_proxy_report.json",
     HERE.parent / "generate_cad.py",
+    HERE.parent
+    / "source_authority"
+    / "millmax_7983"
+    / "authority_ledger.json",
     HERE.parent / "exports" / "core_cad_manifest.json",
     HERE.parent / "exports" / "so101_positive_lock_slider.step",
     HERE.parent

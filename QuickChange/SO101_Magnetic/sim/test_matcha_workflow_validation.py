@@ -10,6 +10,7 @@ does not generate CAD, patch the scene, or mutate the controller.
 from __future__ import annotations
 
 import ast
+import copy
 import hashlib
 import importlib.metadata
 import importlib.util
@@ -55,6 +56,606 @@ EXPECTED_TOOL_IDS = {
 EXPECTED_WHISK_DEVICE_ID = 7
 SURFACE_INTERNAL_TARGET_MM = 0.34
 SURFACE_RELEASE_LIMIT_MM = 0.35
+
+POGO_PART_NUMBER = "7983-1-15-20-75-14-11-0"
+POGO_DIMENSION_DRAWING_SHA256 = (
+    "c97327d953663a0aa04ea389ee2d2be19372ffa21503f46e5cbbfb0fd2e890e8"
+)
+POGO_DIMENSION_DRAWING_BYTES = 175_611
+POGO_PRESS_FIT_NOTE_SHA256 = (
+    "bbf4c414a11bd3355cde2bb25624c6736b61942964b2cbb3fc42c67c09e87adf"
+)
+POGO_PRESS_FIT_NOTE_BYTES = 509_252
+POGO_OFFICIAL_PROFILE_DIAMETERS_MM = {
+    "moving_plunger": 0.042 * 25.4,
+    "upper_guide": 0.068 * 25.4,
+    "upper_shell": 0.073 * 25.4,
+    "barb": 0.0765 * 25.4,
+    "shoulder": 0.083 * 25.4,
+    "knurl": 0.065 * 25.4,
+    "solder_cup_outer": 0.060 * 25.4,
+    "solder_cup_bore": 0.038 * 25.4,
+}
+# These are the complete non-stroke axial dimensions printed on the official
+# 7983 SVG.  Keeping the values as a sorted roster avoids inventing semantic
+# names for drawing extension lines while still rejecting the legacy 3.0 +
+# 5.1 mm two-cylinder display envelope.
+POGO_OFFICIAL_AXIAL_DIMENSIONS_MM = [
+    0.025 * 25.4,
+    0.028 * 25.4,
+    0.030 * 25.4,
+    0.100 * 25.4,
+    0.132 * 25.4,
+    0.145 * 25.4,
+    0.180 * 25.4,
+    0.374 * 25.4,
+]
+POGO_SIGNAL_CENTRES_MM = {
+    "GND": [-31.0, -7.5],
+    "+12V": [-31.0, -2.5],
+    "TTL_DATA": [-31.0, 2.5],
+    "TOOL_ID_SPARE": [-31.0, 7.5],
+}
+POGO_STANDARD_SIGNALS = ["+12V", "TTL_DATA", "TOOL_ID_SPARE"]
+POGO_LEDGER_PATH = (
+    MAGNETIC_ROOT
+    / "source_authority"
+    / "millmax_7983"
+    / "authority_ledger.json"
+)
+POGO_DIMENSION_DRAWING_URL = (
+    "https://www.mill-max.com/sites/default/files/external/products/"
+    "fullsize/2020-09/7983.svg"
+)
+POGO_PRESS_FIT_NOTE_URL = (
+    "https://www.mill-max.com/sites/default/files/external/assets/2020-10/"
+    "spring-loaded_solder-cup_pin_2.pdf"
+)
+POGO_LEDGER_AXIAL_IN = {
+    "maximum_exposed_plunger": 0.062,
+    "shell_top_to_shoulder_bottom": 0.132,
+    "shoulder_bottom_from_base": 0.180,
+    "shoulder_thickness": 0.028,
+    "knurl_length": 0.030,
+    "cup_reference_length": 0.145,
+    "cup_bore_length": 0.100,
+    "barb_axial_reference": 0.025,
+    "mid_stroke": 0.0275,
+    "full_stroke": 0.055,
+    "full_stroke_tolerance": 0.005,
+}
+POGO_LEDGER_DIAMETERS_IN = {
+    "moving_plunger": 0.042,
+    "upper_guide": 0.068,
+    "upper_shell": 0.073,
+    "barb": 0.0765,
+    "shoulder": 0.083,
+    "knurl": 0.065,
+    "solder_cup_outer": 0.060,
+    "solder_cup_bore": 0.038,
+}
+
+
+def _finite_real(value: Any) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    result = float(value)
+    return result if math.isfinite(result) else None
+
+
+def _number_matches(value: Any, expected: float, tolerance: float = 1.0e-12) -> bool:
+    observed = _finite_real(value)
+    return observed is not None and abs(observed - expected) <= tolerance
+
+
+def _two_number_bounds(value: Any) -> tuple[float, float] | None:
+    if not isinstance(value, list) or len(value) != 2:
+        return None
+    lower = _finite_real(value[0])
+    upper = _finite_real(value[1])
+    if lower is None or upper is None or lower > upper:
+        return None
+    return lower, upper
+
+
+def pogo_authority_contract_errors(
+    record: Any,
+    ledger: Any,
+    *,
+    require_release_ready: bool = True,
+) -> list[str]:
+    """Recompute the hash-ledger 7983 contract and its release verdict."""
+
+    errors: list[str] = []
+    if not isinstance(record, dict):
+        return ["pogo_authority_record_missing"]
+    if not isinstance(ledger, dict):
+        return ["pogo_authority_ledger_missing"]
+
+    def expect_number(
+        mapping: dict[str, Any], key: str, expected: float, prefix: str
+    ) -> None:
+        if not _number_matches(mapping.get(key), expected):
+            errors.append(f"{prefix}:{key}")
+
+    def evidence_matches(observed: Any, expected: Any) -> bool:
+        if isinstance(expected, bool) or expected is None or isinstance(expected, str):
+            return observed == expected
+        if isinstance(expected, (int, float)):
+            return _number_matches(observed, float(expected))
+        if isinstance(expected, list):
+            return (
+                isinstance(observed, list)
+                and len(observed) == len(expected)
+                and all(
+                    evidence_matches(left, right)
+                    for left, right in zip(observed, expected, strict=True)
+                )
+            )
+        if isinstance(expected, dict):
+            return (
+                isinstance(observed, dict)
+                and set(observed) == set(expected)
+                and all(
+                    evidence_matches(observed[key], value)
+                    for key, value in expected.items()
+                )
+            )
+        return observed == expected
+
+    if record.get("schema_version") != "1.0":
+        errors.append("schema_version")
+    if record.get("part_number") != POGO_PART_NUMBER:
+        errors.append("part_number")
+    if record.get("units") != "mm":
+        errors.append("units")
+    if record.get("pin_source_frame") != (
+        "solder_cup_end_z0_axis_positive_toward_plunger"
+    ):
+        errors.append("pin_source_frame")
+
+    if ledger.get("schema_version") != "1.0":
+        errors.append("ledger:schema_version")
+    if ledger.get("part_number") != POGO_PART_NUMBER:
+        errors.append("ledger:part_number")
+    if ledger.get("drawing_units") != "inch":
+        errors.append("ledger:drawing_units")
+    if ledger.get("standard_tolerances") != {
+        "length_in": 0.006,
+        "diameter_in": 0.002,
+        "angle_deg": 2.0,
+    }:
+        errors.append("ledger:standard_tolerances")
+    if ledger.get("axial_dimensions_in") != POGO_LEDGER_AXIAL_IN:
+        errors.append("ledger:axial_dimensions")
+    if ledger.get("reference_dimensions_in") != {
+        "overall_parenthesized": 0.374,
+    }:
+        errors.append("ledger:reference_dimensions")
+    if ledger.get("diameters_in") != POGO_LEDGER_DIAMETERS_IN:
+        errors.append("ledger:diameters")
+    if ledger.get("press_fit_note_dimensions_in") != {
+        "barb_recommended_hole": 0.0755,
+        "knurl_recommended_hole": 0.062,
+        "body_counterbore_minimum": 0.087,
+    }:
+        errors.append("ledger:press_fit_dimensions")
+
+    expected_drawing = {
+        "url": POGO_DIMENSION_DRAWING_URL,
+        "media_type": "image/svg+xml",
+        "bytes": POGO_DIMENSION_DRAWING_BYTES,
+        "sha256": POGO_DIMENSION_DRAWING_SHA256,
+    }
+    expected_note = {
+        "url": POGO_PRESS_FIT_NOTE_URL,
+        "media_type": "application/pdf",
+        "bytes": POGO_PRESS_FIT_NOTE_BYTES,
+        "sha256": POGO_PRESS_FIT_NOTE_SHA256,
+    }
+    expected_redistribution = {
+        "manufacturer_file_license_confirmed": False,
+        "manufacturer_files_vendored": False,
+        "semantics": (
+            "URLs, byte counts, SHA-256 digests, and dimension facts are "
+            "retained; cached manufacturer artwork is not redistributed "
+            "because redistribution terms were not established."
+        ),
+    }
+    provenance = ledger.get("provenance")
+    if not isinstance(provenance, dict):
+        provenance = {}
+        errors.append("ledger:provenance")
+    if provenance.get("dimension_drawing") != expected_drawing:
+        errors.append("ledger:dimension_drawing")
+    if provenance.get("press_fit_application_note") != expected_note:
+        errors.append("ledger:press_fit_note")
+    if provenance.get("redistribution") != expected_redistribution:
+        errors.append("ledger:redistribution")
+    if provenance.get("retrieval_timestamp_available") is not False:
+        errors.append("ledger:retrieval_timestamp")
+
+    sources = record.get("official_sources")
+    if not isinstance(sources, dict):
+        sources = {}
+        errors.append("official_sources")
+    if sources.get("dimension_drawing_svg") != expected_drawing:
+        errors.append("official_sources:dimension_drawing")
+    if sources.get("press_fit_application_note_pdf") != expected_note:
+        errors.append("official_sources:press_fit_note")
+    if sources.get("redistribution") != expected_redistribution:
+        errors.append("official_sources:redistribution")
+    if sources.get("offline_manufacturer_byte_revalidation_available") is not False:
+        errors.append("official_sources:offline_revalidation")
+    if sources.get("hash_pin_semantics") != (
+        "records the recovered manufacturer byte digests; cached manufacturer "
+        "artwork is not redistributed"
+    ):
+        errors.append("official_sources:hash_pin_semantics")
+    ledger_record = sources.get("derived_authority_ledger")
+    if not isinstance(ledger_record, dict):
+        errors.append("official_sources:ledger_record")
+    else:
+        expected_path = POGO_LEDGER_PATH.relative_to(REPOSITORY_ROOT).as_posix()
+        if ledger_record.get("path") != expected_path:
+            errors.append("official_sources:ledger_path")
+        if (
+            not isinstance(ledger_record.get("bytes"), int)
+            or ledger_record["bytes"] <= 0
+        ):
+            errors.append("official_sources:ledger_bytes")
+        digest = ledger_record.get("sha256")
+        if (
+            not isinstance(digest, str)
+            or len(digest) != 64
+            or any(character not in "0123456789abcdef" for character in digest)
+        ):
+            errors.append("official_sources:ledger_sha256")
+
+    if record.get("drawing_tolerances") != {
+        "standard_length_mm": 0.006 * 25.4,
+        "standard_diameter_mm": 0.002 * 25.4,
+        "standard_angle_deg": 2.0,
+    }:
+        errors.append("drawing_tolerances")
+    if record.get("fixed_shell_envelope_authority") != {
+        "kind": "official-drawing-derived_conservative_nominal_exterior",
+        "manufacturer_3d_cad": False,
+        "transition_spans_enlarged_to_adjacent_maximum_diameter": True,
+        "manufacturing_diameter_tolerance_included": False,
+        "mass_or_internal_material_authority": False,
+    }:
+        errors.append("fixed_shell_envelope_authority")
+
+    profile = record.get("dimensioned_profile")
+    if not isinstance(profile, dict):
+        profile = {}
+        errors.append("dimensioned_profile")
+    expected_profile_scalars = {
+        "overall_reference_length_mm": 0.374 * 25.4,
+        "fixed_shell_length_mm": (0.180 + 0.132) * 25.4,
+        "maximum_exposed_plunger_mm": 0.062 * 25.4,
+        "shell_top_to_shoulder_bottom_mm": 0.132 * 25.4,
+        "shoulder_bottom_from_base_mm": 0.180 * 25.4,
+        "shoulder_thickness_mm": 0.028 * 25.4,
+        "knurl_length_mm": 0.030 * 25.4,
+        "cup_reference_length_mm": 0.145 * 25.4,
+        "cup_bore_length_mm": 0.100 * 25.4,
+        "barb_axial_reference_mm": 0.025 * 25.4,
+    }
+    for key, expected in expected_profile_scalars.items():
+        expect_number(profile, key, expected, "profile")
+    if profile.get("overall_reference_semantics") != (
+        "parenthesized drawing reference; independently checked against the "
+        "dimensioned .180+.132+.062 chain"
+    ):
+        errors.append("profile:overall_reference_semantics")
+    fixed_shell_observed = _finite_real(profile.get("fixed_shell_length_mm"))
+    shell_span_observed = _finite_real(
+        profile.get("shell_top_to_shoulder_bottom_mm")
+    )
+    base_span_observed = _finite_real(profile.get("shoulder_bottom_from_base_mm"))
+    exposed_observed = _finite_real(profile.get("maximum_exposed_plunger_mm"))
+    overall_reference = _finite_real(profile.get("overall_reference_length_mm"))
+    if (
+        fixed_shell_observed is None
+        or shell_span_observed is None
+        or base_span_observed is None
+        or not _number_matches(
+            fixed_shell_observed, base_span_observed + shell_span_observed
+        )
+    ):
+        errors.append("profile:fixed_shell_dimension_chain")
+    if (
+        fixed_shell_observed is None
+        or exposed_observed is None
+        or overall_reference is None
+        or not _number_matches(
+            overall_reference, fixed_shell_observed + exposed_observed
+        )
+    ):
+        errors.append("profile:overall_reference_chain")
+    if profile.get("nominal_diameters_mm") != POGO_OFFICIAL_PROFILE_DIAMETERS_MM:
+        errors.append("profile:diameters")
+
+    shoulder_bottom = 0.180 * 25.4
+    shoulder_thickness = 0.028 * 25.4
+    knurl_length = 0.030 * 25.4
+    fixed_shell_length = (0.180 + 0.132) * 25.4
+    expected_segments = [
+        {
+            "name": "solder_cup",
+            "z_bounds_mm": [0.0, 0.145 * 25.4],
+            "outer_diameter_mm": 0.060 * 25.4,
+            "semantics": "drawing_nominal_outer_envelope",
+        },
+        {
+            "name": "cup_to_knurl_transition_bound",
+            "z_bounds_mm": [0.145 * 25.4, shoulder_bottom - knurl_length],
+            "outer_diameter_mm": 0.065 * 25.4,
+            "semantics": "conservative_largest_adjacent_dimensioned_diameter",
+        },
+        {
+            "name": "knurl",
+            "z_bounds_mm": [shoulder_bottom - knurl_length, shoulder_bottom],
+            "outer_diameter_mm": 0.065 * 25.4,
+            "semantics": "dimensioned_press_fit_feature",
+        },
+        {
+            "name": "shoulder",
+            "z_bounds_mm": [shoulder_bottom, shoulder_bottom + shoulder_thickness],
+            "outer_diameter_mm": 0.083 * 25.4,
+            "semantics": "dimensioned_hard_stop_feature",
+        },
+        {
+            "name": "plunger_side_fixed_features",
+            "z_bounds_mm": [shoulder_bottom + shoulder_thickness, fixed_shell_length],
+            "outer_diameter_mm": 0.0765 * 25.4,
+            "semantics": (
+                "conservative_full_span_envelope_of_dimensioned_"
+                "upper_guide_upper_shell_and_barb_diameters"
+            ),
+        },
+    ]
+    if profile.get("fixed_shell_collision_envelope_segments") != expected_segments:
+        errors.append("profile:fixed_shell_segments")
+    moving = profile.get("moving_plunger")
+    if not isinstance(moving, dict):
+        moving = {}
+    if moving.get("motion_kind") != "prismatic":
+        errors.append("plunger:motion_kind")
+    expect_number(moving, "outer_diameter_mm", 0.042 * 25.4, "plunger")
+    expect_number(
+        moving, "maximum_exposed_length_mm", 0.062 * 25.4, "plunger"
+    )
+    if moving.get("motion_axis") != [0.0, 0.0, -1.0]:
+        errors.append("plunger:axis")
+    compression_range = _two_number_bounds(moving.get("compression_range_mm"))
+    if compression_range is None or not (
+        _number_matches(compression_range[0], 0.0)
+        and _number_matches(compression_range[1], 0.060 * 25.4)
+    ):
+        errors.append("plunger:compression_range")
+    if moving.get("collision_shape_semantics") != (
+        "official-drawing-derived conservative cylindrical envelope of round "
+        "tip; not manufacturer 3D CAD"
+    ):
+        errors.append("plunger:collision_shape")
+
+    stroke = record.get("stroke")
+    if not isinstance(stroke, dict):
+        errors.append("stroke")
+    else:
+        for key, expected in (
+            ("mid_stroke_nominal_mm", 0.0275 * 25.4),
+            ("full_stroke_nominal_mm", 0.055 * 25.4),
+            ("full_stroke_tolerance_mm", 0.005 * 25.4),
+            ("guaranteed_minimum_full_stroke_mm", 0.050 * 25.4),
+            ("maximum_full_stroke_mm", 0.060 * 25.4),
+        ):
+            expect_number(stroke, key, expected, "stroke")
+
+    mounting = record.get("selected_mounting_design")
+    if not isinstance(mounting, dict):
+        mounting = {}
+        errors.append("selected_mounting_design")
+    if mounting.get("mode") != "knurl_solder_cup_first":
+        errors.append("mounting:mode")
+    for key, expected in (
+        ("application_note_knurl_feature_label_mm", 1.65),
+        ("drawing_knurl_nominal_diameter_mm", 0.065 * 25.4),
+        ("application_note_hole_exact_inch_conversion_mm", 0.062 * 25.4),
+        ("application_note_hole_rounded_label_mm", 1.58),
+        ("retention_land_diameter_mm", 1.58),
+        ("body_counterbore_minimum_diameter_mm", 0.087 * 25.4),
+        ("body_counterbore_design_diameter_mm", 2.31),
+        ("barb_alternative_recommended_hole_diameter_mm", 0.0755 * 25.4),
+    ):
+        expect_number(mounting, key, expected, "mounting")
+
+    datums = mounting.get("installed_datums")
+    datum_by_signal: dict[str, dict[str, Any]] = {}
+    if isinstance(datums, list):
+        for datum in datums:
+            if not isinstance(datum, dict) or not isinstance(datum.get("signal"), str):
+                errors.append("mounting:datum_record")
+                continue
+            signal = str(datum["signal"])
+            if signal in datum_by_signal:
+                errors.append(f"mounting:duplicate_datum:{signal}")
+            datum_by_signal[signal] = datum
+    else:
+        errors.append("mounting:installed_datums")
+    if set(datum_by_signal) != set(POGO_SIGNAL_CENTRES_MM):
+        errors.append("mounting:datum_inventory")
+    nominal_protrusions: dict[str, float] = {}
+    for signal, centre in POGO_SIGNAL_CENTRES_MM.items():
+        datum = datum_by_signal.get(signal, {})
+        protrusion = _finite_real(datum.get("nominal_face_protrusion_mm"))
+        if protrusion is None:
+            protrusion = math.nan
+            errors.append(f"mounting:datum:{signal}:nominal_face_protrusion_mm")
+        else:
+            nominal_protrusions[signal] = protrusion
+        if signal != "GND" and not _number_matches(protrusion, 0.70):
+            errors.append(f"mounting:standard_protrusion:{signal}")
+        base_z = 9.50 + protrusion - 0.374 * 25.4
+        shoulder_z = base_z + shoulder_bottom
+        target_contact_plane_z = 9.50 - 0.05
+        mated_compression = protrusion + 0.05
+        if mated_compression > 0.050 * 25.4 + 1.0e-12:
+            errors.append(f"mounting:datum:{signal}:minimum_stroke_exceeded")
+        expected_datum = {
+            "signal": signal,
+            "centre_xy_mm": centre,
+            "installation_mode": "knurl_solder_cup_first",
+            "insertion_direction": "mating_face_toward_rear_negative_z",
+            "base_z_mm": base_z,
+            "fixed_shell_top_z_mm": base_z + fixed_shell_length,
+            "shoulder_stop_plane_z_mm": shoulder_z,
+            "shoulder_z_bounds_mm": [shoulder_z, shoulder_z + shoulder_thickness],
+            "knurl_z_bounds_mm": [shoulder_z - knurl_length, shoulder_z],
+            "retention_land_z_bounds_mm": [1.85, shoulder_z],
+            "body_counterbore_z_bounds_mm": [shoulder_z, 9.50],
+            "full_extension_tip_z_mm": base_z + 0.374 * 25.4,
+            "nominal_face_protrusion_mm": protrusion,
+            "target_pad_exposed_contact_plane_z_mm": target_contact_plane_z,
+            "mated_compression_mm": mated_compression,
+            "mated_tip_z_mm": target_contact_plane_z,
+            "nominal_design_remaining_against_catalog_minimum_stroke_mm": (
+                0.050 * 25.4 - mated_compression
+            ),
+            "remaining_stroke_semantics": (
+                "nominal installation arithmetic only; part, bore, target, "
+                "and fabrication tolerances are not included"
+            ),
+        }
+        if not evidence_matches(datum, expected_datum):
+            errors.append(f"mounting:datum:{signal}")
+
+    fit = mounting.get("nominal_and_part_tolerance_only_fit")
+    if not isinstance(fit, dict):
+        fit = {}
+        errors.append("mounting:fit_record")
+    diameter_tolerance = 0.002 * 25.4
+    knurl = 0.065 * 25.4
+    shoulder = 0.083 * 25.4
+    cup = 0.060 * 25.4
+    expected_fit = {
+        "knurl_diameter_range_mm": [
+            knurl - diameter_tolerance,
+            knurl + diameter_tolerance,
+        ],
+        "knurl_diametral_interference_range_mm": [
+            knurl - diameter_tolerance - 1.58,
+            knurl + diameter_tolerance - 1.58,
+        ],
+        "solder_cup_max_diameter_mm": cup + diameter_tolerance,
+        "solder_cup_minimum_diametral_passage_mm": 1.58 - (cup + diameter_tolerance),
+        "shoulder_diameter_range_mm": [
+            shoulder - diameter_tolerance,
+            shoulder + diameter_tolerance,
+        ],
+        "minimum_shoulder_bearing_radial_overlap_mm": (
+            shoulder - diameter_tolerance - 1.58
+        ) / 2.0,
+        "body_counterbore_minimum_radial_clearance_mm": (
+            2.31 - (shoulder + diameter_tolerance)
+        ) / 2.0,
+        "fabrication_hole_tolerance_included": False,
+        "pullout_force_bound_included": False,
+    }
+    if fit != expected_fit:
+        errors.append("mounting:fit_arithmetic")
+
+    first_mate = record.get("first_mate_tolerance_stack")
+    if not isinstance(first_mate, dict):
+        first_mate = {}
+        errors.append("first_mate:record")
+    nominal_lead = _finite_real(first_mate.get("nominal_ground_lead_mm"))
+    length_error = _finite_real(first_mate.get("independent_pin_pair_error_bound_mm"))
+    guaranteed = _finite_real(
+        first_mate.get("guaranteed_worst_case_ground_lead_mm")
+    )
+    expected_nominal_lead = None
+    if set(nominal_protrusions) == set(POGO_SIGNAL_CENTRES_MM):
+        standard_values = [
+            nominal_protrusions[signal] for signal in POGO_STANDARD_SIGNALS
+        ]
+        if any(
+            not _number_matches(value, standard_values[0])
+            for value in standard_values[1:]
+        ):
+            errors.append("first_mate:standard_datum_mismatch")
+        expected_nominal_lead = nominal_protrusions["GND"] - max(standard_values)
+    if expected_nominal_lead is None or not _number_matches(
+        nominal_lead, expected_nominal_lead
+    ):
+        errors.append("first_mate:nominal_lead")
+    if first_mate.get("shoulder_to_tip_dimension_terms_per_pin") != [
+        ".132_in_fixed_span",
+        ".062_in_maximum_exposed_plunger",
+    ]:
+        errors.append("first_mate:dimension_term_roster")
+    if first_mate.get("independent_standard_length_tolerance_term_count") != 4:
+        errors.append("first_mate:length_term_count")
+    if not _number_matches(length_error, 4.0 * 0.006 * 25.4):
+        errors.append("first_mate:length_error")
+    if (
+        nominal_lead is None
+        or length_error is None
+        or guaranteed is None
+        or not _number_matches(guaranteed, nominal_lead - length_error)
+    ):
+        errors.append("first_mate:arithmetic")
+    first_mate_passed = guaranteed is not None and guaranteed > 0.0
+    if first_mate.get("passed") is not first_mate_passed:
+        errors.append("first_mate:verdict")
+
+    authority = record.get("release_authority")
+    if not isinstance(authority, dict):
+        authority = {}
+        errors.append("release_authority")
+    press_fit_passed = bool(
+        fit.get("fabrication_hole_tolerance_included")
+        and fit.get("pullout_force_bound_included")
+    )
+    cycle_passed = bool(
+        authority.get("installed_electrical_cycle_reliability_qualified")
+    )
+    expected_blockers = []
+    if not first_mate_passed:
+        expected_blockers.append("ground_first_mate_tolerance_stack_unqualified")
+    if not press_fit_passed:
+        expected_blockers.append("knurl_press_fit_process_and_pullout_unqualified")
+    if not cycle_passed:
+        expected_blockers.append("installed_electrical_cycle_reliability_unqualified")
+    for key in (
+        "official_sources_hash_pinned",
+        "fixed_shell_drawing_envelope_reconstructed",
+        "moving_plunger_split_from_fixed_shell",
+        "knurl_mounting_mode_selected",
+        "sectional_bore_and_shoulder_stop_resolved",
+        "ground_first_mate_shoulder_datum_resolved",
+    ):
+        if authority.get(key) is not True:
+            errors.append(f"release_authority:{key}")
+    expected_qualification_flags = {
+        "ground_first_mate_tolerance_stack_qualified": first_mate_passed,
+        "knurl_press_fit_process_and_pullout_qualified": press_fit_passed,
+        "installed_electrical_cycle_reliability_qualified": cycle_passed,
+    }
+    for key, expected in expected_qualification_flags.items():
+        if authority.get(key) is not expected:
+            errors.append(f"release_authority:{key}")
+    if authority.get("blockers") != expected_blockers:
+        errors.append("release_authority:blockers")
+    release_ready = not expected_blockers
+    if authority.get("release_ready") is not release_ready:
+        errors.append("release_authority:verdict")
+    if require_release_ready and not release_ready:
+        errors.append("release_authority:not_ready")
+    return errors
 
 
 def sha256_file(path: Path) -> str:
@@ -379,6 +980,379 @@ class MatchaIdentityAndCadContractTests(unittest.TestCase):
                 for item in limitations
             ),
             limitations,
+        )
+
+
+class PogoInterfaceAuthorityContractTests(unittest.TestCase):
+    """Bind the purchased 7983 section, mounting direction, and first-mate proof."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        try:
+            cls.cad = import_file(
+                MAGNETIC_ROOT / "generate_cad.py",
+                "core_cad_pogo_authority_validation",
+                "core CAD pogo authority",
+            )
+            cls.ledger = load_json(
+                POGO_LEDGER_PATH, "Mill-Max 7983 authority ledger"
+            )
+        except unittest.SkipTest as error:
+            raise AssertionError(
+                "pogo authority dependencies are release inputs and may not skip"
+            ) from error
+        cls.contract = cls._production_contract(cls.cad)
+
+    @staticmethod
+    def _production_contract(cad: ModuleType) -> Any:
+        factory = getattr(cad, "pogo_interface_authority_contract", None)
+        if callable(factory):
+            return factory()
+        fit_factory = getattr(cad, "interface_hardware_fit_contract", None)
+        if callable(fit_factory):
+            fit_contract = fit_factory()
+            if isinstance(fit_contract, dict):
+                return fit_contract.get("pogo_interface_authority")
+        return None
+
+    def test_pure_pogo_authority_schema_accepts_only_complete_evidence(self) -> None:
+        self.assertIsInstance(self.contract, dict)
+        self.assertEqual(
+            pogo_authority_contract_errors(
+                self.contract, self.ledger, require_release_ready=False
+            ),
+            [],
+        )
+        proof = self.contract["first_mate_tolerance_stack"]
+        self.assertEqual(
+            proof["independent_standard_length_tolerance_term_count"], 4
+        )
+        self.assertAlmostEqual(
+            proof["independent_pin_pair_error_bound_mm"],
+            4.0 * 0.006 * 25.4,
+            places=12,
+        )
+        self.assertEqual(
+            proof["passed"], proof["guaranteed_worst_case_ground_lead_mm"] > 0.0
+        )
+        stroke = self.contract["stroke"]
+        self.assertAlmostEqual(stroke["full_stroke_nominal_mm"], 1.397, places=12)
+        self.assertAlmostEqual(stroke["full_stroke_tolerance_mm"], 0.127, places=12)
+        plunger = self.contract["dimensioned_profile"]["moving_plunger"]
+        self.assertAlmostEqual(plunger["outer_diameter_mm"], 1.0668, places=12)
+        self.assertEqual(plunger["motion_kind"], "prismatic")
+        datums = {
+            datum["signal"]: datum
+            for datum in self.contract["selected_mounting_design"][
+                "installed_datums"
+            ]
+        }
+        for signal, datum in datums.items():
+            expected_compression = 0.95 if signal == "GND" else 0.75
+            self.assertAlmostEqual(
+                datum["target_pad_exposed_contact_plane_z_mm"], 9.45, places=12
+            )
+            self.assertAlmostEqual(
+                datum["mated_tip_z_mm"], 9.45, places=12
+            )
+            self.assertAlmostEqual(
+                datum["mated_compression_mm"], expected_compression, places=12
+            )
+        fit = self.contract["selected_mounting_design"][
+            "nominal_and_part_tolerance_only_fit"
+        ]
+        self.assertAlmostEqual(
+            fit["solder_cup_minimum_diametral_passage_mm"],
+            0.0052,
+            places=12,
+        )
+        self.assertIs(fit["pullout_force_bound_included"], False)
+        self.assertIs(self.contract["release_authority"]["release_ready"], False)
+
+    def test_pogo_authority_rejects_simplified_mounting_and_runtime_models(
+        self,
+    ) -> None:
+        baseline = self.contract
+
+        straight_pilot = copy.deepcopy(baseline)
+        straight_pilot["selected_mounting_design"]["mode"] = "straight_pilot"
+        straight_errors = pogo_authority_contract_errors(
+            straight_pilot, self.ledger, require_release_ready=False
+        )
+        self.assertIn("mounting:mode", straight_errors)
+
+        two_cylinders = copy.deepcopy(baseline)
+        two_cylinders["dimensioned_profile"][
+            "fixed_shell_collision_envelope_segments"
+        ] = [
+            {
+                "name": "solder_cup",
+                "z_bounds_mm": [0.0, 3.0],
+                "outer_diameter_mm": 1.52,
+            },
+            {
+                "name": "body",
+                "z_bounds_mm": [3.0, 8.1],
+                "outer_diameter_mm": 2.11,
+            },
+        ]
+        cylinder_errors = pogo_authority_contract_errors(
+            two_cylinders, self.ledger, require_release_ready=False
+        )
+        self.assertIn("profile:fixed_shell_segments", cylinder_errors)
+
+        swapped = copy.deepcopy(baseline)
+        for datum in swapped["selected_mounting_design"]["installed_datums"]:
+            datum["insertion_direction"] = "rear_to_mating_face_plunger_side_first"
+        swapped_errors = pogo_authority_contract_errors(
+            swapped, self.ledger, require_release_ready=False
+        )
+        self.assertTrue(
+            all(
+                f"mounting:datum:{signal}" in swapped_errors
+                for signal in POGO_SIGNAL_CENTRES_MM
+            ),
+            swapped_errors,
+        )
+
+        frozen = copy.deepcopy(baseline)
+        frozen["dimensioned_profile"]["moving_plunger"]["motion_kind"] = "fixed"
+        frozen["dimensioned_profile"]["moving_plunger"][
+            "compression_range_mm"
+        ] = [0.0, 0.0]
+        frozen_errors = pogo_authority_contract_errors(
+            frozen, self.ledger, require_release_ready=False
+        )
+        self.assertIn("plunger:motion_kind", frozen_errors)
+        self.assertIn("plunger:compression_range", frozen_errors)
+
+        no_shoulder = copy.deepcopy(baseline)
+        for datum in no_shoulder["selected_mounting_design"]["installed_datums"]:
+            datum.pop("body_counterbore_z_bounds_mm")
+            datum.pop("shoulder_stop_plane_z_mm")
+        shoulder_errors = pogo_authority_contract_errors(
+            no_shoulder, self.ledger, require_release_ready=False
+        )
+        self.assertTrue(
+            all(
+                f"mounting:datum:{signal}" in shoulder_errors
+                for signal in POGO_SIGNAL_CENTRES_MM
+            ),
+            shoulder_errors,
+        )
+
+        reference_as_authority = copy.deepcopy(baseline)
+        reference_as_authority["first_mate_tolerance_stack"][
+            "shoulder_to_tip_dimension_terms_per_pin"
+        ] = [".374_in_parenthesized_reference"]
+        self.assertIn(
+            "first_mate:dimension_term_roster",
+            pogo_authority_contract_errors(
+                reference_as_authority,
+                self.ledger,
+                require_release_ready=False,
+            ),
+        )
+
+        plane_tip = copy.deepcopy(baseline)
+        for datum in plane_tip["selected_mounting_design"]["installed_datums"]:
+            protrusion = float(datum["nominal_face_protrusion_mm"])
+            datum["target_pad_exposed_contact_plane_z_mm"] = 9.50
+            datum["mated_tip_z_mm"] = 9.50
+            datum["mated_compression_mm"] = protrusion
+            datum[
+                "nominal_design_remaining_against_catalog_minimum_stroke_mm"
+            ] = 0.050 * 25.4 - protrusion
+        plane_tip_errors = pogo_authority_contract_errors(
+            plane_tip, self.ledger, require_release_ready=False
+        )
+        self.assertTrue(
+            all(
+                f"mounting:datum:{signal}" in plane_tip_errors
+                for signal in POGO_SIGNAL_CENTRES_MM
+            ),
+            plane_tip_errors,
+        )
+
+    def test_pogo_authority_rejects_hash_and_nominal_only_first_mate_controls(
+        self,
+    ) -> None:
+        altered_hash = copy.deepcopy(self.contract)
+        altered_hash["official_sources"]["dimension_drawing_svg"]["sha256"] = (
+            "0" * 64
+        )
+        self.assertIn(
+            "official_sources:dimension_drawing",
+            pogo_authority_contract_errors(
+                altered_hash, self.ledger, require_release_ready=False
+            ),
+        )
+
+        nominal_only = copy.deepcopy(self.contract)
+        proof = nominal_only["first_mate_tolerance_stack"]
+        self.assertAlmostEqual(proof["nominal_ground_lead_mm"], 0.20)
+        proof["passed"] = True
+        authority = nominal_only["release_authority"]
+        authority["ground_first_mate_tolerance_stack_qualified"] = True
+        authority["blockers"].remove(
+            "ground_first_mate_tolerance_stack_unqualified"
+        )
+        nominal_errors = pogo_authority_contract_errors(
+            nominal_only, self.ledger, require_release_ready=True
+        )
+        self.assertIn("first_mate:verdict", nominal_errors)
+        self.assertIn(
+            "release_authority:ground_first_mate_tolerance_stack_qualified",
+            nominal_errors,
+        )
+        self.assertIn("release_authority:blockers", nominal_errors)
+
+    def test_production_pogo_authority_is_hash_bound_physical_and_qualified(
+        self,
+    ) -> None:
+        self.assertIsInstance(self.contract, dict)
+        self.assertEqual(
+            pogo_authority_contract_errors(
+                self.contract, self.ledger, require_release_ready=False
+            ),
+            [],
+        )
+
+        ledger_record = self.contract["official_sources"][
+            "derived_authority_ledger"
+        ]
+        self.assertEqual(
+            ledger_record["path"],
+            POGO_LEDGER_PATH.relative_to(REPOSITORY_ROOT).as_posix(),
+        )
+        self.assertEqual(ledger_record["bytes"], POGO_LEDGER_PATH.stat().st_size)
+        self.assertEqual(ledger_record["sha256"], sha256_file(POGO_LEDGER_PATH))
+        self.assertEqual(
+            self.cad.pogo_points(),
+            [tuple(centre) for centre in POGO_SIGNAL_CENTRES_MM.values()],
+        )
+
+        # Bind the declared envelope to actual source solids.  A JSON-only
+        # two-cylinder shell or frozen plunger must not satisfy this gate.
+        profile = self.contract["dimensioned_profile"]
+        physical_features = self.cad.pogo_official_fixed_feature_solids()
+        segment_records = {
+            segment["name"]: segment
+            for segment in profile["fixed_shell_collision_envelope_segments"]
+        }
+        self.assertEqual(set(physical_features), set(segment_records))
+        for name, workplane in physical_features.items():
+            segment = segment_records[name]
+            z_min_mm, z_max_mm = segment["z_bounds_mm"]
+            diameter_mm = float(segment["outer_diameter_mm"])
+            bounds = workplane.val().BoundingBox()
+            self.assertAlmostEqual(bounds.xlen, diameter_mm, places=9, msg=name)
+            self.assertAlmostEqual(bounds.ylen, diameter_mm, places=9, msg=name)
+            self.assertAlmostEqual(bounds.zmin, z_min_mm, places=9, msg=name)
+            self.assertAlmostEqual(bounds.zmax, z_max_mm, places=9, msg=name)
+
+        fixed_length_mm = float(profile["fixed_shell_length_mm"])
+        exposed_length_mm = float(profile["maximum_exposed_plunger_mm"])
+        plunger_diameter_mm = float(
+            profile["moving_plunger"]["outer_diameter_mm"]
+        )
+        max_compression_mm = float(
+            self.contract["stroke"]["maximum_full_stroke_mm"]
+        )
+        full_extension_zmax = None
+        for compression_mm in (0.0, max_compression_mm):
+            plunger_bounds = self.cad.pogo_official_plunger(
+                compression_mm
+            ).val().BoundingBox()
+            self.assertAlmostEqual(
+                plunger_bounds.xlen, plunger_diameter_mm, places=9
+            )
+            self.assertAlmostEqual(
+                plunger_bounds.ylen, plunger_diameter_mm, places=9
+            )
+            self.assertAlmostEqual(plunger_bounds.zmin, fixed_length_mm, places=9)
+            self.assertAlmostEqual(
+                plunger_bounds.zmax,
+                fixed_length_mm + exposed_length_mm - compression_mm,
+                places=9,
+            )
+            if full_extension_zmax is None:
+                full_extension_zmax = plunger_bounds.zmax
+            else:
+                self.assertAlmostEqual(
+                    full_extension_zmax - plunger_bounds.zmax,
+                    max_compression_mm,
+                    places=9,
+                )
+        pad_bounds = self.cad.contact_pad().val().BoundingBox()
+        self.assertAlmostEqual(pad_bounds.zmin, 0.0, places=12)
+        self.assertAlmostEqual(pad_bounds.zmax, 0.05, places=12)
+
+        # Recompute the sectional knurl land, counterbore, and hard-stop
+        # annulus from the actual plate rather than trusting record booleans.
+        plate = self.cad.robot_plate().val()
+        mounting = self.contract["selected_mounting_design"]
+        for datum in mounting["installed_datums"]:
+            self.assertEqual(
+                self.cad.pogo_installed_datum(datum["signal"]), datum
+            )
+        land_radius_mm = float(mounting["retention_land_diameter_mm"]) / 2.0
+        counter_radius_mm = (
+            float(mounting["body_counterbore_design_diameter_mm"]) / 2.0
+        )
+        annulus_radius_mm = 0.5 * (land_radius_mm + counter_radius_mm)
+        for datum in mounting["installed_datums"]:
+            x_mm, y_mm = [float(value) for value in datum["centre_xy_mm"]]
+            land_z_min, land_z_max = [
+                float(value) for value in datum["retention_land_z_bounds_mm"]
+            ]
+            counter_z_min, counter_z_max = [
+                float(value) for value in datum["body_counterbore_z_bounds_mm"]
+            ]
+            self.assertAlmostEqual(land_z_max, counter_z_min, places=12)
+            for z_mm, radius_mm in (
+                (0.5 * (land_z_min + land_z_max), 0.45 * land_radius_mm),
+                (0.5 * (counter_z_min + counter_z_max), 0.45 * counter_radius_mm),
+            ):
+                for angle in np.linspace(0.0, 2.0 * math.pi, 8, endpoint=False):
+                    point = self.cad.cq.Vector(
+                        x_mm + radius_mm * math.cos(float(angle)),
+                        y_mm + radius_mm * math.sin(float(angle)),
+                        z_mm,
+                    )
+                    self.assertFalse(
+                        plate.isInside(point, 1.0e-7),
+                        {"datum": datum, "filled_bore_point_mm": point.toTuple()},
+                    )
+            for angle in np.linspace(0.0, 2.0 * math.pi, 8, endpoint=False):
+                cosine = math.cos(float(angle))
+                sine = math.sin(float(angle))
+                below = self.cad.cq.Vector(
+                    x_mm + annulus_radius_mm * cosine,
+                    y_mm + annulus_radius_mm * sine,
+                    counter_z_min - 0.01,
+                )
+                above = self.cad.cq.Vector(
+                    x_mm + annulus_radius_mm * cosine,
+                    y_mm + annulus_radius_mm * sine,
+                    counter_z_min + 0.01,
+                )
+                self.assertTrue(
+                    plate.isInside(below, 1.0e-7),
+                    {"datum": datum, "missing_shoulder_point_mm": below.toTuple()},
+                )
+                self.assertFalse(
+                    plate.isInside(above, 1.0e-7),
+                    {"datum": datum, "filled_counterbore_point_mm": above.toTuple()},
+                )
+
+        # The gate remains deliberately red until the four-term tolerance
+        # proof, process/pullout qualification, and cycle evidence all close.
+        self.assertEqual(
+            pogo_authority_contract_errors(
+                self.contract, self.ledger, require_release_ready=True
+            ),
+            [],
         )
 
 
