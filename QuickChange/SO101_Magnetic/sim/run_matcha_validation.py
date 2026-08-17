@@ -91,6 +91,14 @@ DEVELOPMENT_TESTS = (
         "test_matcha_docks_retain_stop_contact_but_core_uses_only_keepers",
     ),
     qualified(
+        "SimCadPlacementContractTests",
+        "test_line_keeper_normal_cones_are_oriented_not_any_xz_vector",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
+        "test_withdrawal_threshold_is_exactly_safe_against_source_cam",
+    ),
+    qualified(
         "BoundedDynamicSmokeTests",
         "test_real_substep_capture_lock_and_release_is_collision_safe",
     ),

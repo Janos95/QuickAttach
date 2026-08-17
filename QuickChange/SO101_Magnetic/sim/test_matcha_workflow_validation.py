@@ -16,12 +16,13 @@ import importlib.util
 import inspect
 import json
 import math
+import struct
 import subprocess
 import sys
 import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 from typing import Any, Iterable
 
 import numpy as np
@@ -467,8 +468,71 @@ class ControllerSourceSafetyTests(unittest.TestCase):
         forbidden_phase_roots = {
             "_command_capture",
             "_command_lock_verify",
+            "_command_move",
             "_command_release_verify",
         }
+
+        def target_is_physical_lock(target: ast.AST) -> bool:
+            if (
+                isinstance(target, ast.Attribute)
+                and target.attr == "physical_lock_confirmed"
+            ):
+                return True
+            return bool(
+                isinstance(target, ast.Subscript)
+                and isinstance(target.value, ast.Attribute)
+                and isinstance(target.value.value, ast.Name)
+                and target.value.value.id == "self"
+                and target.value.attr == "__dict__"
+                and isinstance(target.slice, ast.Constant)
+                and target.slice.value == "physical_lock_confirmed"
+            )
+
+        def method_may_set_lock_true(method: ast.AST) -> list[int]:
+            lines: list[int] = []
+            for node in ast.walk(method):
+                if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+                    targets = (
+                        list(node.targets)
+                        if isinstance(node, ast.Assign)
+                        else [node.target]
+                    )
+                    value = node.value
+                    for target in targets:
+                        if target_is_physical_lock(target) and not (
+                            isinstance(value, ast.Constant) and value.value is False
+                        ):
+                            lines.append(node.lineno)
+                if not isinstance(node, ast.Call) or called_name(node) != "setattr":
+                    continue
+                if len(node.args) < 3:
+                    lines.append(node.lineno)
+                    continue
+                field = node.args[1]
+                value = node.args[2]
+                if (
+                    isinstance(field, ast.Constant)
+                    and field.value == "physical_lock_confirmed"
+                    and not (isinstance(value, ast.Constant) and value.value is False)
+                ):
+                    lines.append(node.lineno)
+            return lines
+
+        module_functions = {
+            node.name: node
+            for node in self.tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+        module_setters = {
+            name: lines
+            for name, node in module_functions.items()
+            if (lines := method_may_set_lock_true(node))
+        }
+        self.assertEqual(
+            module_setters,
+            {},
+            "module helpers may not mutate controller physical-lock state",
+        )
         for class_node in self.controller_classes:
             methods = {
                 node.name: node
@@ -487,23 +551,9 @@ class ControllerSourceSafetyTests(unittest.TestCase):
             }
             setters: dict[str, list[int]] = {}
             for method_name, method in methods.items():
-                for node in ast.walk(method):
-                    if not isinstance(node, (ast.Assign, ast.AnnAssign)):
-                        continue
-                    targets = (
-                        list(node.targets)
-                        if isinstance(node, ast.Assign)
-                        else [node.target]
-                    )
-                    value = node.value
-                    for target in targets:
-                        if (
-                            isinstance(target, ast.Attribute)
-                            and target.attr == "physical_lock_confirmed"
-                            and isinstance(value, ast.Constant)
-                            and value.value is True
-                        ):
-                            setters.setdefault(method_name, []).append(node.lineno)
+                setter_lines = method_may_set_lock_true(method)
+                if setter_lines:
+                    setters[method_name] = setter_lines
             for root in sorted(forbidden_phase_roots):
                 reachable = {root}
                 pending = [root]
@@ -703,8 +753,9 @@ class SimCadPlacementContractTests(unittest.TestCase):
         build_xml = getattr(cls.demo, "_build_xml_and_assets", None)
         if build_xml is None:
             raise AssertionError("simulator must expose deterministic XML assembly")
-        xml_text, _ = build_xml()
+        xml_text, cls.assets = build_xml()
         cls.xml_root = ET.fromstring(xml_text)
+        cls.model = cls.demo.build_model()
 
     @staticmethod
     def _vector(element: ET.Element, name: str, default: str) -> np.ndarray:
@@ -712,6 +763,21 @@ class SimCadPlacementContractTests(unittest.TestCase):
             [float(value) for value in element.get(name, default).split()],
             dtype=np.float64,
         )
+
+    @staticmethod
+    def _binary_stl_vertices(payload: bytes) -> np.ndarray:
+        if len(payload) < 84:
+            raise AssertionError("binary STL is truncated")
+        triangle_count = struct.unpack_from("<I", payload, 80)[0]
+        if len(payload) != 84 + 50 * triangle_count:
+            raise AssertionError("binary STL byte count does not match its header")
+        vertices = np.empty((triangle_count * 3, 3), dtype=np.float64)
+        for triangle_index in range(triangle_count):
+            offset = 84 + 50 * triangle_index + 12
+            vertices[3 * triangle_index : 3 * triangle_index + 3] = np.asarray(
+                struct.unpack_from("<9f", payload, offset), dtype=np.float64
+            ).reshape(3, 3)
+        return vertices
 
     def test_stock_gripper_wrapper_composes_to_published_step_mount(self) -> None:
         wrapper = self.xml_root.find(".//body[@name='stock_gripper']")
@@ -976,23 +1042,203 @@ class SimCadPlacementContractTests(unittest.TestCase):
         xml_geoms = {
             str(geom.get("name")): geom for geom in self.xml_root.iter("geom") if geom.get("name")
         }
+        expected_owners = {
+            "matcha_col_gripper_plate_electrical_wing_edge__mating_land__keeper_land": (
+                "tool_gripper"
+            ),
+            "matcha_col_gripper_plate_xpos__mating_land__locator_land__dock_stop_land": (
+                "tool_gripper"
+            ),
+            "qc_col_robot_plate_electrical_wing_edge__keeper_land": (
+                "robot_plate_frame"
+            ),
+            "dock_gripper_keeper_left_lower_collision": "dock_gripper",
+            "dock_gripper_keeper_left_upper_collision": "dock_gripper",
+            "dock_gripper_keeper_right_lower_collision": "dock_gripper",
+            "dock_gripper_keeper_right_upper_collision": "dock_gripper",
+        }
         for expected_record in expected.values():
             for name in expected_record["runtime_pair"]:
                 self.assertIn(name, xml_geoms)
-                geom = xml_geoms[name]
-                self.assertTrue(
-                    int(geom.get("contype", "0"))
-                    or int(geom.get("conaffinity", "0")),
+                geom_id = int(self.model.geom(name).id)
+                owner_id = int(self.model.geom_bodyid[geom_id])
+                self.assertEqual(
+                    str(self.model.body(owner_id).name), expected_owners[name], name
+                )
+            geom_ids = [
+                int(self.model.geom(name).id)
+                for name in expected_record["runtime_pair"]
+            ]
+            contype_a = int(self.model.geom_contype[geom_ids[0]])
+            affinity_a = int(self.model.geom_conaffinity[geom_ids[0]])
+            contype_b = int(self.model.geom_contype[geom_ids[1]])
+            affinity_b = int(self.model.geom_conaffinity[geom_ids[1]])
+            self.assertTrue(
+                (contype_a & affinity_b) or (contype_b & affinity_a),
+                {
+                    "runtime_pair": expected_record["runtime_pair"],
+                    "contype": [contype_a, contype_b],
+                    "conaffinity": [affinity_a, affinity_b],
+                },
+            )
+
+        dock_features = self.clearance._named_dock_features()
+        expected_bounds_m: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+        for side in ("left", "right"):
+            for level in ("lower", "upper"):
+                feature_name = f"{side}_{level}_rail"
+                bounds = dock_features[feature_name].val().BoundingBox()
+                expected_bounds_m[f"dock_gripper_keeper_{side}_{level}_collision"] = (
+                    0.001 * np.asarray([bounds.xmin, bounds.ymin, bounds.zmin]),
+                    0.001 * np.asarray([bounds.xmax, bounds.ymax, bounds.zmax]),
+                )
+        cad = self.clearance.CAD
+        edge_x_max_mm = cad.CONTACT_CENTER_X - (
+            cad.CONTACT_BOARD_WIDTH + 0.25
+        ) / 2.0
+        edge_bounds = (
+            0.001
+            * np.asarray(
+                [
+                    cad.ELECTRICAL_WING_X_MIN,
+                    -cad.ELECTRICAL_WING_HEIGHT / 2.0,
+                    0.0,
+                ]
+            ),
+            0.001
+            * np.asarray(
+                [
+                    edge_x_max_mm,
+                    cad.ELECTRICAL_WING_HEIGHT / 2.0,
+                    cad.PLATE_THICKNESS,
+                ]
+            ),
+        )
+        expected_bounds_m[
+            "matcha_col_gripper_plate_electrical_wing_edge__mating_land__keeper_land"
+        ] = edge_bounds
+        expected_bounds_m[
+            "qc_col_robot_plate_electrical_wing_edge__keeper_land"
+        ] = edge_bounds
+        expected_bounds_m[
+            "matcha_col_gripper_plate_xpos__mating_land__locator_land__dock_stop_land"
+        ] = (
+            np.asarray([0.004, -0.025, 0.0]),
+            np.asarray([0.028, 0.025, 0.001 * cad.PLATE_THICKNESS]),
+        )
+        self.assertEqual(set(expected_bounds_m), set(expected_owners))
+        for name, (expected_minimum, expected_maximum) in expected_bounds_m.items():
+            geom = xml_geoms[name]
+            if name.startswith("matcha_col_gripper_plate_xpos"):
+                self.assertEqual(geom.get("type"), "mesh", name)
+                mesh_name = str(geom.get("mesh"))
+                mesh_element = self.xml_root.find(
+                    f"./asset/mesh[@name='{mesh_name}']"
+                )
+                self.assertIsNotNone(mesh_element, mesh_name)
+                serialized_vertices = mesh_element.get("vertex")
+                if serialized_vertices is not None:
+                    vertices = np.asarray(
+                        [float(value) for value in serialized_vertices.split()],
+                        dtype=np.float64,
+                    ).reshape(-1, 3)
+                else:
+                    mesh_file = mesh_element.get("file")
+                    self.assertIsNotNone(mesh_file, mesh_name)
+                    self.assertTrue(mesh_file in self.assets, mesh_file)
+                    vertices = self._binary_stl_vertices(self.assets[mesh_file])
+                np.testing.assert_allclose(
+                    np.min(vertices, axis=0),
+                    expected_minimum,
+                    rtol=0.0,
+                    atol=1.0e-9,
+                    err_msg=name,
+                )
+                np.testing.assert_allclose(
+                    np.max(vertices, axis=0),
+                    expected_maximum,
+                    rtol=0.0,
+                    atol=1.0e-9,
+                    err_msg=name,
+                )
+                arc_steps = 16
+                expected_outline = [(0.004, -0.025), (0.024, -0.025)]
+                expected_outline.extend(
+                    (
+                        0.024
+                        + 0.004
+                        * math.cos(
+                            -math.pi / 2.0
+                            + index * math.pi / (2.0 * arc_steps)
+                        ),
+                        -0.021
+                        + 0.004
+                        * math.sin(
+                            -math.pi / 2.0
+                            + index * math.pi / (2.0 * arc_steps)
+                        ),
+                    )
+                    for index in range(1, arc_steps + 1)
+                )
+                expected_outline.append((0.028, 0.021))
+                expected_outline.extend(
+                    (
+                        0.024
+                        + 0.004
+                        * math.cos(index * math.pi / (2.0 * arc_steps)),
+                        0.021
+                        + 0.004
+                        * math.sin(index * math.pi / (2.0 * arc_steps)),
+                    )
+                    for index in range(1, arc_steps + 1)
+                )
+                expected_outline.append((0.004, 0.025))
+                observed_outline = {
+                    (round(float(x), 9), round(float(y), 9))
+                    for x, y in vertices[:, :2]
+                }
+                self.assertEqual(
+                    observed_outline,
+                    {
+                        (round(float(x), 9), round(float(y), 9))
+                        for x, y in expected_outline
+                    },
                     name,
                 )
+                self.assertEqual(
+                    {round(float(value), 9) for value in vertices[:, 2]},
+                    {0.0, round(0.001 * cad.PLATE_THICKNESS, 9)},
+                    name,
+                )
+                continue
+            self.assertEqual(geom.get("type"), "box", name)
+            quat = self._vector(geom, "quat", "1 0 0 0")
+            quat /= np.linalg.norm(quat)
+            self.assertAlmostEqual(abs(float(quat[0])), 1.0, 12, name)
+            self.assertLessEqual(float(np.linalg.norm(quat[1:])), 1.0e-12, name)
+            position = self._vector(geom, "pos", "0 0 0")
+            half_size = self._vector(geom, "size", "")
+            np.testing.assert_allclose(
+                position - half_size,
+                expected_minimum,
+                rtol=0.0,
+                atol=1.0e-12,
+                err_msg=name,
+            )
+            np.testing.assert_allclose(
+                position + half_size,
+                expected_maximum,
+                rtol=0.0,
+                atol=1.0e-12,
+                err_msg=name,
+            )
 
     def test_matcha_docks_retain_stop_contact_but_core_uses_only_keepers(
         self,
     ) -> None:
-        model = self.demo.build_model()
-        data = self.demo.mujoco.MjData(model)
-        self.demo.initialize(model, data)
-        controller = self.demo.MatchaWorkflowController(model, data)
+        data = self.demo.mujoco.MjData(self.model)
+        self.demo.initialize(self.model, data)
+        controller = self.demo.MatchaWorkflowController(self.model, data)
 
         valid_stop_contacts: dict[str, int] = {
             "gripper": 0,
@@ -1015,6 +1261,89 @@ class SimCadPlacementContractTests(unittest.TestCase):
             self.assertGreater(valid_stop_contacts[tool], 0, tool)
             self.assertTrue(controller._dock_stop_is_seated(tool), tool)
 
+    def test_line_keeper_normal_cones_are_oriented_not_any_xz_vector(self) -> None:
+        validator = getattr(
+            self.demo.MatchaWorkflowController,
+            "_core_keeper_normal_is_valid",
+            None,
+        )
+        self.assertTrue(
+            callable(validator),
+            "keeper contacts need an oriented-normal predicate, not projection only",
+        )
+        contract = {
+            tuple(record["source_pair"]): record
+            for record in self.demo.CORE_KEEPER_CONTACT_CONTRACT
+        }
+        left = contract[("stock_tool_plate", "left_lower_rail")]
+        right = contract[("stock_tool_plate", "right_lower_rail")]
+        dock_rotation = np.eye(3)
+
+        def contact(normal: tuple[float, float, float]) -> SimpleNamespace:
+            unit = np.asarray(normal, dtype=np.float64)
+            unit /= np.linalg.norm(unit)
+            return SimpleNamespace(frame=np.concatenate((unit, np.zeros(6))))
+
+        for normal in ((1.0, 0.0, 1.0), (-1.0, 0.0, -1.0)):
+            self.assertTrue(validator(contact(normal), left, dock_rotation), normal)
+            self.assertFalse(validator(contact(normal), right, dock_rotation), normal)
+        for normal in ((1.0, 0.0, -1.0), (-1.0, 0.0, 1.0)):
+            self.assertFalse(validator(contact(normal), left, dock_rotation), normal)
+            self.assertTrue(validator(contact(normal), right, dock_rotation), normal)
+        for normal in ((1.0, 0.0, 0.0), (0.0, 0.0, 1.0)):
+            self.assertTrue(validator(contact(normal), left, dock_rotation), normal)
+            self.assertTrue(validator(contact(normal), right, dock_rotation), normal)
+        self.assertFalse(validator(contact((0.0, 1.0, 0.0)), left, dock_rotation))
+        self.assertFalse(validator(contact((0.0, 1.0, 0.0)), right, dock_rotation))
+
+    def test_withdrawal_threshold_is_exactly_safe_against_source_cam(self) -> None:
+        cad = self.clearance.CAD
+        threshold_mm = float(self.demo.MINIMUM_SOURCE_AXIS_WITHDRAWAL_MM)
+        self.assertGreaterEqual(threshold_mm, 15.0)
+
+        def locked_slider(withdrawal_mm: float) -> Any:
+            return (
+                cad.locking_slider()
+                .translate(
+                    (
+                        cad.SLIDER_TRAVEL,
+                        -withdrawal_mm,
+                        cad.SLIDER_Z - cad.PLATE_THICKNESS,
+                    )
+                )
+                .val()
+            )
+
+        cam = cad.positive_lock_cam().val()
+        twelve_mm_slider = locked_slider(12.0)
+        twelve_mm_overlap = self.clearance._intersection_volume_mm3(
+            twelve_mm_slider, cam
+        )
+        self.assertGreater(
+            twelve_mm_overlap,
+            self.clearance.OVERLAP_VOLUME_TOLERANCE_MM3,
+            "12 mm still leaves the locked slider inside the dock cam",
+        )
+        threshold_slider = locked_slider(threshold_mm)
+        threshold_distance = float(threshold_slider.distance(cam))
+        threshold_overlap = (
+            self.clearance._intersection_volume_mm3(threshold_slider, cam)
+            if threshold_distance <= self.clearance.NUMERIC_DISTANCE_TOLERANCE_MM
+            else 0.0
+        )
+        self.assertLessEqual(
+            threshold_overlap, self.clearance.OVERLAP_VOLUME_TOLERANCE_MM3
+        )
+        self.assertGreaterEqual(
+            threshold_distance,
+            self.clearance.MANUFACTURING_CLEARANCE_MM,
+            {
+                "withdrawal_mm": threshold_mm,
+                "distance_mm": threshold_distance,
+                "overlap_mm3": threshold_overlap,
+            },
+        )
+
 
 class BoundedDynamicSmokeTests(unittest.TestCase):
     @classmethod
@@ -1024,6 +1353,37 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
             "matcha_demo_bounded_dynamic_validation",
             "matcha workflow simulator",
         )
+        cls.clearance = import_file(
+            CORE_CLEARANCE_VALIDATOR,
+            "core_clearance_bounded_dynamic_validation",
+            "core CAD clearance validator",
+        )
+
+    @staticmethod
+    def quaternion_matrix(quaternion: Any) -> np.ndarray:
+        values = np.asarray(quaternion, dtype=np.float64)
+        if values.shape != (4,) or not np.all(np.isfinite(values)):
+            raise AssertionError(f"invalid quaternion: {quaternion}")
+        norm = float(np.linalg.norm(values))
+        if norm <= 0.0:
+            raise AssertionError(f"zero quaternion: {quaternion}")
+        w, x, y, z = values / norm
+        return np.asarray(
+            [
+                [1.0 - 2.0 * (y * y + z * z), 2.0 * (x * y - w * z), 2.0 * (x * z + w * y)],
+                [2.0 * (x * y + w * z), 1.0 - 2.0 * (x * x + z * z), 2.0 * (y * z - w * x)],
+                [2.0 * (x * z - w * y), 2.0 * (y * z + w * x), 1.0 - 2.0 * (x * x + y * y)],
+            ],
+            dtype=np.float64,
+        )
+
+    @staticmethod
+    def quaternion_angle(quaternion_a: Any, quaternion_b: Any) -> float:
+        a = np.asarray(quaternion_a, dtype=np.float64)
+        b = np.asarray(quaternion_b, dtype=np.float64)
+        a /= np.linalg.norm(a)
+        b /= np.linalg.norm(b)
+        return 2.0 * math.acos(min(1.0, max(0.0, abs(float(a @ b)))))
 
     def assert_points_on_source_witness(
         self,
@@ -1181,6 +1541,19 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
                 float(expected["source_witness"]["point_tolerance_mm"]),
                 record,
             )
+            contact_normals = record.get(
+                "contact_normals_from_runtime_pair_0_to_1_dock_local"
+            )
+            self.assertIsInstance(contact_normals, list, record)
+            self.assertEqual(len(contact_normals), contact_count, record)
+            normalized_contact_normals: list[np.ndarray] = []
+            for raw_normal in contact_normals:
+                normal = np.asarray(raw_normal, dtype=np.float64)
+                self.assertEqual(normal.shape, (3,), record)
+                self.assertTrue(np.all(np.isfinite(normal)), record)
+                norm = float(np.linalg.norm(normal))
+                self.assertGreater(norm, 0.0, record)
+                normalized_contact_normals.append(normal / norm)
             if expected.get("expected_local_normal_axis") is not None:
                 alignment = float(
                     record.get("minimum_normal_alignment", -math.inf)
@@ -1192,6 +1565,17 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
                 )
                 self.assertGreater(contact_count, 0, record)
                 self.assertEqual(witness_method, "live_mujoco_contact", record)
+                axis_index = {
+                    "x": 0,
+                    "y": 1,
+                    "z": 2,
+                }[str(expected["expected_local_normal_axis"])]
+                for normal in normalized_contact_normals:
+                    self.assertGreaterEqual(
+                        abs(float(normal[axis_index])),
+                        float(self.demo.CORE_KEEPER_MIN_NORMAL_ALIGNMENT),
+                        record,
+                    )
             else:
                 self.assertEqual(
                     expected.get("expected_local_normal_subspace"),
@@ -1209,6 +1593,21 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
                         float(self.demo.CORE_KEEPER_MIN_NORMAL_ALIGNMENT),
                         record,
                     )
+                same_sign_quadrants = source_pair == (
+                    "stock_tool_plate",
+                    "left_lower_rail",
+                )
+                for normal in normalized_contact_normals:
+                    self.assertGreaterEqual(
+                        float(np.linalg.norm(normal[[0, 2]])),
+                        float(self.demo.CORE_KEEPER_MIN_NORMAL_ALIGNMENT),
+                        record,
+                    )
+                    product = float(normal[0] * normal[2])
+                    if same_sign_quadrants:
+                        self.assertGreaterEqual(product, -1.0e-12, record)
+                    else:
+                        self.assertLessEqual(product, 1.0e-12, record)
             observed[source_pair] = record
         self.assertEqual(set(observed), set(contract), report)
 
@@ -1236,11 +1635,21 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
             matching[event_name] = record
         self.assertEqual(event_positions, sorted(event_positions), journal)
 
-        self.assertIs(
-            matching["physical_capture_complete"].get("physical_lock_confirmed"),
-            False,
-            matching["physical_capture_complete"],
-        )
+        physics_indices: list[int] = []
+        for event_name in expected_events:
+            record = matching[event_name]
+            physics_index = int(record.get("physics_substep_count", -1))
+            self.assertGreaterEqual(physics_index, 0, record)
+            physics_indices.append(physics_index)
+        self.assertEqual(physics_indices, sorted(physics_indices), matching)
+        self.assertEqual(len(physics_indices), len(set(physics_indices)), matching)
+
+        for event_name in expected_events[:-1]:
+            self.assertIs(
+                matching[event_name].get("physical_lock_confirmed"),
+                False,
+                matching[event_name],
+            )
         self.assertIs(
             matching["dock_hold_released"].get("dock_hold_active"),
             False,
@@ -1249,21 +1658,156 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
         withdrawal = matching["source_axis_withdrawal_complete"]
         minimum_withdrawal_mm = float(self.demo.MINIMUM_SOURCE_AXIS_WITHDRAWAL_MM)
         self.assertGreaterEqual(minimum_withdrawal_mm, 15.0)
+        capture = matching["physical_capture_complete"]
+        pose_fields = (
+            "robot_mating_position_world_m",
+            "robot_mating_quat_wxyz",
+            "dock_position_world_m",
+            "dock_quat_wxyz",
+        )
+        for record in (capture, withdrawal):
+            for field in pose_fields:
+                self.assertIn(field, record, record)
+        capture_robot_position = np.asarray(
+            capture["robot_mating_position_world_m"], dtype=np.float64
+        )
+        capture_dock_position = np.asarray(
+            capture["dock_position_world_m"], dtype=np.float64
+        )
+        withdrawal_robot_position = np.asarray(
+            withdrawal["robot_mating_position_world_m"], dtype=np.float64
+        )
+        withdrawal_dock_position = np.asarray(
+            withdrawal["dock_position_world_m"], dtype=np.float64
+        )
+        for position in (
+            capture_robot_position,
+            capture_dock_position,
+            withdrawal_robot_position,
+            withdrawal_dock_position,
+        ):
+            self.assertEqual(position.shape, (3,))
+            self.assertTrue(np.all(np.isfinite(position)))
+        np.testing.assert_allclose(
+            withdrawal_dock_position,
+            capture_dock_position,
+            rtol=0.0,
+            atol=1.0e-12,
+        )
+        capture_dock_rotation = self.quaternion_matrix(capture["dock_quat_wxyz"])
+        withdrawal_dock_rotation = self.quaternion_matrix(
+            withdrawal["dock_quat_wxyz"]
+        )
+        np.testing.assert_allclose(
+            withdrawal_dock_rotation,
+            capture_dock_rotation,
+            rtol=0.0,
+            atol=1.0e-12,
+        )
+        capture_local = capture_dock_rotation.T @ (
+            capture_robot_position - capture_dock_position
+        )
+        withdrawal_local = capture_dock_rotation.T @ (
+            withdrawal_robot_position - withdrawal_dock_position
+        )
+        displacement_local = withdrawal_local - capture_local
+        displacement_norm = float(np.linalg.norm(displacement_local))
+        self.assertGreater(displacement_norm, 0.0, withdrawal)
+        recomputed_withdrawal_mm = -1000.0 * float(displacement_local[1])
+        recomputed_axis_alignment = -float(displacement_local[1]) / displacement_norm
         self.assertGreaterEqual(
-            float(withdrawal.get("withdrawal_mm", -math.inf)),
+            recomputed_withdrawal_mm,
             minimum_withdrawal_mm,
             withdrawal,
         )
         self.assertGreaterEqual(
-            float(withdrawal.get("axis_alignment", -math.inf)), 0.999, withdrawal
+            recomputed_axis_alignment, 0.999, withdrawal
+        )
+        self.assertAlmostEqual(
+            float(withdrawal.get("withdrawal_mm", math.inf)),
+            recomputed_withdrawal_mm,
+            delta=1.0e-6,
+        )
+        self.assertAlmostEqual(
+            float(withdrawal.get("axis_alignment", math.inf)),
+            recomputed_axis_alignment,
+            delta=1.0e-9,
+        )
+        self.assertLessEqual(
+            1000.0 * float(np.linalg.norm(displacement_local[[0, 2]])),
+            1000.0 * float(self.demo.CAM_RELIEF_CORRIDOR_M),
+            withdrawal,
+        )
+        self.assertLessEqual(
+            self.quaternion_angle(
+                capture["robot_mating_quat_wxyz"],
+                withdrawal["robot_mating_quat_wxyz"],
+            ),
+            float(self.demo.CAPTURE_ORIENTATION_TOLERANCE_RAD),
+            withdrawal,
         )
         slider = matching["slider_return_verified"]
         self.assertIs(slider.get("cam_clear"), True, slider)
         self.assertIs(slider.get("returned"), True, slider)
+        slider_position_mm = float(
+            slider.get("slider_joint_position_mm", -math.inf)
+        )
+        self.assertGreaterEqual(slider_position_mm, 2.95, slider)
+        self.assertLessEqual(slider_position_mm, 3.0 + 1.0e-6, slider)
+        self.assertGreaterEqual(float(slider.get("settled_dwell_s", 0.0)), 0.050)
+        slider_speed_mm_s = abs(
+            float(slider.get("slider_joint_velocity_mm_s", math.inf))
+        )
+        settled_speed_limit_mm_s = float(
+            slider.get("settled_speed_limit_mm_s", -math.inf)
+        )
+        self.assertGreater(settled_speed_limit_mm_s, 0.0, slider)
+        self.assertLessEqual(slider_speed_mm_s, settled_speed_limit_mm_s, slider)
+
+        cad = self.clearance.CAD
+        exact_slider = (
+            cad.locking_slider()
+            .translate(
+                (
+                    slider_position_mm,
+                    -recomputed_withdrawal_mm,
+                    cad.SLIDER_Z - cad.PLATE_THICKNESS,
+                )
+            )
+            .val()
+        )
+        exact_cam = cad.positive_lock_cam().val()
+        exact_cam_clearance_mm = float(exact_slider.distance(exact_cam))
+        exact_cam_overlap_mm3 = (
+            self.clearance._intersection_volume_mm3(exact_slider, exact_cam)
+            if exact_cam_clearance_mm
+            <= self.clearance.NUMERIC_DISTANCE_TOLERANCE_MM
+            else 0.0
+        )
+        self.assertLessEqual(
+            exact_cam_overlap_mm3,
+            self.clearance.OVERLAP_VOLUME_TOLERANCE_MM3,
+            slider,
+        )
+        self.assertGreaterEqual(
+            exact_cam_clearance_mm,
+            self.clearance.MANUFACTURING_CLEARANCE_MM,
+            slider,
+        )
+        self.assertAlmostEqual(
+            float(slider.get("cam_tab_clearance_mm", math.inf)),
+            exact_cam_clearance_mm,
+            delta=1.0e-6,
+        )
         self.assertIs(
             matching["physical_lock_confirmed"].get("physical_lock_confirmed"),
             True,
             matching["physical_lock_confirmed"],
+        )
+        self.assertEqual(
+            int(result.get("first_physical_lock_true_substep", -1)),
+            physics_indices[-1],
+            result,
         )
 
     def test_real_substep_capture_lock_and_release_is_collision_safe(self) -> None:
