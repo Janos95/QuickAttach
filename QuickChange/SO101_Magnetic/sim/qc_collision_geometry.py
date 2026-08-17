@@ -351,7 +351,7 @@ def add_tool_quick_change_interface(body: ET.Element, tool: str) -> list[str]:
     names.extend(_add_partitioned_contact_board(body, tool))
     # The two M5 target stacks sit outside the retained-stud wells; their
     # 5.5 mm outer envelope remains inside the 25 mm plate datum.
-    for side, y_value in (("neg", -0.0195), ("pos", 0.0195)):
+    for side, y_value in (("neg", -0.0190), ("pos", 0.0190)):
         names.extend(_add_target_with_bore(body, tool, side, y_value))
     for side, y_value in (("left", -0.010), ("right", 0.010)):
         _geom(

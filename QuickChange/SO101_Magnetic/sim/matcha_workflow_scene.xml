@@ -34,6 +34,7 @@
   <contact/>
   <custom>
     <numeric name="tool_bus_id" data="7"/>
+    <numeric name="gripper_tool_id" data="6"/>
     <numeric name="spoon_tool_id" data="21"/>
     <numeric name="whisk_tool_id" data="22"/>
   </custom>

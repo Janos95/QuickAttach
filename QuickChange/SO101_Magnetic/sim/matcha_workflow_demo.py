@@ -41,6 +41,7 @@ ARM_JOINTS = (
 )
 ARM_ACTUATORS = ARM_JOINTS
 TOOL_IDS = {"spoon": 21, "whisk": 22}
+ALL_TOOL_IDS = {"gripper": 6, **TOOL_IDS}
 TOOL_BUS_ID = 7
 CAMERA_NAME = "matcha_scene_camera"
 
@@ -77,6 +78,89 @@ DOCK_POSES = {
 CONTACT_NUMERICAL_EPSILON_M = 1.0e-9
 FORBIDDEN_CONTACT_LATCH_M = 1.5e-4
 DEFAULT_MAX_STEPS = 120_000
+PHYSICS_SUBSTEPS_PER_CONTROLLER_STEP = 20
+WORKFLOW_GLOBAL_SAFETY_MARGIN_S = 10.0
+CAPTURE_POSITION_TOLERANCE_M = 0.0015
+CAPTURE_ORIENTATION_TOLERANCE_RAD = math.radians(1.25)
+POGO_PAD_MAX_PENETRATION_M = 6.0e-5
+DOCK_STOP_MAX_PENETRATION_M = 1.5e-4
+CAPTURE_CONTACT_DWELL_S = 0.020
+LOCK_VERIFY_DWELL_S = 0.050
+
+
+@dataclass(frozen=True)
+class WorkflowAction:
+    """One finite-deadline controller action."""
+
+    name: str
+    kind: str
+    timeout_s: float
+    duration_s: float = 0.0
+    tool: str | None = None
+    target_q: tuple[float, ...] | None = None
+
+    def __post_init__(self) -> None:
+        if not self.name or not self.kind:
+            raise ValueError("workflow action name/kind must be nonempty")
+        if not math.isfinite(self.timeout_s) or self.timeout_s <= 0.0:
+            raise ValueError(f"invalid timeout for {self.name}: {self.timeout_s}")
+        if not math.isfinite(self.duration_s) or self.duration_s < 0.0:
+            raise ValueError(f"invalid duration for {self.name}: {self.duration_s}")
+        if self.timeout_s + 1.0e-12 < self.duration_s:
+            raise ValueError(f"timeout shorter than duration for {self.name}")
+        if self.target_q is not None and len(self.target_q) != len(ARM_JOINTS):
+            raise ValueError(f"wrong target width for {self.name}")
+
+
+def _recovery_controller_actions(tool: str = "gripper") -> tuple[WorkflowAction, ...]:
+    if tool not in ALL_TOOL_IDS:
+        raise ValueError(f"unsupported recovery tool {tool}")
+    return (
+        WorkflowAction(
+            name=f"{tool}_to_capture",
+            kind="move",
+            tool=tool,
+            target_q=tuple(float(value) for value in DOCK_CAPTURE_Q[tool]),
+            duration_s=1.5,
+            timeout_s=3.5,
+        ),
+        WorkflowAction(
+            name=f"{tool}_physical_capture",
+            kind="capture",
+            tool=tool,
+            duration_s=CAPTURE_CONTACT_DWELL_S,
+            timeout_s=2.0,
+        ),
+        WorkflowAction(
+            name=f"{tool}_lock_verify",
+            kind="lock_verify",
+            tool=tool,
+            duration_s=LOCK_VERIFY_DWELL_S,
+            timeout_s=2.0,
+        ),
+        WorkflowAction(
+            name=f"{tool}_dock_release_verify",
+            kind="release_verify",
+            tool=tool,
+            duration_s=LOCK_VERIFY_DWELL_S,
+            timeout_s=2.0,
+        ),
+        WorkflowAction(
+            name=f"{tool}_rack_exit",
+            kind="move",
+            tool=tool,
+            target_q=tuple(float(value) for value in DOCK_PRE_CAPTURE_Q[tool]),
+            duration_s=1.5,
+            timeout_s=3.5,
+        ),
+        WorkflowAction(
+            name=f"{tool}_exit_hold",
+            kind="hold",
+            tool=tool,
+            duration_s=0.10,
+            timeout_s=1.0,
+        ),
+    )
 
 
 def _mesh_assets(
@@ -297,7 +381,7 @@ def _add_whisk_payload(tool: ET.Element, actuator: ET.Element) -> None:
         pos=(0.004, 0.0, 0.0),
         # Tangent to, rather than embedded in, the compliance carriage at its
         # zero state.  The eccentric remains a direct active collider.
-        size=(0.006, 0.002),
+        size=(0.006, 0.0018),
         rgba="0.8 0.5 0.1 0.8",
     )
     carriage = ET.SubElement(tool, "body", {"name": "whisk_compliance_carriage", "pos": "0 0 0.060"})
@@ -675,6 +759,7 @@ def _add_equalities(root: ET.Element) -> None:
                 "name": f"attach_{tool}",
                 "body1": "robot_plate_frame",
                 "body2": f"tool_{tool}",
+                "relpose": "0 0 0.0095 1 0 0 0",
                 "active": "false",
                 "solref": "0.001 1",
                 "solimp": "0.99 0.999 0.0001",
@@ -771,7 +856,11 @@ def initialize(model: mujoco.MjModel, data: mujoco.MjData) -> None:
         raise RuntimeError("Matcha scene must compile with exactly one named camera")
     if int(round(_custom_numeric(model, "tool_bus_id")[0])) != TOOL_BUS_ID:
         raise RuntimeError("Compiled tool bus ID drifted")
-    for name, expected in (("spoon_tool_id", 21), ("whisk_tool_id", 22)):
+    for name, expected in (
+        ("gripper_tool_id", 6),
+        ("spoon_tool_id", 21),
+        ("whisk_tool_id", 22),
+    ):
         if int(round(_custom_numeric(model, name)[0])) != expected:
             raise RuntimeError(f"Compiled {name} drifted")
 
@@ -871,29 +960,487 @@ def initial_contact_report(model: mujoco.MjModel, data: mujoco.MjData) -> dict[s
     }
 
 
-def run_headless_scenario(max_steps: int = 100) -> dict[str, Any]:
+class MatchaWorkflowController:
+    """Fail-closed real-dynamics controller for the first recovery milestone.
+
+    This checkpoint intentionally stops after one complete gripper capture and
+    rack exit.  The same finite-deadline action and contact-audit machinery is
+    used by the remaining matcha process actions as they are restored.
+    """
+
+    def __init__(
+        self,
+        model: mujoco.MjModel,
+        data: mujoco.MjData,
+        *,
+        actions: tuple[WorkflowAction, ...] | None = None,
+    ) -> None:
+        self.model = model
+        self.data = data
+        self.actions = actions if actions is not None else _recovery_controller_actions()
+        if not self.actions:
+            raise ValueError("controller action list cannot be empty")
+        self.controller_dt_s = float(model.opt.timestep) * PHYSICS_SUBSTEPS_PER_CONTROLLER_STEP
+        public_horizon_s = DEFAULT_MAX_STEPS * self.controller_dt_s
+        declared_horizon_s = math.fsum(action.timeout_s for action in self.actions)
+        if public_horizon_s + 1.0e-12 < declared_horizon_s + WORKFLOW_GLOBAL_SAFETY_MARGIN_S:
+            raise RuntimeError("public step horizon cannot cover declared action deadlines")
+
+        self.arm_qpos_ids = np.asarray(
+            [model.joint(name).qposadr[0] for name in ARM_JOINTS], dtype=int
+        )
+        self.arm_dof_ids = np.asarray(
+            [model.joint(name).dofadr[0] for name in ARM_JOINTS], dtype=int
+        )
+        self.arm_actuator_ids = np.asarray(
+            [model.actuator(name).id for name in ARM_ACTUATORS], dtype=int
+        )
+        self.action_index = 0
+        self.action_started_s = float(data.time)
+        self.action_start_q = np.asarray(data.qpos[self.arm_qpos_ids], dtype=float).copy()
+        self.completed = False
+        self.success = False
+        self.abort_reason: str | None = None
+        self.motion_stopped = False
+        self.attached_tool: str | None = None
+        self.bus_connected = False
+        self.handshake_achieved = False
+        self.physical_lock_confirmed = False
+        self.locked = False
+        self.capture_live_substeps = 0
+        self.lock_live_substeps = 0
+        self.release_live_substeps = 0
+        self.physics_substep_count = 0
+        self.forbidden_contact_count = 0
+        self.max_forbidden_penetration_m = 0.0
+        self.first_forbidden_pair: tuple[str, str] | None = None
+        self.max_tracking_error_rad = 0.0
+        self.max_actuator_utilization = {
+            name: 0.0 for name in (*ARM_ACTUATORS, "whisk_motor")
+        }
+        self.journal: list[dict[str, Any]] = [
+            {
+                "event": "controller_started",
+                "sim_time_s": float(data.time),
+                "action": self.actions[0].name,
+            }
+        ]
+
+    @property
+    def current_action(self) -> WorkflowAction | None:
+        if self.completed or self.abort_reason is not None:
+            return None
+        return self.actions[self.action_index]
+
+    def _equality_active(self, name: str) -> bool:
+        equality_id = int(self.model.equality(name).id)
+        return bool(self.data.eq_active[equality_id])
+
+    def _tool_id_from_compiled_bus(self, tool: str) -> int:
+        return int(round(float(_custom_numeric(self.model, f"{tool}_tool_id")[0])))
+
+    def _tool_pose_error(self, tool: str) -> tuple[float, float]:
+        robot_site = self.data.site("robot_mating_face")
+        tool_site = self.data.site(f"{tool}_mating_face")
+        position_error = float(np.linalg.norm(robot_site.xpos - tool_site.xpos))
+        robot_rotation = np.asarray(robot_site.xmat, dtype=float).reshape(3, 3)
+        tool_rotation = np.asarray(tool_site.xmat, dtype=float).reshape(3, 3)
+        cosine = float((np.trace(robot_rotation.T @ tool_rotation) - 1.0) / 2.0)
+        orientation_error = math.acos(max(-1.0, min(1.0, cosine)))
+        return position_error, orientation_error
+
+    def _capture_pose_is_valid(self, tool: str) -> bool:
+        position_error, orientation_error = self._tool_pose_error(tool)
+        return (
+            position_error <= CAPTURE_POSITION_TOLERANCE_M
+            and orientation_error <= CAPTURE_ORIENTATION_TOLERANCE_RAD
+        )
+
+    def _matching_pogo_contact_is_valid(
+        self,
+        contact: mujoco.MjContact,
+        tool: str,
+        signal: str,
+    ) -> bool:
+        geom_a = str(self.model.geom(int(contact.geom[0])).name)
+        geom_b = str(self.model.geom(int(contact.geom[1])).name)
+        expected = {f"qc_col_pogo_{signal}", f"{tool}_pad_{signal}_collision"}
+        if {geom_a, geom_b} != expected:
+            return False
+        if float(contact.dist) < -POGO_PAD_MAX_PENETRATION_M:
+            return False
+        if not self._capture_pose_is_valid(tool):
+            return False
+        if not (
+            self._equality_active(f"dock_{tool}_hold")
+            or self._equality_active(f"attach_{tool}")
+        ):
+            return False
+        pad_id = int(self.model.geom(f"{tool}_pad_{signal}_collision").id)
+        pad_center = np.asarray(self.data.geom_xpos[pad_id], dtype=float)
+        pad_rotation = np.asarray(self.data.geom_xmat[pad_id], dtype=float).reshape(3, 3)
+        pad_axis = pad_rotation[:, 2]
+        offset = np.asarray(contact.pos, dtype=float) - pad_center
+        axial = abs(float(offset @ pad_axis))
+        radial = float(np.linalg.norm(offset - (offset @ pad_axis) * pad_axis))
+        contact_normal = np.asarray(contact.frame[:3], dtype=float)
+        return (
+            axial <= 1.0e-3
+            and radial <= 2.01e-3
+            and abs(float(contact_normal @ pad_axis)) >= 0.98
+        )
+
+    def _pogo_contact_signals(self, tool: str) -> set[str]:
+        observed: set[str] = set()
+        for contact_index in range(self.data.ncon):
+            contact = self.data.contact[contact_index]
+            for signal in qc.SIGNALS:
+                if self._matching_pogo_contact_is_valid(contact, tool, signal):
+                    observed.add(signal)
+                    break
+        return observed
+
+    def _dock_stop_contact_is_valid(self, contact: mujoco.MjContact, tool: str) -> bool:
+        geom_a = str(self.model.geom(int(contact.geom[0])).name)
+        geom_b = str(self.model.geom(int(contact.geom[1])).name)
+        stop_name = f"dock_{tool}_qc_col_dock_stop"
+        if stop_name not in {geom_a, geom_b}:
+            return False
+        plate_name = geom_b if geom_a == stop_name else geom_a
+        if not (
+            plate_name.startswith(f"matcha_col_{tool}_plate_")
+            and "__dock_stop_land" in plate_name
+        ):
+            return False
+        if float(contact.dist) < -DOCK_STOP_MAX_PENETRATION_M:
+            return False
+        if not self._equality_active(f"dock_{tool}_hold"):
+            return False
+        dock_rotation = np.asarray(
+            self.data.body(f"dock_{tool}").xmat, dtype=float
+        ).reshape(3, 3)
+        expected_normal = dock_rotation[:, 1]
+        return abs(float(np.asarray(contact.frame[:3]) @ expected_normal)) >= 0.98
+
+    def _dock_stop_is_seated(self, tool: str) -> bool:
+        return any(
+            self._dock_stop_contact_is_valid(self.data.contact[index], tool)
+            for index in range(self.data.ncon)
+        )
+
+    def _interface_guard(self, tool: str) -> bool:
+        signals = self._pogo_contact_signals(tool)
+        id_matches = self._tool_id_from_compiled_bus(tool) == ALL_TOOL_IDS[tool]
+        dock_or_attach = (
+            self._dock_stop_is_seated(tool)
+            if self._equality_active(f"dock_{tool}_hold")
+            else self._equality_active(f"attach_{tool}")
+        )
+        return (
+            signals == set(qc.SIGNALS)
+            and id_matches
+            and dock_or_attach
+            and self._capture_pose_is_valid(tool)
+        )
+
+    def _allowed_penetrating_contact(self, contact: mujoco.MjContact) -> bool:
+        geom_a = str(self.model.geom(int(contact.geom[0])).name)
+        geom_b = str(self.model.geom(int(contact.geom[1])).name)
+        for tool in ALL_TOOL_IDS:
+            if self._dock_stop_contact_is_valid(contact, tool):
+                return True
+            for signal in qc.SIGNALS:
+                if self._matching_pogo_contact_is_valid(contact, tool, signal):
+                    return True
+        support_pairs = {
+            frozenset(
+                {
+                    f"dock_{tool}_support_anchor_collision",
+                    f"dock_{tool}_support_collision",
+                }
+            )
+            for tool in ALL_TOOL_IDS
+        }
+        support_pairs.update(
+            frozenset({f"dock_{tool}_support_collision", "matcha_floor_collision"})
+            for tool in ALL_TOOL_IDS
+        )
+        return frozenset({geom_a, geom_b}) in support_pairs
+
+    def _audit_contacts(self) -> None:
+        for contact_index in range(self.data.ncon):
+            contact = self.data.contact[contact_index]
+            penetration = -float(contact.dist)
+            if penetration <= CONTACT_NUMERICAL_EPSILON_M:
+                continue
+            if self._allowed_penetrating_contact(contact):
+                continue
+            geom_a = str(self.model.geom(int(contact.geom[0])).name)
+            geom_b = str(self.model.geom(int(contact.geom[1])).name)
+            self.forbidden_contact_count += 1
+            self.max_forbidden_penetration_m = max(
+                self.max_forbidden_penetration_m, penetration
+            )
+            if self.first_forbidden_pair is None:
+                self.first_forbidden_pair = (geom_a, geom_b)
+            if penetration > FORBIDDEN_CONTACT_LATCH_M:
+                self._abort("forbidden_collision")
+                return
+
+    def _record_actuator_loads(self) -> None:
+        for name in self.max_actuator_utilization:
+            actuator_id = int(self.model.actuator(name).id)
+            force = abs(float(self.data.actuator_force[actuator_id]))
+            force_range = np.asarray(self.model.actuator_forcerange[actuator_id], dtype=float)
+            limit = max(abs(float(force_range[0])), abs(float(force_range[1])))
+            utilization = force / limit if limit > 0.0 else 0.0
+            self.max_actuator_utilization[name] = max(
+                self.max_actuator_utilization[name], utilization
+            )
+
+    def _abort(self, reason: str) -> None:
+        if self.abort_reason is not None:
+            return
+        self.abort_reason = reason
+        self.motion_stopped = True
+        self.data.ctrl[self.arm_actuator_ids] = self.data.qpos[self.arm_qpos_ids]
+        self.data.xfrc_applied[:] = 0.0
+        self.journal.append(
+            {"event": "abort", "reason": reason, "sim_time_s": float(self.data.time)}
+        )
+
+    def _integrate(self) -> None:
+        action = self.current_action
+        if action is None:
+            return
+        for _ in range(PHYSICS_SUBSTEPS_PER_CONTROLLER_STEP):
+            mujoco.mj_step(self.model, self.data)
+            self.physics_substep_count += 1
+            self._audit_contacts()
+            self._record_actuator_loads()
+            if self.abort_reason is not None:
+                return
+            if self.attached_tool is not None and self._equality_active(
+                f"attach_{self.attached_tool}"
+            ):
+                if not self._interface_guard(self.attached_tool):
+                    self._abort("contact_bus_drop")
+                    return
+            if action.kind == "capture" and action.tool is not None:
+                if self._interface_guard(action.tool):
+                    self.capture_live_substeps += 1
+                else:
+                    self.capture_live_substeps = 0
+            elif action.kind == "lock_verify" and action.tool is not None:
+                if self._interface_guard(action.tool):
+                    self.lock_live_substeps += 1
+                else:
+                    self.lock_live_substeps = 0
+            elif action.kind == "release_verify" and action.tool is not None:
+                if self._interface_guard(action.tool):
+                    self.release_live_substeps += 1
+                else:
+                    self.release_live_substeps = 0
+            if not (
+                np.all(np.isfinite(self.data.qpos))
+                and np.all(np.isfinite(self.data.qvel))
+                and np.all(np.isfinite(self.data.actuator_force))
+            ):
+                self._abort("nonfinite_state")
+                return
+
+    def _advance_action(self, event: str) -> None:
+        action = self.actions[self.action_index]
+        self.journal.append(
+            {
+                "event": event,
+                "action": action.name,
+                "sim_time_s": float(self.data.time),
+            }
+        )
+        self.action_index += 1
+        if self.action_index >= len(self.actions):
+            self.completed = True
+            self.motion_stopped = True
+            self.success = (
+                self.locked
+                and self.attached_tool is not None
+                and self.forbidden_contact_count == 0
+                and self.abort_reason is None
+            )
+            return
+        self.action_started_s = float(self.data.time)
+        self.action_start_q = np.asarray(
+            self.data.qpos[self.arm_qpos_ids], dtype=float
+        ).copy()
+        self.journal.append(
+            {
+                "event": "action_started",
+                "action": self.actions[self.action_index].name,
+                "sim_time_s": float(self.data.time),
+            }
+        )
+
+    def _command_move(self, action: WorkflowAction, elapsed_s: float) -> None:
+        if action.target_q is None:
+            self._abort("move_missing_target")
+            return
+        target = np.asarray(action.target_q, dtype=float)
+        alpha = min(1.0, max(0.0, elapsed_s / action.duration_s))
+        smooth = alpha**3 * (10.0 + alpha * (-15.0 + 6.0 * alpha))
+        command = self.action_start_q + smooth * (target - self.action_start_q)
+        self.data.ctrl[self.arm_actuator_ids] = command
+        self._integrate()
+        tracking = float(
+            np.max(np.abs(self.data.qpos[self.arm_qpos_ids] - command))
+        )
+        self.max_tracking_error_rad = max(self.max_tracking_error_rad, tracking)
+        if self.abort_reason is not None:
+            return
+        if elapsed_s >= action.duration_s:
+            target_error = float(
+                np.max(np.abs(self.data.qpos[self.arm_qpos_ids] - target))
+            )
+            speed = float(np.max(np.abs(self.data.qvel[self.arm_dof_ids])))
+            if target_error <= 0.025 and speed <= 0.20:
+                self._advance_action("move_complete")
+
+    def _command_capture(self, action: WorkflowAction) -> None:
+        if action.tool is None:
+            self._abort("capture_missing_tool")
+            return
+        self.data.ctrl[self.arm_actuator_ids] = DOCK_CAPTURE_Q[action.tool]
+        self._integrate()
+        required = math.ceil(CAPTURE_CONTACT_DWELL_S / float(self.model.opt.timestep))
+        if self.abort_reason is not None or self.capture_live_substeps < required:
+            return
+        if not self._dock_stop_is_seated(action.tool):
+            self._abort("dock_stop_not_seated")
+            return
+        self.bus_connected = True
+        self.handshake_achieved = True
+        self.physical_lock_confirmed = True
+        self.data.eq_active[self.model.equality(f"attach_{action.tool}").id] = 1
+        self.attached_tool = action.tool
+        self._advance_action("physical_capture_complete")
+
+    def _command_lock_verify(self, action: WorkflowAction) -> None:
+        if action.tool is None:
+            self._abort("lock_missing_tool")
+            return
+        self.data.ctrl[self.arm_actuator_ids] = DOCK_CAPTURE_Q[action.tool]
+        self._integrate()
+        required = math.ceil(LOCK_VERIFY_DWELL_S / float(self.model.opt.timestep))
+        if self.abort_reason is not None or self.lock_live_substeps < required:
+            return
+        equality_active = self._equality_active(f"attach_{action.tool}")
+        self.locked = bool(
+            equality_active
+            and self.physical_lock_confirmed
+            and self._interface_guard(action.tool)
+        )
+        if not self.locked:
+            self._abort("physical_lock_not_confirmed")
+            return
+        self.data.eq_active[self.model.equality(f"dock_{action.tool}_hold").id] = 0
+        self._advance_action("lock_verified")
+
+    def _command_release_verify(self, action: WorkflowAction) -> None:
+        if action.tool is None:
+            self._abort("release_verify_missing_tool")
+            return
+        self.data.ctrl[self.arm_actuator_ids] = DOCK_CAPTURE_Q[action.tool]
+        self._integrate()
+        required = math.ceil(LOCK_VERIFY_DWELL_S / float(self.model.opt.timestep))
+        if self.abort_reason is not None or self.release_live_substeps < required:
+            return
+        if self._equality_active(f"dock_{action.tool}_hold"):
+            self._abort("dock_hold_failed_to_release")
+            return
+        self._advance_action("dock_release_verified")
+
+    def _command_hold(self, action: WorkflowAction, elapsed_s: float) -> None:
+        self.data.ctrl[self.arm_actuator_ids] = self.data.qpos[self.arm_qpos_ids]
+        self._integrate()
+        if self.abort_reason is None and elapsed_s >= action.duration_s:
+            self._advance_action("hold_complete")
+
+    def step(self) -> None:
+        action = self.current_action
+        if action is None:
+            return
+        elapsed_s = float(self.data.time) - self.action_started_s
+        if elapsed_s > action.timeout_s:
+            self._abort(f"action_timeout:{action.name}")
+            return
+        if action.kind == "move":
+            self._command_move(action, elapsed_s)
+        elif action.kind == "capture":
+            self._command_capture(action)
+        elif action.kind == "lock_verify":
+            self._command_lock_verify(action)
+        elif action.kind == "release_verify":
+            self._command_release_verify(action)
+        elif action.kind == "hold":
+            self._command_hold(action, elapsed_s)
+        else:
+            self._abort(f"unknown_action:{action.kind}")
+
+    def result(self) -> dict[str, Any]:
+        action = self.current_action
+        return {
+            "completed": self.completed,
+            "success": self.success,
+            "abort_reason": self.abort_reason,
+            "motion_stopped": self.motion_stopped,
+            "action_index": self.action_index,
+            "action": action.name if action is not None else None,
+            "sim_time_s": float(self.data.time),
+            "physics_substep_count": self.physics_substep_count,
+            "attached_tool": self.attached_tool,
+            "bus_connected": self.bus_connected,
+            "handshake_achieved": self.handshake_achieved,
+            "physical_lock_confirmed": self.physical_lock_confirmed,
+            "locked": self.locked,
+            "forbidden_contact_count": self.forbidden_contact_count,
+            "max_forbidden_penetration_m": self.max_forbidden_penetration_m,
+            "first_forbidden_pair": self.first_forbidden_pair,
+            "max_tracking_error_rad": self.max_tracking_error_rad,
+            "max_actuator_utilization": dict(self.max_actuator_utilization),
+            "action_deadlines_s": {
+                action.name: action.timeout_s for action in self.actions
+            },
+            "declared_deadline_sum_s": math.fsum(
+                action.timeout_s for action in self.actions
+            ),
+            "global_safety_margin_s": WORKFLOW_GLOBAL_SAFETY_MARGIN_S,
+            "journal": list(self.journal),
+        }
+
+
+def run_headless_scenario(max_steps: int = DEFAULT_MAX_STEPS) -> dict[str, Any]:
+    if max_steps < 0:
+        raise ValueError("max_steps must be nonnegative")
     model = build_model()
     data = mujoco.MjData(model)
     initialize(model, data)
     startup_contacts = initial_contact_report(model, data)
-    arm_actuators = np.asarray([model.actuator(name).id for name in ARM_ACTUATORS])
-    for _ in range(max_steps):
-        data.ctrl[arm_actuators] = DOCK_PRE_CAPTURE_Q["gripper"]
-        mujoco.mj_step(model, data)
-        if not np.all(np.isfinite(data.qpos)):
-            raise RuntimeError("Non-finite state during initialized smoke")
     result = initialized_summary(model, data)
+    controller = MatchaWorkflowController(model, data)
+    for _ in range(max_steps):
+        controller.step()
+        if controller.completed or controller.abort_reason is not None:
+            break
     result["collision_coverage"] = collision_coverage(model)
     result["startup_contact_audit"] = startup_contacts
-    result["sim_time"] = float(data.time)
-    result["completed"] = True
+    result.update(controller.result())
     return result
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--headless", action="store_true")
-    parser.add_argument("--max-steps", type=int, default=100)
+    parser.add_argument("--max-steps", type=int, default=DEFAULT_MAX_STEPS)
     parser.add_argument("--dump-xml", type=Path)
     return parser.parse_args()
 

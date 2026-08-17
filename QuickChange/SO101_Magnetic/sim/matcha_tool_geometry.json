@@ -70,10 +70,10 @@
     "dock_spoon": ["dock_spoon_support_anchor_collision", "dock_spoon_support_collision", "matcha_floor_collision"],
     "dock_whisk": ["dock_whisk_support_anchor_collision", "dock_whisk_support_collision", "matcha_floor_collision"],
     "bowl_station": ["bowl_base_collision", "bowl_support_collision", "matcha_floor_collision"],
-    "powder_station": ["powder_canister_collision", "powder_support_collision", "matcha_floor_collision"],
-    "rinse_station": ["rinse_basin_collision", "rinse_support_collision", "matcha_floor_collision"],
-    "hot_water": ["hot_water_station_collision", "hot_water_support_collision", "matcha_floor_collision"],
-    "milk": ["milk_station_collision", "milk_support_collision", "matcha_floor_collision"]
+    "powder_station": ["powder_collision", "powder_support_collision", "matcha_floor_collision"],
+    "rinse_station": ["rinse_collision", "rinse_support_collision", "matcha_floor_collision"],
+    "hot_water": ["hot_water_collision", "hot_water_support_collision", "matcha_floor_collision"],
+    "milk": ["milk_collision", "milk_support_collision", "matcha_floor_collision"]
   },
   "limitations": [
     "Exact purchased sieve, bellows, tubing, nozzle, and latch hardware geometry remains pending fabrication selection.",
