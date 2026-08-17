@@ -19,6 +19,7 @@ import math
 import subprocess
 import sys
 import unittest
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Iterable
@@ -35,7 +36,9 @@ MATCHA_CONFIG = HERE / "matcha_tool_geometry.json"
 PAYLOAD_GENERATOR = HERE / "generate_matcha_payload_proxy_report.py"
 PAYLOAD_VALIDATOR = HERE / "validate_matcha_payload_proxy_report.py"
 PAYLOAD_REPORT = HERE / "matcha_payload_proxy_report.json"
+CORE_CLEARANCE_VALIDATOR = HERE / "validate_cad_clearance.py"
 CAD_ROOT = MAGNETIC_ROOT / "matcha_tools"
+MATCHA_CAD_GENERATOR = CAD_ROOT / "generate_matcha_tool_cad.py"
 CAD_MANIFEST = CAD_ROOT / "exports" / "matcha_tool_manifest.json"
 RUNNER = HERE / "run_matcha_validation.py"
 
@@ -609,6 +612,169 @@ class RenderedCollisionInventoryTests(unittest.TestCase):
         expected = getattr(self.demo, "MATCHA_PAYLOAD_COLLISION_GEOM_NAMES", None)
         if expected is not None:
             self.assertEqual(set(reported), set(expected))
+
+
+class SimCadPlacementContractTests(unittest.TestCase):
+    """Bind runtime mount/stop primitives to their distinct source contracts."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.demo = import_file(
+            MATCHA_DEMO,
+            "matcha_demo_cad_placement_validation",
+            "matcha workflow simulator",
+        )
+        cls.clearance = import_file(
+            CORE_CLEARANCE_VALIDATOR,
+            "core_clearance_placement_validation",
+            "core CAD clearance validator",
+        )
+        cls.matcha_cad = import_file(
+            MATCHA_CAD_GENERATOR,
+            "matcha_cad_placement_validation",
+            "matcha CAD generator",
+        )
+        build_xml = getattr(cls.demo, "_build_xml_and_assets", None)
+        if build_xml is None:
+            raise AssertionError("simulator must expose deterministic XML assembly")
+        xml_text, _ = build_xml()
+        cls.xml_root = ET.fromstring(xml_text)
+
+    @staticmethod
+    def _vector(element: ET.Element, name: str, default: str) -> np.ndarray:
+        return np.asarray(
+            [float(value) for value in element.get(name, default).split()],
+            dtype=np.float64,
+        )
+
+    def test_stock_gripper_wrapper_composes_to_published_step_mount(self) -> None:
+        wrapper = self.xml_root.find(".//body[@name='stock_gripper']")
+        self.assertIsNotNone(wrapper, "runtime stock-gripper wrapper is missing")
+        required = self.clearance._required_stock_sim_body_transform()
+        observed_position = self._vector(wrapper, "pos", "0 0 0")
+        expected_position = np.asarray(required["wrapper_body_pos_m"], dtype=np.float64)
+        np.testing.assert_allclose(
+            observed_position, expected_position, rtol=0.0, atol=1.0e-12
+        )
+        observed_quat = self._vector(wrapper, "quat", "1 0 0 0")
+        expected_quat = np.asarray(
+            required["wrapper_body_quat_wxyz"], dtype=np.float64
+        )
+        observed_quat /= np.linalg.norm(observed_quat)
+        expected_quat /= np.linalg.norm(expected_quat)
+        self.assertAlmostEqual(abs(float(observed_quat @ expected_quat)), 1.0, 12)
+        self.assertLessEqual(float(required["position_residual_m"]), 1.0e-12)
+        self.assertLessEqual(
+            float(required["rotation_residual_frobenius"]), 1.0e-12
+        )
+
+    def _stop_box_records(self, tool: str) -> list[dict[str, Any]]:
+        dock = self.xml_root.find(f".//body[@name='dock_{tool}']")
+        self.assertIsNotNone(dock, f"dock_{tool} body is missing")
+        prefix = f"dock_{tool}_qc_col_dock_stop"
+        records: list[dict[str, Any]] = []
+        for geom in dock.findall("./geom"):
+            name = str(geom.get("name", ""))
+            if not name.startswith(prefix):
+                continue
+            self.assertEqual(geom.get("type"), "box", name)
+            self.assertTrue(
+                int(geom.get("contype", "0")) or int(geom.get("conaffinity", "0")),
+                name,
+            )
+            quat = self._vector(geom, "quat", "1 0 0 0")
+            quat /= np.linalg.norm(quat)
+            self.assertAlmostEqual(abs(float(quat[0])), 1.0, 12, name)
+            self.assertLessEqual(float(np.linalg.norm(quat[1:])), 1.0e-12, name)
+            position = self._vector(geom, "pos", "0 0 0")
+            half_size = self._vector(geom, "size", "")
+            self.assertEqual(half_size.shape, (3,), name)
+            self.assertTrue(np.all(half_size > 0.0), name)
+            records.append(
+                {
+                    "name": name,
+                    "position_m": position,
+                    "half_size_m": half_size,
+                    "minimum_m": position - half_size,
+                    "maximum_m": position + half_size,
+                }
+            )
+        self.assertTrue(records, f"{prefix}* collision pieces are missing")
+        self.assertEqual(
+            [record["name"] for record in records],
+            sorted(record["name"] for record in records),
+            f"{tool} stop pieces must have deterministic sorted names",
+        )
+        return records
+
+    def test_each_dock_stop_matches_its_exact_source_bounds_and_core_holes(
+        self,
+    ) -> None:
+        core_spec = self.clearance.CAD.core_dock_stop_spec()
+        matcha_spec = self.matcha_cad.matcha_dock_stop_spec()
+        self.assertNotEqual(core_spec["bounds_mm"], matcha_spec["bounds_mm"])
+        observed_bounds: dict[str, dict[str, list[float]]] = {}
+        for tool, spec in (
+            ("gripper", core_spec),
+            ("spoon", matcha_spec),
+            ("whisk", matcha_spec),
+        ):
+            records = self._stop_box_records(tool)
+            minimum = np.min(
+                np.stack([record["minimum_m"] for record in records]), axis=0
+            )
+            maximum = np.max(
+                np.stack([record["maximum_m"] for record in records]), axis=0
+            )
+            expected_minimum = 0.001 * np.asarray(
+                [spec["bounds_mm"][axis][0] for axis in "xyz"], dtype=np.float64
+            )
+            expected_maximum = 0.001 * np.asarray(
+                [spec["bounds_mm"][axis][1] for axis in "xyz"], dtype=np.float64
+            )
+            np.testing.assert_allclose(
+                minimum, expected_minimum, rtol=0.0, atol=1.0e-12
+            )
+            np.testing.assert_allclose(
+                maximum, expected_maximum, rtol=0.0, atol=1.0e-12
+            )
+            observed_bounds[tool] = {
+                "minimum_m": minimum.tolist(),
+                "maximum_m": maximum.tolist(),
+            }
+            if tool != "gripper":
+                continue
+            for hole in spec["through_holes"]:
+                radius_m = 0.0005 * float(hole["diameter_mm"])
+                y_value = 0.5 * (expected_minimum[1] + expected_maximum[1])
+                for radial_x, radial_z in (
+                    (0.0, 0.0),
+                    (0.5, 0.0),
+                    (-0.5, 0.0),
+                    (0.0, 0.5),
+                    (0.0, -0.5),
+                ):
+                    point = np.asarray(
+                        [
+                            0.001 * float(hole["x_mm"]) + radial_x * radius_m,
+                            y_value,
+                            0.001 * float(hole["z_mm"]) + radial_z * radius_m,
+                        ]
+                    )
+                    filled_by = [
+                        record["name"]
+                        for record in records
+                        if np.all(
+                            np.abs(point - record["position_m"])
+                            < record["half_size_m"] - 1.0e-12
+                        )
+                    ]
+                    self.assertEqual(
+                        filled_by,
+                        [],
+                        f"core stop proxy fills functional hole {hole}: {point}",
+                    )
+        self.assertNotEqual(observed_bounds["gripper"], observed_bounds["spoon"])
 
 
 def box_triangles(

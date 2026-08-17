@@ -71,6 +71,14 @@ DEVELOPMENT_TESTS = (
         "test_payload_report_active_geom_inventory_matches_compiled_model",
     ),
     qualified(
+        "SimCadPlacementContractTests",
+        "test_stock_gripper_wrapper_composes_to_published_step_mount",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
+        "test_each_dock_stop_matches_its_exact_source_bounds_and_core_holes",
+    ),
+    qualified(
         "FcpwFastGateContractTests",
         "test_fcpw_version_and_candidate_input_guards_are_fail_closed",
     ),
