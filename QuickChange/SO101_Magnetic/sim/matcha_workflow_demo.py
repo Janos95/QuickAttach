@@ -24,7 +24,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
-from types import MappingProxyType
+from types import CodeType, MappingProxyType
 from typing import Any
 
 import mujoco
@@ -457,6 +457,38 @@ def _numeric_tree_all_finite(value: object) -> bool:
     return False
 
 
+def _code_object_sha256(code: CodeType) -> str:
+    """Hash executable bytecode, constants and symbol tables canonically."""
+
+    def constant_record(value: object) -> object:
+        if isinstance(value, CodeType):
+            return {"nested_code_sha256": _code_object_sha256(value)}
+        if isinstance(value, bytes):
+            return {"bytes_hex": value.hex()}
+        if isinstance(value, tuple):
+            return [constant_record(item) for item in value]
+        if value is None or isinstance(value, (bool, int, float, str)):
+            return value
+        return {"type": type(value).__name__, "repr": repr(value)}
+
+    return _canonical_json_sha256(
+        {
+            "co_code_hex": code.co_code.hex(),
+            "co_consts": [constant_record(value) for value in code.co_consts],
+            "co_names": list(code.co_names),
+            "co_varnames": list(code.co_varnames),
+            "co_freevars": list(code.co_freevars),
+            "co_cellvars": list(code.co_cellvars),
+            "co_argcount": code.co_argcount,
+            "co_posonlyargcount": code.co_posonlyargcount,
+            "co_kwonlyargcount": code.co_kwonlyargcount,
+            "co_nlocals": code.co_nlocals,
+            "co_stacksize": code.co_stacksize,
+            "co_flags": code.co_flags,
+        }
+    )
+
+
 def _decode_core_capture_route_source_states(
 ) -> tuple[tuple[float, float, tuple[float, ...]], ...]:
     raw = base64.b64decode(_CORE_CAPTURE_ROUTE_STATE_BASE64, validate=True)
@@ -593,6 +625,14 @@ def _current_core_capture_route_identity_preimage() -> dict[str, Any]:
             CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
         ),
     }
+
+
+_CORE_CAPTURE_ROUTE_IDENTITY_PREIMAGE_IMPLEMENTATION = (
+    _current_core_capture_route_identity_preimage
+)
+_CORE_CAPTURE_ROUTE_IDENTITY_PREIMAGE_CODE_OBJECT = (
+    _current_core_capture_route_identity_preimage.__code__
+)
 
 
 CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_DIGEST_PREIMAGE = (
@@ -761,11 +801,16 @@ def _current_core_capture_gravity_bias_formula() -> dict[str, Any]:
         "saturation_policy": "any_saturation_fails_development_evidence",
         "runtime_isolation": {
             "scratch_and_live_object_identity_must_differ": True,
+            "evaluator_receives_no_live_MjData_argument": True,
             "live_qpos_qvel_snapshots_must_be_bitwise_unchanged": True,
             "all_scratch_qvel_must_be_exact_zero": True,
             "non_arm_scratch_qpos_digest_must_remain_frozen": True,
             "failure_aborts_before_ctrl_write": True,
         },
+        "prewrite_revalidation": (
+            "fresh_route_formula_guard_desired_action_ast_bytecode_and_"
+            "compiled_dynamics_identity_before_desired_q_and_ctrl_write"
+        ),
         "prohibited_inputs": [
             "qfrc_constraint",
             "mj_contactForce",
@@ -777,11 +822,19 @@ def _current_core_capture_gravity_bias_formula() -> dict[str, Any]:
     }
 
 
+_CORE_CAPTURE_GRAVITY_BIAS_FORMULA_BUILDER_IMPLEMENTATION = (
+    _current_core_capture_gravity_bias_formula
+)
+_CORE_CAPTURE_GRAVITY_BIAS_FORMULA_BUILDER_CODE_OBJECT = (
+    _current_core_capture_gravity_bias_formula.__code__
+)
+
+
 CORE_CAPTURE_GRAVITY_BIAS_FORMULA = (
     _current_core_capture_gravity_bias_formula()
 )
 CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256 = (
-    "7084ee29d3ff1ab3b30bcd940633459f7e199c5d59b5d1dc0e06958c4810a2c8"
+    "a84c10e16c890b5e1ee4e4479c0d15d7e07a75f2afae17c62e639e8adc55cc27"
 )
 def _current_core_capture_gravity_bias_guard_thresholds() -> dict[str, Any]:
     """Return every current guard value consumed by FF evidence."""
@@ -825,18 +878,39 @@ def _current_core_capture_gravity_bias_guard_thresholds() -> dict[str, Any]:
     }
 
 
+_CORE_CAPTURE_GRAVITY_BIAS_GUARD_BUILDER_IMPLEMENTATION = (
+    _current_core_capture_gravity_bias_guard_thresholds
+)
+_CORE_CAPTURE_GRAVITY_BIAS_GUARD_BUILDER_CODE_OBJECT = (
+    _current_core_capture_gravity_bias_guard_thresholds.__code__
+)
+
+
 CORE_CAPTURE_GRAVITY_BIAS_GUARD_THRESHOLDS = (
     _current_core_capture_gravity_bias_guard_thresholds()
 )
+CORE_CAPTURE_GRAVITY_BIAS_GUARD_THRESHOLDS_SHA256 = (
+    "a30d3c871580b36a8f18eca6f07b6d4e5eee34cbecf50093aaca7c4cb1d3ee40"
+)
 CORE_CAPTURE_GRAVITY_BIAS_TRANSITIVE_CALLGRAPH_SHA256 = (
-    "122899a2db90050b4f7adbb603d5b726340429a1ab992e9a3cbc0eef4cd7649a"
+    "89f5970cfbcda100a50960795804ee49a39cb8460228e257860caf92e6b7dddf"
+)
+CORE_CAPTURE_GRAVITY_BIAS_TRANSITIVE_BYTECODE_SHA256 = (
+    "68c9a2fcd64d81913582b74fbf9bca53b697c1a0eb091257d6ad5caa79bcddf1"
 )
 CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY = {
     "schema_version": "1.0",
     "audited_functions": [
+        "_current_core_capture_route_identity_preimage",
+        "_current_core_capture_gravity_bias_formula",
+        "_current_core_capture_gravity_bias_guard_thresholds",
+        "_core_capture_gravity_bias_model_digests",
+        "_core_capture_move_actions",
         "_move_action_desired_q",
         "_forward_scratch_arm_configuration",
         "_core_capture_gravity_bias_control",
+        "_current_core_capture_gravity_bias_lightweight_identity_snapshot",
+        "_core_capture_gravity_bias_prewrite_snapshot",
         "MatchaWorkflowController._command_move",
     ],
     "allowed_direct_mujoco_calls": [
@@ -861,11 +935,18 @@ CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY = {
         "self.data.qvel",
     ],
     "command_branch_live_state_policy": (
-        "live_qpos_qvel_reads_only_after_control_evaluation;no_assignment"
+        "outer_live_qpos_qvel_snapshots_before_and_after_evaluator;"
+        "evaluator_receives_no_live_MjData;no_live_assignment"
     ),
 }
 CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY_SHA256 = (
-    "a37f23d5febca6be18c72cd00dbdeb4f03a44b6aa803a5f128cfa98b15b0e407"
+    "40995993893abbd315a2c95806291116f0a641bb6e8db54fbb576b6a08477d1f"
+)
+CORE_CAPTURE_MOVE_ACTION_ROSTER_SHA256 = (
+    "563c827f618b8ff51649272db1c41d3949b55df93908a4f9b218f9c7aeead271"
+)
+CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_SHA256 = (
+    "0bc63776a5a71bae5b3ba0786f2851ff461bd82bf7126b3a37b6ada632187a22"
 )
 CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_PREIMAGE = {
     "robot_xml_sha256": CORE_CAPTURE_ROBOT_XML_SHA256,
@@ -902,10 +983,50 @@ CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_PREIMAGE = {
     "transitive_callgraph_sha256": (
         CORE_CAPTURE_GRAVITY_BIAS_TRANSITIVE_CALLGRAPH_SHA256
     ),
+    "transitive_bytecode_sha256": (
+        CORE_CAPTURE_GRAVITY_BIAS_TRANSITIVE_BYTECODE_SHA256
+    ),
     "ast_policy_sha256": CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY_SHA256,
+    "lightweight_identity_sha256": (
+        CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_SHA256
+    ),
 }
 CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_SHA256 = (
-    "6d1562adc58501f6db1d69c6037b4a5bc1ded0775150b7d376c4bc440f8236f5"
+    "6337ad59be6d90d8e9c72211ee6cd6f5305361dbb0dedafaa89492a972c5c003"
+)
+
+# These private literals are the immutable runtime comparison authority.  A
+# caller mutating a public contract object and its advertised SHA together
+# must still fail before a capture control is evaluated or written.
+_FROZEN_CORE_CAPTURE_ROUTE_IDENTITY_SHA256 = (
+    "6451fadc64d30fb64523671d7568e4912d7631026c0be8dc336a55d995e7c283"
+)
+_FROZEN_CORE_CAPTURE_DESIRED_START_Q_SHA256 = (
+    "fa630130c3e7a911e81bb01c681ee82a070569256a317cbb8a9474fe441df668"
+)
+_FROZEN_CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256 = (
+    "a84c10e16c890b5e1ee4e4479c0d15d7e07a75f2afae17c62e639e8adc55cc27"
+)
+_FROZEN_CORE_CAPTURE_GRAVITY_BIAS_GUARDS_SHA256 = (
+    "a30d3c871580b36a8f18eca6f07b6d4e5eee34cbecf50093aaca7c4cb1d3ee40"
+)
+_FROZEN_CORE_CAPTURE_GRAVITY_BIAS_CALLGRAPH_SHA256 = (
+    "89f5970cfbcda100a50960795804ee49a39cb8460228e257860caf92e6b7dddf"
+)
+_FROZEN_CORE_CAPTURE_GRAVITY_BIAS_BYTECODE_SHA256 = (
+    "68c9a2fcd64d81913582b74fbf9bca53b697c1a0eb091257d6ad5caa79bcddf1"
+)
+_FROZEN_CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY_SHA256 = (
+    "40995993893abbd315a2c95806291116f0a641bb6e8db54fbb576b6a08477d1f"
+)
+_FROZEN_CORE_CAPTURE_MOVE_ACTION_ROSTER_SHA256 = (
+    "563c827f618b8ff51649272db1c41d3949b55df93908a4f9b218f9c7aeead271"
+)
+_FROZEN_CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_SHA256 = (
+    "0bc63776a5a71bae5b3ba0786f2851ff461bd82bf7126b3a37b6ada632187a22"
+)
+_FROZEN_CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_SHA256 = (
+    "6337ad59be6d90d8e9c72211ee6cd6f5305361dbb0dedafaa89492a972c5c003"
 )
 
 
@@ -1967,6 +2088,10 @@ def _core_capture_move_actions() -> tuple[WorkflowAction, ...]:
     )
 
 
+_CORE_CAPTURE_MOVE_ACTIONS_IMPLEMENTATION = _core_capture_move_actions
+_CORE_CAPTURE_MOVE_ACTIONS_CODE_OBJECT = _core_capture_move_actions.__code__
+
+
 def _move_action_desired_q(
     action: WorkflowAction,
     desired_start_q: np.ndarray,
@@ -1999,6 +2124,9 @@ def _move_action_desired_q(
 
 _CORE_CAPTURE_MOVE_ACTION_DESIRED_Q_IMPLEMENTATION = (
     _move_action_desired_q
+)
+_CORE_CAPTURE_MOVE_ACTION_DESIRED_Q_CODE_OBJECT = (
+    _move_action_desired_q.__code__
 )
 
 
@@ -3512,6 +3640,14 @@ def _core_capture_gravity_bias_model_digests(
     }
 
 
+_CORE_CAPTURE_GRAVITY_BIAS_MODEL_DIGESTS_IMPLEMENTATION = (
+    _core_capture_gravity_bias_model_digests
+)
+_CORE_CAPTURE_GRAVITY_BIAS_MODEL_DIGESTS_CODE_OBJECT = (
+    _core_capture_gravity_bias_model_digests.__code__
+)
+
+
 def _ast_attribute_path(node: ast.AST) -> str | None:
     """Return a dotted attribute/subscript base path when statically known."""
 
@@ -3529,6 +3665,19 @@ def _core_capture_gravity_bias_source_audit() -> dict[str, Any]:
     """Inspect the exact FF callgraph and count prohibited operations."""
 
     functions = {
+        "_current_core_capture_route_identity_preimage": (
+            _current_core_capture_route_identity_preimage
+        ),
+        "_current_core_capture_gravity_bias_formula": (
+            _current_core_capture_gravity_bias_formula
+        ),
+        "_current_core_capture_gravity_bias_guard_thresholds": (
+            _current_core_capture_gravity_bias_guard_thresholds
+        ),
+        "_core_capture_gravity_bias_model_digests": (
+            _core_capture_gravity_bias_model_digests
+        ),
+        "_core_capture_move_actions": _core_capture_move_actions,
         "_move_action_desired_q": _move_action_desired_q,
         "_forward_scratch_arm_configuration": (
             _forward_scratch_arm_configuration
@@ -3536,8 +3685,60 @@ def _core_capture_gravity_bias_source_audit() -> dict[str, Any]:
         "_core_capture_gravity_bias_control": (
             _core_capture_gravity_bias_control
         ),
+        "_current_core_capture_gravity_bias_lightweight_identity_snapshot": (
+            _current_core_capture_gravity_bias_lightweight_identity_snapshot
+        ),
+        "_core_capture_gravity_bias_prewrite_snapshot": (
+            _core_capture_gravity_bias_prewrite_snapshot
+        ),
         "MatchaWorkflowController._command_move": (
             MatchaWorkflowController._command_move
+        ),
+    }
+    frozen_functions = {
+        "_current_core_capture_route_identity_preimage": (
+            _CORE_CAPTURE_ROUTE_IDENTITY_PREIMAGE_IMPLEMENTATION,
+            _CORE_CAPTURE_ROUTE_IDENTITY_PREIMAGE_CODE_OBJECT,
+        ),
+        "_current_core_capture_gravity_bias_formula": (
+            _CORE_CAPTURE_GRAVITY_BIAS_FORMULA_BUILDER_IMPLEMENTATION,
+            _CORE_CAPTURE_GRAVITY_BIAS_FORMULA_BUILDER_CODE_OBJECT,
+        ),
+        "_current_core_capture_gravity_bias_guard_thresholds": (
+            _CORE_CAPTURE_GRAVITY_BIAS_GUARD_BUILDER_IMPLEMENTATION,
+            _CORE_CAPTURE_GRAVITY_BIAS_GUARD_BUILDER_CODE_OBJECT,
+        ),
+        "_core_capture_gravity_bias_model_digests": (
+            _CORE_CAPTURE_GRAVITY_BIAS_MODEL_DIGESTS_IMPLEMENTATION,
+            _CORE_CAPTURE_GRAVITY_BIAS_MODEL_DIGESTS_CODE_OBJECT,
+        ),
+        "_core_capture_move_actions": (
+            _CORE_CAPTURE_MOVE_ACTIONS_IMPLEMENTATION,
+            _CORE_CAPTURE_MOVE_ACTIONS_CODE_OBJECT,
+        ),
+        "_move_action_desired_q": (
+            _CORE_CAPTURE_MOVE_ACTION_DESIRED_Q_IMPLEMENTATION,
+            _CORE_CAPTURE_MOVE_ACTION_DESIRED_Q_CODE_OBJECT,
+        ),
+        "_forward_scratch_arm_configuration": (
+            _CORE_CAPTURE_GRAVITY_BIAS_FORWARD_IMPLEMENTATION,
+            _CORE_CAPTURE_GRAVITY_BIAS_FORWARD_CODE_OBJECT,
+        ),
+        "_core_capture_gravity_bias_control": (
+            _CORE_CAPTURE_GRAVITY_BIAS_CONTROL_IMPLEMENTATION,
+            _CORE_CAPTURE_GRAVITY_BIAS_CONTROL_CODE_OBJECT,
+        ),
+        "_current_core_capture_gravity_bias_lightweight_identity_snapshot": (
+            _CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_IMPLEMENTATION,
+            _CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_CODE_OBJECT,
+        ),
+        "_core_capture_gravity_bias_prewrite_snapshot": (
+            _CORE_CAPTURE_GRAVITY_BIAS_PREWRITE_IMPLEMENTATION,
+            _CORE_CAPTURE_GRAVITY_BIAS_PREWRITE_CODE_OBJECT,
+        ),
+        "MatchaWorkflowController._command_move": (
+            _CORE_CAPTURE_COMMAND_MOVE_IMPLEMENTATION,
+            _CORE_CAPTURE_COMMAND_MOVE_CODE_OBJECT,
         ),
     }
     records: list[dict[str, Any]] = []
@@ -3582,6 +3783,9 @@ def _core_capture_gravity_bias_source_audit() -> dict[str, Any]:
                 "normalized_ast_sha256": hashlib.sha256(
                     ast_dump.encode()
                 ).hexdigest(),
+                "code_object_sha256": _code_object_sha256(
+                    function.__code__
+                ),
             }
         )
         for node in ast.walk(tree):
@@ -3623,18 +3827,26 @@ def _core_capture_gravity_bias_source_audit() -> dict[str, Any]:
                     if path == "self.data.qvel":
                         counts["direct_live_qvel_write_count"] += 1
     callgraph_sha256 = _canonical_json_sha256(records)
+    bytecode_sha256 = _canonical_json_sha256(
+        [
+            {
+                "name": record["name"],
+                "code_object_sha256": record["code_object_sha256"],
+            }
+            for record in records
+        ]
+    )
     policy_sha256 = _canonical_json_sha256(
         CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY
     )
     transitive_function_bindings_match_frozen = bool(
-        _core_capture_gravity_bias_control
-        is _CORE_CAPTURE_GRAVITY_BIAS_CONTROL_IMPLEMENTATION
-        and _move_action_desired_q
-        is _CORE_CAPTURE_MOVE_ACTION_DESIRED_Q_IMPLEMENTATION
-        and _forward_scratch_arm_configuration
-        is _CORE_CAPTURE_GRAVITY_BIAS_FORWARD_IMPLEMENTATION
-        and MatchaWorkflowController._command_move
-        is _CORE_CAPTURE_COMMAND_MOVE_IMPLEMENTATION
+        list(functions) == list(frozen_functions)
+        and all(
+            function is frozen_function
+            and function.__code__ is frozen_code
+            for name, function in functions.items()
+            for frozen_function, frozen_code in (frozen_functions[name],)
+        )
     )
     passed = bool(
         not inspection_errors
@@ -3643,7 +3855,15 @@ def _core_capture_gravity_bias_source_audit() -> dict[str, Any]:
         and all(count == 0 for count in counts.values())
         and callgraph_sha256
         == CORE_CAPTURE_GRAVITY_BIAS_TRANSITIVE_CALLGRAPH_SHA256
+        and callgraph_sha256
+        == _FROZEN_CORE_CAPTURE_GRAVITY_BIAS_CALLGRAPH_SHA256
+        and bytecode_sha256
+        == CORE_CAPTURE_GRAVITY_BIAS_TRANSITIVE_BYTECODE_SHA256
+        and bytecode_sha256
+        == _FROZEN_CORE_CAPTURE_GRAVITY_BIAS_BYTECODE_SHA256
         and policy_sha256 == CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY_SHA256
+        and policy_sha256
+        == _FROZEN_CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY_SHA256
         and transitive_function_bindings_match_frozen
     )
     return {
@@ -3655,6 +3875,10 @@ def _core_capture_gravity_bias_source_audit() -> dict[str, Any]:
             CORE_CAPTURE_GRAVITY_BIAS_TRANSITIVE_CALLGRAPH_SHA256
         ),
         "observed_transitive_callgraph_sha256": callgraph_sha256,
+        "expected_transitive_bytecode_sha256": (
+            CORE_CAPTURE_GRAVITY_BIAS_TRANSITIVE_BYTECODE_SHA256
+        ),
+        "observed_transitive_bytecode_sha256": bytecode_sha256,
         "function_records": records,
         "prohibited_operation_counts": counts,
         "transitive_function_bindings_match_frozen": (
@@ -3663,6 +3887,215 @@ def _core_capture_gravity_bias_source_audit() -> dict[str, Any]:
         "inspection_errors": inspection_errors,
         "passed": passed,
     }
+
+
+_CORE_CAPTURE_GRAVITY_BIAS_SOURCE_AUDIT_IMPLEMENTATION = (
+    _core_capture_gravity_bias_source_audit
+)
+_CORE_CAPTURE_GRAVITY_BIAS_SOURCE_AUDIT_CODE_OBJECT = (
+    _core_capture_gravity_bias_source_audit.__code__
+)
+
+
+def _current_core_capture_gravity_bias_lightweight_identity_snapshot(
+) -> dict[str, Any]:
+    """Rebuild all mutable, non-model FF authority before control use."""
+
+    builder_bindings_match_frozen = bool(
+        _current_core_capture_route_identity_preimage
+        is _CORE_CAPTURE_ROUTE_IDENTITY_PREIMAGE_IMPLEMENTATION
+        and _current_core_capture_route_identity_preimage.__code__
+        is _CORE_CAPTURE_ROUTE_IDENTITY_PREIMAGE_CODE_OBJECT
+        and _current_core_capture_gravity_bias_formula
+        is _CORE_CAPTURE_GRAVITY_BIAS_FORMULA_BUILDER_IMPLEMENTATION
+        and _current_core_capture_gravity_bias_formula.__code__
+        is _CORE_CAPTURE_GRAVITY_BIAS_FORMULA_BUILDER_CODE_OBJECT
+        and _current_core_capture_gravity_bias_guard_thresholds
+        is _CORE_CAPTURE_GRAVITY_BIAS_GUARD_BUILDER_IMPLEMENTATION
+        and _current_core_capture_gravity_bias_guard_thresholds.__code__
+        is _CORE_CAPTURE_GRAVITY_BIAS_GUARD_BUILDER_CODE_OBJECT
+        and _core_capture_move_actions
+        is _CORE_CAPTURE_MOVE_ACTIONS_IMPLEMENTATION
+        and _core_capture_move_actions.__code__
+        is _CORE_CAPTURE_MOVE_ACTIONS_CODE_OBJECT
+    )
+    if not builder_bindings_match_frozen:
+        return {
+            "schema_version": "1.0",
+            "observed_identity_preimage": {},
+            "expected_identity_sha256": (
+                CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_SHA256
+            ),
+            "observed_identity_sha256": None,
+            "component_matches": {},
+            "public_objects_match_fresh_reconstruction": False,
+            "public_digests_match_private_frozen_literals": False,
+            "source_audit_binding_matches": False,
+            "builder_bindings_match_frozen": False,
+            "source_audit": {"passed": False},
+            "move_action_records": [],
+            "passed": False,
+        }
+    route_preimage = _current_core_capture_route_identity_preimage()
+    route_identity_sha256 = _canonical_json_sha256(route_preimage)
+    formula = _current_core_capture_gravity_bias_formula()
+    formula_sha256 = _canonical_json_sha256(formula)
+    guard_thresholds = _current_core_capture_gravity_bias_guard_thresholds()
+    guard_thresholds_sha256 = _canonical_json_sha256(guard_thresholds)
+    desired_start_records = {
+        name: list(values)
+        for name, values in CORE_CAPTURE_ROUTE_DESIRED_START_Q.items()
+    }
+    desired_start_sha256 = _canonical_json_sha256(desired_start_records)
+    action_records = []
+    for action in _core_capture_move_actions():
+        action_records.append(
+            {
+                "name": action.name,
+                "kind": action.kind,
+                "tool": action.tool,
+                "duration_s": action.duration_s,
+                "timeout_s": action.timeout_s,
+                "target_q": list(action.target_q or ()),
+                "joint_waypoints": [
+                    list(row) for row in action.joint_waypoints
+                ],
+            }
+        )
+    action_roster_sha256 = _canonical_json_sha256(action_records)
+    source_audit_binding_matches = bool(
+        _core_capture_gravity_bias_source_audit
+        is _CORE_CAPTURE_GRAVITY_BIAS_SOURCE_AUDIT_IMPLEMENTATION
+        and _core_capture_gravity_bias_source_audit.__code__
+        is _CORE_CAPTURE_GRAVITY_BIAS_SOURCE_AUDIT_CODE_OBJECT
+    )
+    if source_audit_binding_matches:
+        source_audit = _core_capture_gravity_bias_source_audit()
+    else:
+        source_audit = {
+            "passed": False,
+            "observed_transitive_callgraph_sha256": None,
+            "observed_transitive_bytecode_sha256": None,
+            "observed_policy_sha256": None,
+        }
+    observed_preimage = {
+        "capture_route_contract_identity_sha256": route_identity_sha256,
+        "desired_start_q_sha256": desired_start_sha256,
+        "move_action_roster_sha256": action_roster_sha256,
+        "formula_sha256": formula_sha256,
+        "guard_thresholds_sha256": guard_thresholds_sha256,
+        "transitive_callgraph_sha256": source_audit.get(
+            "observed_transitive_callgraph_sha256"
+        ),
+        "transitive_bytecode_sha256": source_audit.get(
+            "observed_transitive_bytecode_sha256"
+        ),
+        "ast_policy_sha256": source_audit.get("observed_policy_sha256"),
+        "source_audit_code_object_sha256": _code_object_sha256(
+            _core_capture_gravity_bias_source_audit.__code__
+        ),
+        "lightweight_guard_code_object_sha256": _code_object_sha256(
+            _current_core_capture_gravity_bias_lightweight_identity_snapshot.__code__
+        ),
+    }
+    observed_identity_sha256 = _canonical_json_sha256(observed_preimage)
+    public_objects_match = bool(
+        CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_DIGEST_PREIMAGE
+        == route_preimage
+        and CORE_CAPTURE_GRAVITY_BIAS_FORMULA == formula
+        and CORE_CAPTURE_GRAVITY_BIAS_GUARD_THRESHOLDS == guard_thresholds
+    )
+    public_digests_match_frozen = bool(
+        CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_SHA256
+        == _FROZEN_CORE_CAPTURE_ROUTE_IDENTITY_SHA256
+        and CORE_CAPTURE_ROUTE_DESIRED_START_Q_SHA256
+        == _FROZEN_CORE_CAPTURE_DESIRED_START_Q_SHA256
+        and CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256
+        == _FROZEN_CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256
+        and CORE_CAPTURE_GRAVITY_BIAS_GUARD_THRESHOLDS_SHA256
+        == _FROZEN_CORE_CAPTURE_GRAVITY_BIAS_GUARDS_SHA256
+        and CORE_CAPTURE_GRAVITY_BIAS_TRANSITIVE_CALLGRAPH_SHA256
+        == _FROZEN_CORE_CAPTURE_GRAVITY_BIAS_CALLGRAPH_SHA256
+        and CORE_CAPTURE_GRAVITY_BIAS_TRANSITIVE_BYTECODE_SHA256
+        == _FROZEN_CORE_CAPTURE_GRAVITY_BIAS_BYTECODE_SHA256
+        and CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY_SHA256
+        == _FROZEN_CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY_SHA256
+        and CORE_CAPTURE_MOVE_ACTION_ROSTER_SHA256
+        == _FROZEN_CORE_CAPTURE_MOVE_ACTION_ROSTER_SHA256
+        and CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_SHA256
+        == _FROZEN_CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_SHA256
+        and CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_SHA256
+        == _FROZEN_CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_SHA256
+    )
+    component_matches = {
+        "route_identity_matches": bool(
+            route_identity_sha256
+            == _FROZEN_CORE_CAPTURE_ROUTE_IDENTITY_SHA256
+        ),
+        "desired_start_q_matches": bool(
+            desired_start_sha256
+            == _FROZEN_CORE_CAPTURE_DESIRED_START_Q_SHA256
+        ),
+        "move_action_roster_matches": bool(
+            action_roster_sha256
+            == _FROZEN_CORE_CAPTURE_MOVE_ACTION_ROSTER_SHA256
+        ),
+        "formula_matches": bool(
+            formula_sha256
+            == _FROZEN_CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256
+        ),
+        "guard_thresholds_match": bool(
+            guard_thresholds_sha256
+            == _FROZEN_CORE_CAPTURE_GRAVITY_BIAS_GUARDS_SHA256
+        ),
+        "callgraph_matches": bool(
+            source_audit.get("observed_transitive_callgraph_sha256")
+            == _FROZEN_CORE_CAPTURE_GRAVITY_BIAS_CALLGRAPH_SHA256
+        ),
+        "bytecode_matches": bool(
+            source_audit.get("observed_transitive_bytecode_sha256")
+            == _FROZEN_CORE_CAPTURE_GRAVITY_BIAS_BYTECODE_SHA256
+        ),
+        "ast_policy_matches": bool(
+            source_audit.get("observed_policy_sha256")
+            == _FROZEN_CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY_SHA256
+        ),
+    }
+    passed = bool(
+        source_audit_binding_matches
+        and bool(source_audit.get("passed"))
+        and all(component_matches.values())
+        and public_objects_match
+        and public_digests_match_frozen
+        and observed_identity_sha256
+        == _FROZEN_CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_SHA256
+    )
+    return {
+        "schema_version": "1.0",
+        "observed_identity_preimage": observed_preimage,
+        "expected_identity_sha256": (
+            CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_SHA256
+        ),
+        "observed_identity_sha256": observed_identity_sha256,
+        "component_matches": component_matches,
+        "public_objects_match_fresh_reconstruction": public_objects_match,
+        "public_digests_match_private_frozen_literals": (
+            public_digests_match_frozen
+        ),
+        "source_audit_binding_matches": source_audit_binding_matches,
+        "builder_bindings_match_frozen": builder_bindings_match_frozen,
+        "source_audit": source_audit,
+        "move_action_records": action_records,
+        "passed": passed,
+    }
+
+
+_CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_IMPLEMENTATION = (
+    _current_core_capture_gravity_bias_lightweight_identity_snapshot
+)
+_CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_CODE_OBJECT = (
+    _current_core_capture_gravity_bias_lightweight_identity_snapshot.__code__
+)
 
 
 def _current_core_capture_gravity_bias_identity_snapshot(
@@ -3705,6 +4138,9 @@ def _current_core_capture_gravity_bias_identity_snapshot(
     formula_sha256 = _canonical_json_sha256(current_formula)
     guard_thresholds = _current_core_capture_gravity_bias_guard_thresholds()
     source_audit = _core_capture_gravity_bias_source_audit()
+    lightweight_identity = (
+        _current_core_capture_gravity_bias_lightweight_identity_snapshot()
+    )
     observed_preimage = {
         "robot_xml_sha256": hashlib.sha256(ROBOT_XML.read_bytes()).hexdigest(),
         "model_xml_sha256": hashlib.sha256(
@@ -3738,7 +4174,13 @@ def _current_core_capture_gravity_bias_identity_snapshot(
         "transitive_callgraph_sha256": source_audit[
             "observed_transitive_callgraph_sha256"
         ],
+        "transitive_bytecode_sha256": source_audit[
+            "observed_transitive_bytecode_sha256"
+        ],
         "ast_policy_sha256": source_audit["observed_policy_sha256"],
+        "lightweight_identity_sha256": lightweight_identity[
+            "observed_identity_sha256"
+        ],
     }
     observed_identity_sha256 = _canonical_json_sha256(observed_preimage)
     component_matches = {
@@ -3757,6 +4199,7 @@ def _current_core_capture_gravity_bias_identity_snapshot(
         all(component_matches.values())
         and public_objects_match
         and source_audit["passed"]
+        and lightweight_identity["passed"]
         and observed_identity_sha256
         == CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_SHA256
     )
@@ -3798,6 +4241,7 @@ def _current_core_capture_gravity_bias_identity_snapshot(
             ),
         },
         "source_audit": source_audit,
+        "lightweight_identity": lightweight_identity,
         "passed": passed,
     }
 
@@ -3850,10 +4294,98 @@ def actual_core_capture_gravity_bias_binding_snapshot(
     }
 
 
+def _core_capture_gravity_bias_prewrite_snapshot(
+    model: mujoco.MjModel,
+    action: WorkflowAction,
+    desired_action_start_q: np.ndarray,
+    expected_model_digests: dict[str, Any],
+) -> dict[str, Any]:
+    """Revalidate mutable capture authority before desired-q evaluation."""
+
+    lightweight_binding_is_frozen = bool(
+        _current_core_capture_gravity_bias_lightweight_identity_snapshot
+        is _CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_IMPLEMENTATION
+        and _current_core_capture_gravity_bias_lightweight_identity_snapshot.__code__
+        is _CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_CODE_OBJECT
+    )
+    if lightweight_binding_is_frozen:
+        lightweight = (
+            _current_core_capture_gravity_bias_lightweight_identity_snapshot()
+        )
+    else:
+        lightweight = {"passed": False}
+    model_digest_binding_is_frozen = bool(
+        _core_capture_gravity_bias_model_digests
+        is _CORE_CAPTURE_GRAVITY_BIAS_MODEL_DIGESTS_IMPLEMENTATION
+        and _core_capture_gravity_bias_model_digests.__code__
+        is _CORE_CAPTURE_GRAVITY_BIAS_MODEL_DIGESTS_CODE_OBJECT
+    )
+    if model_digest_binding_is_frozen:
+        observed_model_digests = _core_capture_gravity_bias_model_digests(
+            model
+        )
+    else:
+        observed_model_digests = {}
+    model_digests_match_controller_init = bool(
+        observed_model_digests == expected_model_digests
+    )
+    frozen_actions = {
+        candidate.name: candidate for candidate in _core_capture_move_actions()
+    }
+    frozen_action = frozen_actions.get(action.name)
+    action_matches_frozen = bool(
+        frozen_action is not None and action == frozen_action
+    )
+    expected_start = CORE_CAPTURE_ROUTE_DESIRED_START_Q.get(action.name)
+    desired_start = np.asarray(desired_action_start_q, dtype=np.float64)
+    desired_start_matches_frozen = bool(
+        expected_start is not None
+        and desired_start.shape == (len(ARM_JOINTS),)
+        and np.array_equal(
+            desired_start,
+            np.asarray(expected_start, dtype=np.float64),
+        )
+    )
+    passed = bool(
+        lightweight_binding_is_frozen
+        and model_digest_binding_is_frozen
+        and model_digests_match_controller_init
+        and bool(lightweight.get("passed"))
+        and action_matches_frozen
+        and desired_start_matches_frozen
+    )
+    return {
+        "schema_version": "1.0",
+        "action": action.name,
+        "lightweight_identity": lightweight,
+        "lightweight_identity_binding_matches_frozen": (
+            lightweight_binding_is_frozen
+        ),
+        "model_digest_binding_matches_frozen": (
+            model_digest_binding_is_frozen
+        ),
+        "model_digests_match_controller_init": (
+            model_digests_match_controller_init
+        ),
+        "action_matches_frozen": action_matches_frozen,
+        "desired_action_start_q_matches_frozen": (
+            desired_start_matches_frozen
+        ),
+        "passed": passed,
+    }
+
+
+_CORE_CAPTURE_GRAVITY_BIAS_PREWRITE_IMPLEMENTATION = (
+    _core_capture_gravity_bias_prewrite_snapshot
+)
+_CORE_CAPTURE_GRAVITY_BIAS_PREWRITE_CODE_OBJECT = (
+    _core_capture_gravity_bias_prewrite_snapshot.__code__
+)
+
+
 def _core_capture_gravity_bias_control(
     model: mujoco.MjModel,
     scratch_data: mujoco.MjData,
-    live_data: mujoco.MjData,
     arm_qpos_ids: np.ndarray,
     non_arm_qpos_ids: np.ndarray,
     arm_dof_ids: np.ndarray,
@@ -3863,10 +4395,6 @@ def _core_capture_gravity_bias_control(
 ) -> dict[str, Any]:
     """Evaluate positive gravity bias on private scratch state only."""
 
-    if scratch_data is live_data:
-        raise RuntimeError("gravity-bias scratch aliases live MjData")
-    live_qpos_before = np.asarray(live_data.qpos, dtype=np.float64).copy()
-    live_qvel_before = np.asarray(live_data.qvel, dtype=np.float64).copy()
     all_scratch_qvel_before = np.asarray(
         scratch_data.qvel, dtype=np.float64
     ).copy()
@@ -3898,14 +4426,6 @@ def _core_capture_gravity_bias_control(
     )
     if non_arm_qpos_after_sha256 != expected_non_arm_qpos_sha256:
         raise RuntimeError("gravity-bias scratch changed non-arm qpos")
-    live_qpos_unchanged = np.array_equal(
-        live_qpos_before, np.asarray(live_data.qpos, dtype=np.float64)
-    )
-    live_qvel_unchanged = np.array_equal(
-        live_qvel_before, np.asarray(live_data.qvel, dtype=np.float64)
-    )
-    if not (live_qpos_unchanged and live_qvel_unchanged):
-        raise RuntimeError("gravity-bias evaluation changed live state")
     qfrc_bias = np.asarray(
         scratch_data.qfrc_bias[arm_dof_ids], dtype=np.float64
     ).copy()
@@ -3933,9 +4453,6 @@ def _core_capture_gravity_bias_control(
     )
     saturation = np.not_equal(applied_control, unsaturated_control)
     return {
-        "scratch_is_distinct_from_live": True,
-        "live_qpos_unchanged": live_qpos_unchanged,
-        "live_qvel_unchanged": live_qvel_unchanged,
         "expected_non_arm_qpos_sha256": expected_non_arm_qpos_sha256,
         "observed_non_arm_qpos_before_sha256": (
             non_arm_qpos_before_sha256
@@ -3972,6 +4489,9 @@ def _core_capture_gravity_bias_control(
 
 _CORE_CAPTURE_GRAVITY_BIAS_CONTROL_IMPLEMENTATION = (
     _core_capture_gravity_bias_control
+)
+_CORE_CAPTURE_GRAVITY_BIAS_CONTROL_CODE_OBJECT = (
+    _core_capture_gravity_bias_control.__code__
 )
 
 
@@ -4125,6 +4645,9 @@ def _forward_scratch_arm_configuration(
 
 _CORE_CAPTURE_GRAVITY_BIAS_FORWARD_IMPLEMENTATION = (
     _forward_scratch_arm_configuration
+)
+_CORE_CAPTURE_GRAVITY_BIAS_FORWARD_CODE_OBJECT = (
+    _forward_scratch_arm_configuration.__code__
 )
 
 
@@ -4964,6 +5487,12 @@ class MatchaWorkflowController:
         )
         self.core_capture_gravity_bias_identity_init_binding = (
             _current_core_capture_gravity_bias_identity_snapshot(model)
+        )
+        self.core_capture_gravity_bias_lightweight_identity_init_binding = (
+            _current_core_capture_gravity_bias_lightweight_identity_snapshot()
+        )
+        self._core_capture_gravity_bias_prewrite_function = (
+            _CORE_CAPTURE_GRAVITY_BIAS_PREWRITE_IMPLEMENTATION
         )
         self._core_capture_gravity_bias_control_function = (
             _CORE_CAPTURE_GRAVITY_BIAS_CONTROL_IMPLEMENTATION
@@ -6495,7 +7024,10 @@ class MatchaWorkflowController:
         replayed_arm_fk = _core_capture_arm_fk_from_data(
             self.core_capture_gravity_bias_telemetry_fk_data
         )
-        slider_q_mm = float(cached_live["slider_q_mm"])
+        slider_qpos_address = int(
+            self.model.joint("qc_positive_lock_slider_joint").qposadr[0]
+        )
+        slider_q_mm = float(live_full_qpos[slider_qpos_address]) * 1000.0
         replayed_source_q_max_mm = _core_cam_tab_source_q_max_mm(
             max(0.0, float(replayed_arm_fk["preseat_mm"])),
             float(replayed_arm_fk["source_x_mm"]),
@@ -6512,6 +7044,12 @@ class MatchaWorkflowController:
             "action": action.name,
             "contract_identity_sha256": (
                 CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_SHA256
+            ),
+            "prewrite_identity_sha256": command[
+                "prewrite_identity_sha256"
+            ],
+            "prewrite_identity_passed": bool(
+                command["prewrite_identity_passed"]
             ),
             "command_elapsed_s": float(command["elapsed_s"]),
             "command_smooth_fraction": float(
@@ -6574,6 +7112,7 @@ class MatchaWorkflowController:
             "live_full_qvel": [
                 float(value) for value in live_full_qvel
             ],
+            "positive_lock_slider_qpos_address": slider_qpos_address,
             "tracking_error_to_desired_rad": [
                 float(value) for value in live_q - desired_q
             ],
@@ -7842,6 +8381,62 @@ class MatchaWorkflowController:
         }
 
     def _command_move(self, action: WorkflowAction, elapsed_s: float) -> None:
+        if action.name in CORE_CAPTURE_ROUTE_ACTION_NAMES:
+            if (
+                self._core_capture_gravity_bias_prewrite_function
+                is not _CORE_CAPTURE_GRAVITY_BIAS_PREWRITE_IMPLEMENTATION
+                or _core_capture_gravity_bias_prewrite_snapshot
+                is not _CORE_CAPTURE_GRAVITY_BIAS_PREWRITE_IMPLEMENTATION
+                or _core_capture_gravity_bias_prewrite_snapshot.__code__
+                is not _CORE_CAPTURE_GRAVITY_BIAS_PREWRITE_CODE_OBJECT
+            ):
+                self._abort_before_control_write(
+                    "gravity_bias_prewrite_function_binding_drift"
+                )
+                return
+            try:
+                prewrite = self._core_capture_gravity_bias_prewrite_function(
+                    self.model,
+                    action,
+                    self.desired_action_start_q,
+                    self.core_capture_gravity_bias_init_binding["observed"],
+                )
+            except Exception:
+                self._abort_before_control_write(
+                    "gravity_bias_prewrite_identity_recompute_failed"
+                )
+                return
+            if not bool(
+                self.core_capture_gravity_bias_identity_init_binding[
+                    "passed"
+                ]
+                and self.core_capture_gravity_bias_lightweight_identity_init_binding[
+                    "passed"
+                ]
+                and prewrite["passed"]
+                and prewrite["lightweight_identity"][
+                    "observed_identity_sha256"
+                ]
+                == self.core_capture_gravity_bias_lightweight_identity_init_binding[
+                    "observed_identity_sha256"
+                ]
+            ):
+                self._abort_before_control_write(
+                    "gravity_bias_prewrite_identity_invalid"
+                )
+                return
+            if (
+                self._core_capture_gravity_bias_control_function
+                is not _CORE_CAPTURE_GRAVITY_BIAS_CONTROL_IMPLEMENTATION
+                or _core_capture_gravity_bias_control
+                is not _CORE_CAPTURE_GRAVITY_BIAS_CONTROL_IMPLEMENTATION
+                or _core_capture_gravity_bias_control.__code__
+                is not _CORE_CAPTURE_GRAVITY_BIAS_CONTROL_CODE_OBJECT
+            ):
+                self._abort_before_control_write(
+                    "gravity_bias_control_function_binding_drift"
+                )
+                return
         if action.target_q is None:
             self._abort("move_missing_target")
             return
@@ -7853,31 +8448,22 @@ class MatchaWorkflowController:
         )
         self.current_move_command_smooth = float(smooth)
         if action.name in CORE_CAPTURE_ROUTE_ACTION_NAMES:
-            if not bool(
-                self.core_capture_gravity_bias_identity_init_binding[
-                    "passed"
-                ]
-            ):
+            if self.core_capture_gravity_bias_scratch_data is self.data:
                 self._abort_before_control_write(
-                    "gravity_bias_identity_invalid_at_controller_init"
+                    "gravity_bias_scratch_aliases_live_data"
                 )
                 return
-            if (
-                self._core_capture_gravity_bias_control_function
-                is not _CORE_CAPTURE_GRAVITY_BIAS_CONTROL_IMPLEMENTATION
-                or _core_capture_gravity_bias_control
-                is not _CORE_CAPTURE_GRAVITY_BIAS_CONTROL_IMPLEMENTATION
-            ):
-                self._abort_before_control_write(
-                    "gravity_bias_control_function_binding_drift"
-                )
-                return
+            live_qpos_before = np.asarray(
+                self.data.qpos, dtype=np.float64
+            ).copy()
+            live_qvel_before = np.asarray(
+                self.data.qvel, dtype=np.float64
+            ).copy()
             try:
                 gravity_bias = (
                     self._core_capture_gravity_bias_control_function(
                         self.model,
                         self.core_capture_gravity_bias_scratch_data,
-                        self.data,
                         self.arm_qpos_ids,
                         self.non_arm_qpos_ids,
                         self.arm_dof_ids,
@@ -7886,12 +8472,37 @@ class MatchaWorkflowController:
                         CORE_CAPTURE_GRAVITY_BIAS_NON_ARM_QPOS_SHA256,
                     )
                 )
-            except RuntimeError:
+            except Exception:
                 self.current_core_capture_gravity_bias_command = None
                 self._abort_before_control_write(
                     "gravity_bias_scratch_isolation_violation"
                 )
                 return
+            live_qpos_unchanged = np.array_equal(
+                live_qpos_before,
+                np.asarray(self.data.qpos, dtype=np.float64),
+            )
+            live_qvel_unchanged = np.array_equal(
+                live_qvel_before,
+                np.asarray(self.data.qvel, dtype=np.float64),
+            )
+            if not (live_qpos_unchanged and live_qvel_unchanged):
+                self.current_core_capture_gravity_bias_command = None
+                self._abort_before_control_write(
+                    "gravity_bias_evaluation_changed_live_state"
+                )
+                return
+            gravity_bias.update(
+                {
+                    "scratch_is_distinct_from_live": True,
+                    "live_qpos_unchanged": live_qpos_unchanged,
+                    "live_qvel_unchanged": live_qvel_unchanged,
+                    "prewrite_identity_sha256": prewrite[
+                        "lightweight_identity"
+                    ]["observed_identity_sha256"],
+                    "prewrite_identity_passed": bool(prewrite["passed"]),
+                }
+            )
             applied_control = np.asarray(
                 gravity_bias["applied_control_rad"], dtype=np.float64
             )
@@ -8105,6 +8716,44 @@ class MatchaWorkflowController:
         action = self.current_action
         if action is None:
             return
+        if action.name in CORE_CAPTURE_ROUTE_ACTION_NAMES:
+            if (
+                self._core_capture_gravity_bias_prewrite_function
+                is not _CORE_CAPTURE_GRAVITY_BIAS_PREWRITE_IMPLEMENTATION
+                or _core_capture_gravity_bias_prewrite_snapshot
+                is not _CORE_CAPTURE_GRAVITY_BIAS_PREWRITE_IMPLEMENTATION
+                or _core_capture_gravity_bias_prewrite_snapshot.__code__
+                is not _CORE_CAPTURE_GRAVITY_BIAS_PREWRITE_CODE_OBJECT
+            ):
+                self._abort_before_control_write(
+                    "gravity_bias_prewrite_function_binding_drift"
+                )
+                return
+            try:
+                prewrite = self._core_capture_gravity_bias_prewrite_function(
+                    self.model,
+                    action,
+                    self.desired_action_start_q,
+                    self.core_capture_gravity_bias_init_binding["observed"],
+                )
+            except Exception:
+                self._abort_before_control_write(
+                    "gravity_bias_prewrite_identity_recompute_failed"
+                )
+                return
+            if not bool(
+                prewrite["passed"]
+                and prewrite["lightweight_identity"][
+                    "observed_identity_sha256"
+                ]
+                == self.core_capture_gravity_bias_lightweight_identity_init_binding[
+                    "observed_identity_sha256"
+                ]
+            ):
+                self._abort_before_control_write(
+                    "gravity_bias_prewrite_identity_invalid"
+                )
+                return
         elapsed_s = float(self.data.time) - self.action_started_s
         if elapsed_s > action.timeout_s:
             self._abort(f"action_timeout:{action.name}")
@@ -8118,6 +8767,12 @@ class MatchaWorkflowController:
                 is not _CORE_CAPTURE_MOVE_ACTION_DESIRED_Q_IMPLEMENTATION
                 or _forward_scratch_arm_configuration
                 is not _CORE_CAPTURE_GRAVITY_BIAS_FORWARD_IMPLEMENTATION
+                or type(self)._command_move.__code__
+                is not _CORE_CAPTURE_COMMAND_MOVE_CODE_OBJECT
+                or _move_action_desired_q.__code__
+                is not _CORE_CAPTURE_MOVE_ACTION_DESIRED_Q_CODE_OBJECT
+                or _forward_scratch_arm_configuration.__code__
+                is not _CORE_CAPTURE_GRAVITY_BIAS_FORWARD_CODE_OBJECT
             )
         ):
             self._abort_before_control_write(
@@ -8360,8 +9015,6 @@ class MatchaWorkflowController:
                 gravity_bias_replay_data.qpos, dtype=np.float64
             )[self.arm_qpos_ids],
         )
-        gravity_bias_replay_live_data = mujoco.MjData(self.model)
-        initialize(self.model, gravity_bias_replay_live_data)
         telemetry_fk_data = mujoco.MjData(self.model)
         initialize(self.model, telemetry_fk_data)
         replay_non_arm_qpos_sha256 = _float64_bytes_sha256(
@@ -8411,7 +9064,6 @@ class MatchaWorkflowController:
                 self._core_capture_gravity_bias_control_function(
                 self.model,
                 gravity_bias_replay_data,
-                gravity_bias_replay_live_data,
                 self.arm_qpos_ids,
                 self.non_arm_qpos_ids,
                 self.arm_dof_ids,
@@ -8442,16 +9094,6 @@ class MatchaWorkflowController:
                     == independent_replay["saturated_by_joint"]
                     and bool(sample["any_saturation"])
                     is bool(independent_replay["any_saturation"])
-                    and sample["scratch_is_distinct_from_live"]
-                    is independent_replay["scratch_is_distinct_from_live"]
-                    and sample[
-                        "live_qpos_unchanged_during_bias_evaluation"
-                    ]
-                    is independent_replay["live_qpos_unchanged"]
-                    and sample[
-                        "live_qvel_unchanged_during_bias_evaluation"
-                    ]
-                    is independent_replay["live_qvel_unchanged"]
                     and sample["all_scratch_qvel_zero_before"]
                     is independent_replay["all_scratch_qvel_zero_before"]
                     and sample["all_scratch_qvel_zero_after"]
@@ -8460,7 +9102,12 @@ class MatchaWorkflowController:
             )
             sample_runtime_isolation_passes.append(
                 bool(
-                    sample["scratch_is_distinct_from_live"]
+                    sample["prewrite_identity_passed"]
+                    and sample["prewrite_identity_sha256"]
+                    == evidence_identity_binding[
+                        "observed_identity_preimage"
+                    ]["lightweight_identity_sha256"]
+                    and sample["scratch_is_distinct_from_live"]
                     and sample[
                         "live_qpos_unchanged_during_bias_evaluation"
                     ]
@@ -8542,7 +9189,14 @@ class MatchaWorkflowController:
                     float(sample["command_smooth_fraction"]),
                 )
             )
-            slider_q_mm = float(sample["fk"]["slider_q_mm"])
+            slider_qpos_address = int(
+                self.model.joint(
+                    "qc_positive_lock_slider_joint"
+                ).qposadr[0]
+            )
+            slider_q_mm = (
+                float(live_full_qpos[slider_qpos_address]) * 1000.0
+            )
             source_q_max_mm = _core_cam_tab_source_q_max_mm(
                 max(0.0, float(replayed_fk["preseat_mm"])),
                 float(replayed_fk["source_x_mm"]),
@@ -8601,6 +9255,8 @@ class MatchaWorkflowController:
                 and np.array_equal(
                     live_qvel, live_full_qvel[self.arm_dof_ids]
                 )
+                and int(sample["positive_lock_slider_qpos_address"])
+                == slider_qpos_address
                 and np.array_equal(
                     np.asarray(
                         sample["tracking_error_to_desired_rad"],
@@ -9828,6 +10484,9 @@ class MatchaWorkflowController:
 
 _CORE_CAPTURE_COMMAND_MOVE_IMPLEMENTATION = (
     MatchaWorkflowController._command_move
+)
+_CORE_CAPTURE_COMMAND_MOVE_CODE_OBJECT = (
+    MatchaWorkflowController._command_move.__code__
 )
 
 
