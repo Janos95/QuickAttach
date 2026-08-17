@@ -640,6 +640,77 @@ def box_triangles(
     return np.ascontiguousarray(vertices[faces], dtype=np.float64)
 
 
+def cylinder_triangles(
+    radius: float, height: float, segments: int = 48
+) -> np.ndarray:
+    """Closed, consistently oriented cylindrical triangle surface in millimetres."""
+
+    triangles: list[np.ndarray] = []
+    lower_center = np.asarray([0.0, 0.0, 0.0])
+    upper_center = np.asarray([0.0, 0.0, height])
+    for index in range(segments):
+        angle_a = 2.0 * math.pi * index / segments
+        angle_b = 2.0 * math.pi * (index + 1) / segments
+        lower_a = np.asarray(
+            [radius * math.cos(angle_a), radius * math.sin(angle_a), 0.0]
+        )
+        lower_b = np.asarray(
+            [radius * math.cos(angle_b), radius * math.sin(angle_b), 0.0]
+        )
+        upper_a = lower_a + upper_center
+        upper_b = lower_b + upper_center
+        triangles.extend(
+            (
+                np.asarray([lower_a, lower_b, upper_b]),
+                np.asarray([lower_a, upper_b, upper_a]),
+                np.asarray([upper_center, upper_a, upper_b]),
+                np.asarray([lower_center, lower_b, lower_a]),
+            )
+        )
+    return np.ascontiguousarray(triangles, dtype=np.float64)
+
+
+def annular_cylinder_triangles(
+    inner_radius: float, outer_radius: float, height: float, segments: int = 48
+) -> np.ndarray:
+    """Closed tube surface whose axial functional opening remains explicit."""
+
+    triangles: list[np.ndarray] = []
+    upper_offset = np.asarray([0.0, 0.0, height])
+    for index in range(segments):
+        angle_a = 2.0 * math.pi * index / segments
+        angle_b = 2.0 * math.pi * (index + 1) / segments
+        outer_a = np.asarray(
+            [outer_radius * math.cos(angle_a), outer_radius * math.sin(angle_a), 0.0]
+        )
+        outer_b = np.asarray(
+            [outer_radius * math.cos(angle_b), outer_radius * math.sin(angle_b), 0.0]
+        )
+        inner_a = np.asarray(
+            [inner_radius * math.cos(angle_a), inner_radius * math.sin(angle_a), 0.0]
+        )
+        inner_b = np.asarray(
+            [inner_radius * math.cos(angle_b), inner_radius * math.sin(angle_b), 0.0]
+        )
+        outer_a_top, outer_b_top = outer_a + upper_offset, outer_b + upper_offset
+        inner_a_top, inner_b_top = inner_a + upper_offset, inner_b + upper_offset
+        triangles.extend(
+            (
+                # Exterior and interior walls.
+                np.asarray([outer_a, outer_b, outer_b_top]),
+                np.asarray([outer_a, outer_b_top, outer_a_top]),
+                np.asarray([inner_a, inner_a_top, inner_b_top]),
+                np.asarray([inner_a, inner_b_top, inner_b]),
+                # Top annulus (+Z) and bottom annulus (-Z).
+                np.asarray([outer_a_top, outer_b_top, inner_b_top]),
+                np.asarray([outer_a_top, inner_b_top, inner_a_top]),
+                np.asarray([outer_a, inner_b, outer_b]),
+                np.asarray([outer_a, inner_a, inner_b]),
+            )
+        )
+    return np.ascontiguousarray(triangles, dtype=np.float64)
+
+
 def point_triangle_distance(point: np.ndarray, triangle: np.ndarray) -> float:
     """Double-precision Ericson point/triangle distance reference."""
 
@@ -727,6 +798,54 @@ class FcpwFastGateContractTests(unittest.TestCase):
         )
         self.assertGreater(abs(float32_distance - expected), 1.0e-6)
 
+    def test_fcpw_batched_candidates_are_deterministic_conservative_replays(
+        self,
+    ) -> None:
+        index_type = getattr(self.authority, "_FcpwTriangleUpperBoundIndex", None)
+        self.assertIsNotNone(index_type)
+        rng = np.random.default_rng(0x5A17)
+        triangles: list[np.ndarray] = []
+        while len(triangles) < 24:
+            triangle = rng.normal(size=(3, 3))
+            doubled_area = np.linalg.norm(
+                np.cross(triangle[1] - triangle[0], triangle[2] - triangle[0])
+            )
+            if float(doubled_area) > 0.1:
+                triangles.append(triangle)
+        triangle_array = np.ascontiguousarray(triangles, dtype=np.float64)
+        points = np.ascontiguousarray(
+            np.concatenate(
+                (
+                    rng.normal(size=(47, 3)),
+                    np.asarray([[1.0e6, -2.0e6, 3.0e6]], dtype=np.float64),
+                )
+            ),
+            dtype=np.float64,
+        )
+        index = index_type(triangle_array)
+        first = np.asarray(index.distances(points), dtype=np.float64)
+        second = np.asarray(index.distances(points.copy()), dtype=np.float64)
+        self.assertEqual(first.shape, (len(points),))
+        np.testing.assert_array_equal(first, second)
+        brute_force = np.asarray(
+            [
+                min(
+                    point_triangle_distance(point, triangle)
+                    for triangle in triangle_array
+                )
+                for point in points
+            ],
+            dtype=np.float64,
+        )
+        self.assertTrue(np.all(np.isfinite(first)))
+        # FCPW selects a compiled float32 candidate, but the published result
+        # replays that original triangle in float64. A missed nearest candidate
+        # may overestimate and cause a conservative red; it may never undercut
+        # the true triangle-set distance.
+        self.assertTrue(
+            np.all(first + 1.0e-12 >= brute_force), (first, brute_force)
+        )
+
     def test_fast_gate_declares_signed_occupancy_tolerance_and_step_mesh_error(self) -> None:
         source = inspect.getsource(self.authority).lower()
         self.assertIn("fcpw", source)
@@ -805,17 +924,11 @@ class FcpwFastGateContractTests(unittest.TestCase):
         )
 
     def test_bidirectional_gate_rejects_a_filled_functional_hole(self) -> None:
-        # Four closed bars form a 2 x 2 through-opening inside a 4 x 4 frame.
-        frame = np.concatenate(
-            (
-                box_triangles((0.0, 0.0, 0.0), (4.0, 1.0, 1.0)),
-                box_triangles((0.0, 3.0, 0.0), (4.0, 4.0, 1.0)),
-                box_triangles((0.0, 1.0, 0.0), (1.0, 3.0, 1.0)),
-                box_triangles((3.0, 1.0, 0.0), (4.0, 3.0, 1.0)),
-            )
-        )
-        filled = box_triangles((0.0, 0.0, 0.0), (4.0, 4.0, 1.0))
-        certificate = self._certify(frame, filled)
+        # Both inputs are independently watertight/oriented. The only material
+        # semantic difference is that the proxy closes the source's axial bore.
+        tube = annular_cylinder_triangles(1.0, 2.0, 1.0)
+        filled = cylinder_triangles(2.0, 1.0)
+        certificate = self._certify(tube, filled)
         self.assertFalse(bool(certificate["passed"]), certificate)
         self.assertGreater(
             max(
@@ -824,6 +937,164 @@ class FcpwFastGateContractTests(unittest.TestCase):
             ),
             SURFACE_RELEASE_LIMIT_MM,
         )
+
+    def test_public_certificate_is_bidirectional_signed_and_never_release_ready(
+        self,
+    ) -> None:
+        surface = box_triangles((0.0, 0.0, 0.0), (1.0, 1.0, 1.0))
+        public = getattr(
+            self.authority, "certify_bidirectional_runtime_collision", None
+        )
+        self.assertIsNotNone(public, "public synthetic fidelity API is required")
+        certificate = public(
+            surface,
+            surface.copy(),
+            threshold_mm=SURFACE_INTERNAL_TARGET_MM,
+            source_error_mm=0.01,
+            proxy_error_mm=0.02,
+        )
+        self.assertIs(certificate.get("release_ready"), False, certificate)
+        self.assertTrue(certificate.get("passed"), certificate)
+        for topology_name in ("source_topology", "proxy_topology"):
+            topology = certificate.get(topology_name)
+            self.assertIsInstance(topology, dict, topology_name)
+            for field in (
+                "watertight",
+                "orientation_consistent",
+                "positive_volume",
+                "passed",
+            ):
+                self.assertIs(topology.get(field), True, (topology_name, topology))
+        occupancy = certificate.get("occupancy")
+        self.assertIsInstance(occupancy, dict)
+        self.assertIs(occupancy.get("signed"), True, occupancy)
+        self.assertIs(occupancy.get("union_occupancy"), True, occupancy)
+        self.assertIs(occupancy.get("passed"), True, occupancy)
+        sign_tolerance = float(occupancy["signed_distance_tolerance_mm"])
+        self.assertTrue(math.isfinite(sign_tolerance), occupancy)
+        self.assertGreaterEqual(sign_tolerance, 0.0, occupancy)
+        self.assertLessEqual(sign_tolerance, 1.0e-6, occupancy)
+        for direction_name in ("source_to_proxy", "proxy_to_source"):
+            direction = certificate.get(direction_name)
+            self.assertIsInstance(direction, dict, direction_name)
+            for field in (
+                "witness_maximum_mm",
+                "query_surface_covering_radius_mm",
+                "query_faceting_error_upper_bound_mm",
+                "target_faceting_error_upper_bound_mm",
+                "certified_upper_bound_mm",
+            ):
+                self.assertTrue(math.isfinite(float(direction[field])), field)
+                self.assertGreaterEqual(float(direction[field]), 0.0, field)
+            recomputed = sum(
+                float(direction[field])
+                for field in (
+                    "witness_maximum_mm",
+                    "query_surface_covering_radius_mm",
+                    "query_faceting_error_upper_bound_mm",
+                    "target_faceting_error_upper_bound_mm",
+                )
+            )
+            self.assertAlmostEqual(
+                float(direction["certified_upper_bound_mm"]),
+                recomputed,
+                delta=1.0e-12,
+            )
+            self.assertLessEqual(
+                float(direction["certified_upper_bound_mm"]),
+                SURFACE_INTERNAL_TARGET_MM,
+            )
+            self.assertRegex(str(direction["witness_set_sha256"]), r"^[0-9a-f]{64}$")
+            self.assertIs(direction.get("float64_candidate_replay"), True, direction)
+            self.assertIs(direction.get("passed"), True, direction)
+        self.assertAlmostEqual(
+            float(
+                certificate["source_to_proxy"][
+                    "target_faceting_error_upper_bound_mm"
+                ]
+            ),
+            0.02,
+            delta=1.0e-15,
+        )
+        self.assertAlmostEqual(
+            float(
+                certificate["source_to_proxy"][
+                    "query_faceting_error_upper_bound_mm"
+                ]
+            ),
+            0.01,
+            delta=1.0e-15,
+        )
+        self.assertAlmostEqual(
+            float(
+                certificate["proxy_to_source"][
+                    "target_faceting_error_upper_bound_mm"
+                ]
+            ),
+            0.01,
+            delta=1.0e-15,
+        )
+        self.assertAlmostEqual(
+            float(
+                certificate["proxy_to_source"][
+                    "query_faceting_error_upper_bound_mm"
+                ]
+            ),
+            0.02,
+            delta=1.0e-15,
+        )
+
+    def test_public_certificate_rejects_invalid_thresholds_and_error_bounds(
+        self,
+    ) -> None:
+        surface = box_triangles((0.0, 0.0, 0.0), (1.0, 1.0, 1.0))
+        public = getattr(
+            self.authority, "certify_bidirectional_runtime_collision", None
+        )
+        self.assertIsNotNone(public, "public synthetic fidelity API is required")
+        cases = (
+            {"threshold_mm": -0.1, "source_error_mm": 0.0, "proxy_error_mm": 0.0},
+            {"threshold_mm": math.nan, "source_error_mm": 0.0, "proxy_error_mm": 0.0},
+            {"threshold_mm": 0.34, "source_error_mm": -0.1, "proxy_error_mm": 0.0},
+            {"threshold_mm": 0.34, "source_error_mm": 0.0, "proxy_error_mm": math.inf},
+        )
+        for kwargs in cases:
+            try:
+                certificate = public(surface, surface.copy(), **kwargs)
+            except (AssertionError, RuntimeError, ValueError):
+                continue
+            self.assertIs(certificate.get("release_ready"), False, certificate)
+            self.assertFalse(bool(certificate.get("passed")), (kwargs, certificate))
+
+    def test_topology_and_sign_gate_rejects_open_or_flipped_meshes(self) -> None:
+        closed = box_triangles((0.0, 0.0, 0.0), (1.0, 1.0, 1.0))
+        open_surface = closed[1:].copy()
+        flipped = closed.copy()
+        flipped[0] = flipped[0, ::-1]
+        inside_out = closed[:, ::-1].copy()
+        public = getattr(
+            self.authority, "certify_bidirectional_runtime_collision", None
+        )
+        self.assertIsNotNone(public, "public synthetic fidelity API is required")
+        for label, proxy in (
+            ("open", open_surface),
+            ("locally_flipped", flipped),
+            ("inside_out", inside_out),
+        ):
+            try:
+                certificate = public(
+                    closed,
+                    proxy,
+                    threshold_mm=SURFACE_INTERNAL_TARGET_MM,
+                    source_error_mm=0.0,
+                    proxy_error_mm=0.0,
+                )
+            except (AssertionError, RuntimeError, ValueError):
+                continue
+            self.assertFalse(bool(certificate.get("passed")), (label, certificate))
+            topology = certificate.get("proxy_topology")
+            self.assertIsInstance(topology, dict, (label, certificate))
+            self.assertFalse(bool(topology.get("passed")), (label, topology))
 
 
 class ValidationTierContractTests(unittest.TestCase):

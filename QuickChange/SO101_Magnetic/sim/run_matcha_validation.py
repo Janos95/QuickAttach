@@ -80,6 +80,10 @@ DEVELOPMENT_TESTS = (
     ),
     qualified(
         "FcpwFastGateContractTests",
+        "test_fcpw_batched_candidates_are_deterministic_conservative_replays",
+    ),
+    qualified(
+        "FcpwFastGateContractTests",
         "test_fast_gate_declares_signed_occupancy_tolerance_and_step_mesh_error",
     ),
     qualified(
@@ -89,6 +93,18 @@ DEVELOPMENT_TESTS = (
     qualified(
         "FcpwFastGateContractTests",
         "test_bidirectional_gate_rejects_a_filled_functional_hole",
+    ),
+    qualified(
+        "FcpwFastGateContractTests",
+        "test_public_certificate_is_bidirectional_signed_and_never_release_ready",
+    ),
+    qualified(
+        "FcpwFastGateContractTests",
+        "test_public_certificate_rejects_invalid_thresholds_and_error_bounds",
+    ),
+    qualified(
+        "FcpwFastGateContractTests",
+        "test_topology_and_sign_gate_rejects_open_or_flipped_meshes",
     ),
 )
 
