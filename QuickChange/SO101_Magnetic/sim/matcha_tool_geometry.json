@@ -1,0 +1,84 @@
+{
+  "schema_version": "2.0.0-recovery",
+  "release_ready": false,
+  "units": "SI unless a key carries an _mm suffix",
+  "tool_bus_id": 7,
+  "tool_ids": {
+    "spoon": 21,
+    "whisk": 22
+  },
+  "normal_gripper_servo_id": 6,
+  "single_scene_camera": {
+    "name": "matcha_scene_camera",
+    "count": 1,
+    "position_m": [0.7, 0.0, 0.55],
+    "fovy_deg": 58.0,
+    "visibility_semantics": "object-level owner-surface visibility; not exact fiducial visibility"
+  },
+  "runtime_collision_geometry": {
+    "architecture": "compact feature-aware active primitives plus upstream calibrated link meshes",
+    "loads_exact_cad_witness_compounds": false,
+    "loads_continuous_swept_guard_as_one_mesh": false,
+    "cad_coverage_validation_required": true,
+    "runtime_proxy_is_clearance_authority": false,
+    "all_physics_substeps_contact_audited": true,
+    "rejected_architecture": "large undifferentiated CoACD part bundle"
+  },
+  "collision_clearance_authority": {
+    "development": "hash-pinned STEP-to-absolute-mesh plus FCPW bidirectional certified surface bounds",
+    "release": "continuous exact-source sweep over a lossless every-substep generalized-state trace",
+    "occt_boolean_in_fidelity_hot_path": false,
+    "occt_release_role": "optional critical-interface B-rep diagnostic only"
+  },
+  "sieve_mesh_proxy": {
+    "physical_mesh": {
+      "nominal_pitch_mm": 0.6,
+      "nominal_opening_mm": 0.45,
+      "wire_diameter_mm": 0.15,
+      "aperture_diameter_mm": 94.0,
+      "exact_product_pending": true
+    },
+    "visual": {
+      "geom_names": ["sieve_mesh_visual"],
+      "representation": "fine visual disk with documented mesh parameters"
+    },
+    "collision": {
+      "geom_names": ["sieve_mesh_collision"],
+      "representation": "thin homogenized disk",
+      "conservative": true,
+      "effective_aperture_mm": 0.0,
+      "thickness_mm": 0.3
+    }
+  },
+  "external_process_subsystems": {
+    "hot_water": {
+      "external": true,
+      "robot_spatial_transfer": false,
+      "destination": "bowl_station",
+      "deterministic_sensor_abstraction": "metered pump pulse plus outlet-proximity and mass-state guard"
+    },
+    "milk": {
+      "external": true,
+      "robot_spatial_transfer": false,
+      "destination": "bowl_station",
+      "deterministic_sensor_abstraction": "metered pump pulse plus outlet-proximity and mass-state guard"
+    }
+  },
+  "final_serving_vessel": "bowl_station",
+  "fixture_support_chains": {
+    "dock_gripper": ["dock_gripper_qc_col_dock_stop", "dock_gripper_support_collision", "matcha_floor_collision"],
+    "dock_spoon": ["dock_spoon_qc_col_dock_stop", "dock_spoon_support_collision", "matcha_floor_collision"],
+    "dock_whisk": ["dock_whisk_qc_col_dock_stop", "dock_whisk_support_collision", "matcha_floor_collision"],
+    "bowl_station": ["bowl_base_collision", "bowl_support_collision", "matcha_floor_collision"],
+    "powder_station": ["powder_canister_collision", "powder_support_collision", "matcha_floor_collision"],
+    "rinse_station": ["rinse_basin_collision", "rinse_support_collision", "matcha_floor_collision"],
+    "hot_water": ["hot_water_station_collision", "hot_water_support_collision", "matcha_floor_collision"],
+    "milk": ["milk_station_collision", "milk_support_collision", "matcha_floor_collision"]
+  },
+  "limitations": [
+    "Exact purchased sieve, bellows, tubing, nozzle, and latch hardware geometry remains pending fabrication selection.",
+    "Fluid particles are not simulated; water and milk are deterministic external pump state handoffs guarded by physical outlet geometry.",
+    "Runtime collision proxies are dynamics guards, not the release clearance authority.",
+    "A release-ready report, nominal trace, video, and publication manifest have not yet been regenerated after workspace recovery."
+  ]
+}
