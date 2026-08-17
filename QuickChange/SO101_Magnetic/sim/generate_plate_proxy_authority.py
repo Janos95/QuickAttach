@@ -39,8 +39,6 @@ import numpy as np
 from generate_matcha_payload_proxy_report import (
     FCPW_REQUIRED_VERSION,
     _FcpwTriangleUpperBoundIndex,
-    _point_triangle_distance_float64,
-    _subdivided_surface_witnesses,
     _surface_topology,
 )
 
@@ -59,12 +57,18 @@ ABSOLUTE_TESSELLATION_REQUEST_MM = 0.005
 SOURCE_FACETING_BOUND_MM = 0.010
 ANGULAR_DEFLECTION_RAD = 0.15
 BOUNDARY_THRESHOLD_MM = 0.35
+INTERNAL_BOUNDARY_TARGET_MM = 0.34
 FCPW_FLOAT_GUARD_MM = 2.0e-5
 SOURCE_WITNESS_COVERING_RADIUS_MM = 0.080
 MAX_OCTREE_DEPTH = 10
 MAX_FRONTIER_CELLS = 3_000_000
 QUERY_CHUNK_SIZE = 250_000
 MAX_PROXY_BOXES_AFTER_MERGE = 100_000
+TARGETED_SEED_DISTANCE_MM = INTERNAL_BOUNDARY_TARGET_MM - SOURCE_FACETING_BOUND_MM
+TARGETED_REFINEMENT_RADIUS_MM = 0.10
+TARGETED_MAX_CELL_EDGE_MM = 0.0625
+MAX_TARGETED_FRONTIER_CELLS = 3_000_000
+MAX_ADAPTIVE_SURFACE_PATCHES = 3_000_000
 FRAME_POSITION_TOLERANCE_MM = 1.0e-12
 
 
@@ -91,6 +95,12 @@ class OctreeParameters:
     query_chunk_size: int = QUERY_CHUNK_SIZE
     max_frontier_cells: int = MAX_FRONTIER_CELLS
     max_proxy_boxes_after_merge: int = MAX_PROXY_BOXES_AFTER_MERGE
+    internal_boundary_target_mm: float = INTERNAL_BOUNDARY_TARGET_MM
+    targeted_seed_distance_mm: float = TARGETED_SEED_DISTANCE_MM
+    targeted_refinement_radius_mm: float = TARGETED_REFINEMENT_RADIUS_MM
+    targeted_max_cell_edge_mm: float = TARGETED_MAX_CELL_EDGE_MM
+    max_targeted_frontier_cells: int = MAX_TARGETED_FRONTIER_CELLS
+    max_adaptive_surface_patches: int = MAX_ADAPTIVE_SURFACE_PATCHES
 
     def validate(self) -> None:
         if self.maximum_depth < 1 or self.maximum_depth > 16:
@@ -100,6 +110,10 @@ class OctreeParameters:
             "source_faceting_bound_mm",
             "fcpw_float_guard_mm",
             "source_witness_covering_radius_mm",
+            "internal_boundary_target_mm",
+            "targeted_seed_distance_mm",
+            "targeted_refinement_radius_mm",
+            "targeted_max_cell_edge_mm",
         ):
             value = float(getattr(self, name))
             if not math.isfinite(value) or value <= 0.0:
@@ -114,10 +128,22 @@ class OctreeParameters:
             raise ValueError("source faceting allowance cannot be weakened")
         if self.fcpw_float_guard_mm < FCPW_FLOAT_GUARD_MM - 1.0e-12:
             raise ValueError("FCPW numeric guard cannot be weakened")
+        if self.internal_boundary_target_mm > INTERNAL_BOUNDARY_TARGET_MM + 1.0e-12:
+            raise ValueError("internal boundary target cannot be weakened")
+        if self.internal_boundary_target_mm >= self.boundary_threshold_mm:
+            raise ValueError("internal boundary target must be below release threshold")
+        if self.targeted_seed_distance_mm > (
+            self.internal_boundary_target_mm - self.source_faceting_bound_mm
+        ) + 1.0e-12:
+            raise ValueError("targeted seed distance leaves an unguarded source witness")
+        if self.targeted_max_cell_edge_mm >= 0.10:
+            raise ValueError("targeted sub-leaf edge must remain below 0.10 mm")
         if self.query_chunk_size < 1 or self.max_frontier_cells < 8:
             raise ValueError("invalid bounded-work parameters")
         if self.max_proxy_boxes_after_merge < 1:
             raise ValueError("proxy box cap must be positive")
+        if self.max_targeted_frontier_cells < 8 or self.max_adaptive_surface_patches < 8:
+            raise ValueError("targeted work caps must be positive")
 
 
 def _sha256(path: Path) -> str:
@@ -374,6 +400,58 @@ class SignedFcpwMesh:
             np.concatenate(upper_parts) if upper_parts else np.empty(0),
         )
 
+    def distance_bounds(
+        self,
+        points: np.ndarray,
+        *,
+        chunk_size: int = QUERY_CHUNK_SIZE,
+        numeric_guard_mm: float = FCPW_FLOAT_GUARD_MM,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Return conservative float64-source distance bounds without winding.
+
+        Source-surface covering checks need only unsigned distance.  Avoiding
+        ``contains`` here is important because a proxy is an exact union of
+        boxes whose triangle soup deliberately retains coincident internal
+        faces; those faces are valid distance authority but not a winding
+        surface, and one winding query per adaptive patch is wasted work.
+        """
+
+        query = np.asarray(points, dtype=np.float64)
+        if query.ndim != 2 or query.shape[1] != 3 or not np.all(np.isfinite(query)):
+            raise ValueError("query points must be finite (N,3)")
+        guard = float(numeric_guard_mm)
+        if not math.isfinite(guard) or guard < FCPW_FLOAT_GUARD_MM - 1.0e-12:
+            raise ValueError("FCPW numeric guard cannot be weakened")
+        lower_parts: list[np.ndarray] = []
+        upper_parts: list[np.ndarray] = []
+        for offset in range(0, len(query), int(chunk_size)):
+            original = query[offset : offset + int(chunk_size)]
+            query32 = np.asfortranarray(original, dtype=np.float32)
+            squared_radii = np.full(
+                len(query32), np.finfo(np.float32).max, dtype=np.float32
+            )
+            interactions = fcpw.interaction_3D_list()
+            self.scene.find_closest_points(
+                query32, squared_radii, interactions, False
+            )
+            if len(interactions) != len(query32):
+                raise RuntimeError("FCPW closest-point batch is incomplete")
+            distances = np.fromiter(
+                (float(interaction.d) for interaction in interactions),
+                dtype=np.float64,
+                count=len(interactions),
+            )
+            query_cast_error = np.linalg.norm(
+                original - query32.astype(np.float64), axis=1
+            )
+            total_error = query_cast_error + self.mesh_cast_error_mm + guard
+            lower_parts.append(np.maximum(0.0, distances - total_error))
+            upper_parts.append(distances + total_error)
+        return (
+            np.concatenate(lower_parts) if lower_parts else np.empty(0),
+            np.concatenate(upper_parts) if upper_parts else np.empty(0),
+        )
+
 
 def _power_of_two_extent(extent: np.ndarray) -> np.ndarray:
     if np.any(extent <= 0.0):
@@ -491,6 +569,338 @@ def _integer_boxes_to_mm(
     return result
 
 
+def _proxy_point_distances_float64(
+    boxes_mm: np.ndarray,
+    points_mm: np.ndarray,
+    *,
+    chunk_size: int = 100_000,
+) -> np.ndarray:
+    """Return conservative point-to-box-union upper bounds in float64."""
+
+    index = _FcpwTriangleUpperBoundIndex(_proxy_triangle_mesh(boxes_mm))
+    points = np.asarray(points_mm, dtype=np.float64)
+    parts = [
+        index.distances(points[offset : offset + chunk_size])
+        for offset in range(0, len(points), chunk_size)
+    ]
+    return np.concatenate(parts) if parts else np.empty(0, dtype=np.float64)
+
+
+def _scan_source_patches_for_undercoverage(
+    source_triangles: np.ndarray,
+    boxes_mm: np.ndarray,
+    parameters: OctreeParameters,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Partition the complete surface into certified-safe or definite-red patches.
+
+    Safe leaves use an upper distance plus their physical covering radius.
+    Refinement seeds use a lower distance, so float32/FCPW rounding cannot
+    hide a certificate-red patch.  ``red`` here means that the current
+    conservative mesh-plus-faceting inequality cannot pass, not that a point
+    of the underlying B-rep has independently been proved farther away.
+    Ambiguous patches alone receive longest-edge splits.
+    """
+
+    proxy = SignedFcpwMesh(_proxy_triangle_mesh(boxes_mm))
+    pending = np.ascontiguousarray(source_triangles, dtype=np.float64)
+    red_parts: list[np.ndarray] = []
+    digest = hashlib.sha256()
+    safe_leaf_count = 0
+    red_leaf_count = 0
+    maximum_safe_upper = 0.0
+    maximum_red_lower = 0.0
+    worst_red_point: list[float] | None = None
+    iterations: list[dict[str, Any]] = []
+    for iteration in range(48):
+        if not len(pending):
+            break
+        if safe_leaf_count + red_leaf_count + len(pending) > parameters.max_adaptive_surface_patches:
+            raise RuntimeError("adaptive source scan exceeded fail-closed patch cap")
+        centroids = np.mean(pending, axis=1)
+        radii = np.max(
+            np.linalg.norm(pending - centroids[:, None, :], axis=2), axis=1
+        )
+        distance_lower, distance_upper = proxy.distance_bounds(
+            centroids,
+            chunk_size=parameters.query_chunk_size,
+            numeric_guard_mm=parameters.fcpw_float_guard_mm,
+        )
+        safe_upper = (
+            distance_upper + radii + parameters.source_faceting_bound_mm
+        )
+        red_lower = distance_lower + parameters.source_faceting_bound_mm
+        safe = safe_upper <= parameters.internal_boundary_target_mm + 1.0e-12
+        red = red_lower > parameters.internal_boundary_target_mm + 1.0e-12
+        if np.any(safe & red):
+            raise RuntimeError("source patch classified simultaneously safe and red")
+        ambiguous = ~(safe | red)
+        if np.any(safe):
+            safe_centroids = np.ascontiguousarray(centroids[safe], dtype="<f8")
+            safe_radii = np.ascontiguousarray(radii[safe], dtype="<f8")
+            safe_distances = np.ascontiguousarray(distance_upper[safe], dtype="<f8")
+            digest.update(b"safe")
+            digest.update(safe_centroids.tobytes())
+            digest.update(safe_radii.tobytes())
+            digest.update(safe_distances.tobytes())
+            safe_leaf_count += int(np.count_nonzero(safe))
+            maximum_safe_upper = max(
+                maximum_safe_upper, float(np.max(safe_upper[safe]))
+            )
+        if np.any(red):
+            selected = np.ascontiguousarray(pending[red])
+            red_parts.append(selected)
+            digest.update(b"red")
+            digest.update(np.ascontiguousarray(centroids[red], dtype="<f8").tobytes())
+            digest.update(np.ascontiguousarray(distance_lower[red], dtype="<f8").tobytes())
+            red_leaf_count += len(selected)
+            local = int(np.argmax(red_lower[red]))
+            local_value = float(red_lower[red][local])
+            if local_value > maximum_red_lower:
+                maximum_red_lower = local_value
+                worst_red_point = centroids[red][local].tolist()
+        iterations.append(
+            {
+                "iteration": iteration,
+                "evaluated_patch_count": len(pending),
+                "certified_safe_patch_count": int(np.count_nonzero(safe)),
+                "certificate_red_patch_count": int(np.count_nonzero(red)),
+                "ambiguous_refined_patch_count": int(np.count_nonzero(ambiguous)),
+                "maximum_safe_candidate_bound_mm": float(np.max(safe_upper)),
+                "maximum_certificate_red_lower_plus_faceting_mm": float(
+                    np.max(red_lower)
+                ),
+            }
+        )
+        uncertain = pending[ambiguous]
+        if not len(uncertain):
+            pending = np.empty((0, 3, 3), dtype=np.float64)
+            break
+        if (
+            safe_leaf_count + red_leaf_count + 2 * len(uncertain)
+            > parameters.max_adaptive_surface_patches
+        ):
+            raise RuntimeError(
+                "adaptive source scan cannot resolve safe/red patches under cap"
+            )
+        pending = _split_triangle_longest_edge(uncertain)
+    if len(pending):
+        raise RuntimeError("adaptive source scan did not terminate")
+    red_patches = (
+        np.concatenate(red_parts, axis=0)
+        if red_parts
+        else np.empty((0, 3, 3), dtype=np.float64)
+    )
+    result = {
+        "method": (
+            "adaptive_longest_edge_complete_source_cover_with_"
+            "FCPW_lower_red_and_upper_plus_radius_safe_bounds"
+        ),
+        "internal_boundary_target_mm": parameters.internal_boundary_target_mm,
+        "complete_surface_partition": True,
+        "certified_safe_patch_count": safe_leaf_count,
+            "certificate_red_patch_count": red_leaf_count,
+        "maximum_certified_safe_upper_mm": maximum_safe_upper,
+            "maximum_certificate_red_lower_plus_faceting_mm": maximum_red_lower,
+            "worst_certificate_red_point_mm": worst_red_point,
+        "partition_sha256": digest.hexdigest(),
+        "iteration_records": iterations,
+        "passed": red_leaf_count == 0,
+    }
+    return red_patches, result
+
+
+def _finite_certificate_red_seed_patches(
+    source_triangles: np.ndarray,
+    boxes_mm: np.ndarray,
+    parameters: OctreeParameters,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Return cheap, conservative refinement seeds before the complete cover.
+
+    Vertices and centroids are not a surface certificate.  They are used only
+    to avoid spending the complete adaptive-cover budget subdividing broad
+    regions already known to fail the conservative distance-plus-faceting
+    inequality.  FCPW lower bounds ensure numeric error cannot manufacture a
+    red seed.
+    """
+
+    probes = np.concatenate(
+        (source_triangles, np.mean(source_triangles, axis=1)[:, None, :]), axis=1
+    )
+    proxy = SignedFcpwMesh(_proxy_triangle_mesh(boxes_mm))
+    lower, _ = proxy.distance_bounds(
+        probes.reshape(-1, 3),
+        chunk_size=parameters.query_chunk_size,
+        numeric_guard_mm=parameters.fcpw_float_guard_mm,
+    )
+    lower = lower.reshape(len(source_triangles), 4)
+    maxima = np.max(lower + parameters.source_faceting_bound_mm, axis=1)
+    selected = maxima > parameters.internal_boundary_target_mm + 1.0e-12
+    worst_triangle = int(np.argmax(maxima))
+    worst_probe = int(np.argmax(lower[worst_triangle]))
+    patches = np.ascontiguousarray(source_triangles[selected])
+    record = {
+        "method": (
+            "source_triangle_vertices_and_centroid_FCPW_lower_bound_plus_"
+            "faceting_refinement_seed_only"
+        ),
+        "triangle_count": len(source_triangles),
+        "probe_count": int(probes.shape[0] * probes.shape[1]),
+        "selected_triangle_count": len(patches),
+        "selected_triangle_mask_sha256": hashlib.sha256(
+            np.ascontiguousarray(selected, dtype=np.uint8).tobytes()
+        ).hexdigest(),
+        "maximum_lower_plus_faceting_mm": float(maxima[worst_triangle]),
+        "worst_triangle_index": worst_triangle,
+        "worst_probe_index": worst_probe,
+        "worst_probe_point_mm": probes[worst_triangle, worst_probe].tolist(),
+        "finite_seed_is_not_a_complete_surface_certificate": True,
+        "passed": True,
+    }
+    return patches, record
+
+
+def _cells_near_triangle_patches(
+    unresolved_mm: np.ndarray,
+    selected_patches: np.ndarray,
+    radius_mm: float,
+) -> np.ndarray:
+    """Return cells intersecting deterministic expanded red-patch AABBs."""
+
+    if not len(selected_patches):
+        return np.zeros(len(unresolved_mm), dtype=bool)
+    patches = np.asarray(selected_patches, dtype=np.float64)
+    patch_low = np.min(patches, axis=1) - radius_mm
+    patch_high = np.max(patches, axis=1) + radius_mm
+    selected = np.zeros(len(unresolved_mm), dtype=bool)
+    # Avoid an unbounded cells x patches tensor.  AABB intersection is a
+    # conservative neighborhood selector; it is not a subset proof.
+    for cell_offset in range(0, len(unresolved_mm), 50_000):
+        cells = unresolved_mm[cell_offset : cell_offset + 50_000]
+        hit = np.zeros(len(cells), dtype=bool)
+        for patch_offset in range(0, len(patch_low), 256):
+            low = patch_low[patch_offset : patch_offset + 256]
+            high = patch_high[patch_offset : patch_offset + 256]
+            hit |= np.any(
+                np.all(cells[:, None, 1, :] >= low[None, :, :], axis=2)
+                & np.all(cells[:, None, 0, :] <= high[None, :, :], axis=2),
+                axis=1,
+            )
+            if np.all(hit):
+                break
+        selected[cell_offset : cell_offset + len(cells)] = hit
+    return selected
+
+
+def _split_integer_records(records: np.ndarray) -> np.ndarray:
+    children: list[np.ndarray] = []
+    for record in records:
+        widths = record[[1, 3, 5]] - record[[0, 2, 4]]
+        if np.any(widths <= 1) or not np.all(widths == widths[0]):
+            raise RuntimeError("targeted refinement received a non-octree cell")
+        child_units = int(widths[0] // 2)
+        start = record[[0, 2, 4]]
+        child_starts = _split_starts(start[None, :], child_units)
+        ends = child_starts + child_units
+        children.append(
+            np.column_stack(
+                (
+                    child_starts[:, 0], ends[:, 0],
+                    child_starts[:, 1], ends[:, 1],
+                    child_starts[:, 2], ends[:, 2],
+                )
+            ).astype(np.int32, copy=False)
+        )
+    return np.concatenate(children, axis=0) if children else np.empty((0, 6), dtype=np.int32)
+
+
+def _targeted_refine_cells(
+    source_triangles: np.ndarray,
+    selected_records: np.ndarray,
+    *,
+    root_min: np.ndarray,
+    leaf_size: np.ndarray,
+    parameters: OctreeParameters,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, dict[str, Any]]:
+    """Refine selected unresolved cells with the unchanged subset inequality."""
+
+    source = SignedFcpwMesh(source_triangles)
+    frontier = np.ascontiguousarray(selected_records, dtype=np.int32)
+    accepted_parts: list[np.ndarray] = []
+    margin_parts: list[np.ndarray] = []
+    unresolved_parts: list[np.ndarray] = []
+    iterations: list[dict[str, Any]] = []
+    for iteration in range(parameters.maximum_depth + 2):
+        if not len(frontier):
+            break
+        if len(frontier) > parameters.max_targeted_frontier_cells:
+            raise RuntimeError("targeted refinement exceeded its fail-closed cell cap")
+        lows = root_min + frontier[:, (0, 2, 4)] * leaf_size
+        highs = root_min + frontier[:, (1, 3, 5)] * leaf_size
+        centers = (lows + highs) / 2.0
+        half_diagonals = np.linalg.norm((highs - lows) / 2.0, axis=1)
+        maximum_edges = np.max(highs - lows, axis=1)
+        inside, distance_lower, _ = source.query(
+            centers,
+            chunk_size=parameters.query_chunk_size,
+            numeric_guard_mm=parameters.fcpw_float_guard_mm,
+        )
+        margins = (
+            distance_lower
+            - half_diagonals
+            - parameters.source_faceting_bound_mm
+        )
+        safe = margins > 0.0
+        accept = safe & inside
+        outside = safe & ~inside
+        terminal = (~safe) & (
+            maximum_edges <= parameters.targeted_max_cell_edge_mm + 1.0e-12
+        )
+        refine = ~(accept | outside | terminal)
+        if np.any(accept):
+            accepted_parts.append(frontier[accept])
+            margin_parts.append(margins[accept])
+        if np.any(terminal):
+            unresolved_parts.append(frontier[terminal])
+        iterations.append(
+            {
+                "iteration": iteration,
+                "evaluated_cell_count": len(frontier),
+                "accepted_cell_count": int(np.count_nonzero(accept)),
+                "outside_cell_count": int(np.count_nonzero(outside)),
+                "terminal_unresolved_cell_count": int(np.count_nonzero(terminal)),
+                "refined_cell_count": int(np.count_nonzero(refine)),
+                "maximum_cell_edge_mm": float(np.max(maximum_edges)),
+            }
+        )
+        frontier = _split_integer_records(frontier[refine])
+    if len(frontier):
+        raise RuntimeError("targeted refinement did not close")
+    accepted = (
+        np.concatenate(accepted_parts, axis=0)
+        if accepted_parts
+        else np.empty((0, 6), dtype=np.int32)
+    )
+    margins = (
+        np.concatenate(margin_parts)
+        if margin_parts
+        else np.empty(0, dtype=np.float64)
+    )
+    unresolved = (
+        np.concatenate(unresolved_parts, axis=0)
+        if unresolved_parts
+        else np.empty((0, 6), dtype=np.int32)
+    )
+    return accepted, margins, unresolved, {
+        "method": "targeted_isotropic_octree_same_signed_distance_Lipschitz_subset",
+        "target_maximum_cell_edge_mm": parameters.targeted_max_cell_edge_mm,
+        "input_unresolved_cell_count": len(selected_records),
+        "new_accepted_cell_count": len(accepted),
+        "terminal_unresolved_cell_count": len(unresolved),
+        "iterations": iterations,
+        "passed": True,
+    }
+
+
 def build_adaptive_subset_boxes(
     triangles: np.ndarray,
     parameters: OctreeParameters,
@@ -605,7 +1015,138 @@ def build_adaptive_subset_boxes(
     if np.any(boundary_bounds > parameters.boundary_threshold_mm + 1.0e-12):
         raise RuntimeError("maximum depth leaves an uncertified boundary interval")
 
-    merged, merged_margins, merge_record = greedy_merge_boxes(accepted, margins)
+    first_merged, first_merged_margins, first_merge_record = greedy_merge_boxes(
+        accepted, margins
+    )
+    first_boxes_mm = _integer_boxes_to_mm(first_merged, root_min, leaf_size)
+    first_unresolved_mm = _integer_boxes_to_mm(unresolved, root_min, leaf_size)
+    targeted_passes: list[dict[str, Any]] = []
+    total_selected_unresolved = 0
+    merged, merged_margins, merge_record = (
+        first_merged, first_merged_margins, first_merge_record
+    )
+    boxes_mm = first_boxes_mm
+    final_surface_scan: dict[str, Any] | None = None
+
+    # Close the broad, cheap finite-witness reds before asking the complete
+    # adaptive surface partition to spend its bounded patch budget near the
+    # final 0.34 mm frontier.  This pass is explicitly not clearance authority.
+    seed_patches, seed_record = _finite_certificate_red_seed_patches(
+        triangles, boxes_mm, parameters
+    )
+    seed_pass: dict[str, Any] = {
+        "pass_index": 0,
+        "mode": "finite_certificate_red_seed_prepass",
+        "seed_record": seed_record,
+    }
+    if len(seed_patches):
+        selected_mask = _cells_near_triangle_patches(
+            first_unresolved_mm,
+            seed_patches,
+            parameters.targeted_refinement_radius_mm,
+        )
+        selected_count = int(np.count_nonzero(selected_mask))
+        if selected_count == 0:
+            raise RuntimeError("finite red seed patches selected no octree cells")
+        total_selected_unresolved += selected_count
+        targeted_accepted, targeted_margins, targeted_unresolved, refinement = (
+            _targeted_refine_cells(
+                triangles,
+                unresolved[selected_mask],
+                root_min=root_min,
+                leaf_size=leaf_size,
+                parameters=parameters,
+            )
+        )
+        if not len(targeted_accepted):
+            raise RuntimeError("finite seed pass added no exact-subset material")
+        accepted = np.concatenate((accepted, targeted_accepted), axis=0)
+        margins = np.concatenate((margins, targeted_margins))
+        unresolved = np.concatenate(
+            (unresolved[~selected_mask], targeted_unresolved), axis=0
+        )
+        merged, merged_margins, merge_record = greedy_merge_boxes(accepted, margins)
+        if len(merged) > parameters.max_proxy_boxes_after_merge:
+            raise RuntimeError(
+                f"targeted proxy has {len(merged)} boxes, cap is "
+                f"{parameters.max_proxy_boxes_after_merge}"
+            )
+        boxes_mm = _integer_boxes_to_mm(merged, root_min, leaf_size)
+        seed_pass["selected_unresolved_cell_count"] = selected_count
+        seed_pass["refinement"] = refinement
+        seed_pass["proxy_box_count_after_pass"] = len(merged)
+    else:
+        seed_pass["selected_unresolved_cell_count"] = 0
+        seed_pass["refinement"] = {
+            "method": "not_required_no_finite_certificate_red_seed",
+            "passed": True,
+        }
+    targeted_passes.append(seed_pass)
+
+    for adaptive_index in range(6):
+        pass_index = adaptive_index + 1
+        red_patches, surface_scan = _scan_source_patches_for_undercoverage(
+            triangles, boxes_mm, parameters
+        )
+        pass_record: dict[str, Any] = {
+            "pass_index": pass_index,
+            "mode": "complete_adaptive_surface_partition",
+            "surface_scan": surface_scan,
+        }
+        if not len(red_patches):
+            final_surface_scan = surface_scan
+            pass_record["selected_unresolved_cell_count"] = 0
+            pass_record["refinement"] = {
+                "method": "not_required_complete_surface_scan_green",
+                "passed": True,
+            }
+            targeted_passes.append(pass_record)
+            break
+        unresolved_mm_current = _integer_boxes_to_mm(
+            unresolved, root_min, leaf_size
+        )
+        selected_mask = _cells_near_triangle_patches(
+            unresolved_mm_current,
+            red_patches,
+            parameters.targeted_refinement_radius_mm,
+        )
+        selected_count = int(np.count_nonzero(selected_mask))
+        if selected_count == 0:
+            raise RuntimeError("definite red source patches selected no octree cells")
+        total_selected_unresolved += selected_count
+        targeted_accepted, targeted_margins, targeted_unresolved, refinement = (
+            _targeted_refine_cells(
+                triangles,
+                unresolved[selected_mask],
+                root_min=root_min,
+                leaf_size=leaf_size,
+                parameters=parameters,
+            )
+        )
+        if not len(targeted_accepted):
+            raise RuntimeError("targeted pass added no exact-subset material")
+        accepted = np.concatenate((accepted, targeted_accepted), axis=0)
+        margins = np.concatenate((margins, targeted_margins))
+        unresolved = np.concatenate(
+            (unresolved[~selected_mask], targeted_unresolved), axis=0
+        )
+        merged, merged_margins, merge_record = greedy_merge_boxes(accepted, margins)
+        if len(merged) > parameters.max_proxy_boxes_after_merge:
+            raise RuntimeError(
+                f"targeted proxy has {len(merged)} boxes, cap is "
+                f"{parameters.max_proxy_boxes_after_merge}"
+            )
+        boxes_mm = _integer_boxes_to_mm(merged, root_min, leaf_size)
+        pass_record["selected_unresolved_cell_count"] = selected_count
+        pass_record["red_patch_geometry_sha256"] = hashlib.sha256(
+            np.ascontiguousarray(red_patches, dtype="<f8").tobytes()
+        ).hexdigest()
+        pass_record["refinement"] = refinement
+        pass_record["proxy_box_count_after_pass"] = len(merged)
+        targeted_passes.append(pass_record)
+    if final_surface_scan is None:
+        raise RuntimeError("targeted refinement did not close source undercoverage")
+
     if len(merged) > parameters.max_proxy_boxes_after_merge:
         raise RuntimeError(
             f"merged proxy has {len(merged)} boxes, cap is "
@@ -613,6 +1154,22 @@ def build_adaptive_subset_boxes(
         )
     boxes_mm = _integer_boxes_to_mm(merged, root_min, leaf_size)
     unresolved_mm = _integer_boxes_to_mm(unresolved, root_min, leaf_size)
+    unresolved_centers = np.mean(unresolved_mm, axis=1)
+    unresolved_half_diagonals = np.linalg.norm(
+        (unresolved_mm[:, 1] - unresolved_mm[:, 0]) / 2.0, axis=1
+    )
+    _, _, unresolved_distance_upper = signed_mesh.query(
+        unresolved_centers,
+        chunk_size=parameters.query_chunk_size,
+        numeric_guard_mm=parameters.fcpw_float_guard_mm,
+    )
+    boundary_bounds = (
+        unresolved_distance_upper
+        + unresolved_half_diagonals
+        + parameters.source_faceting_bound_mm
+    )
+    if np.any(boundary_bounds > parameters.boundary_threshold_mm + 1.0e-12):
+        raise RuntimeError("targeted refinement weakened proxy boundary coverage")
     grid_limit = int(grid["grid_units_per_axis"])
     accepted_root_boundary_face_count = int(
         np.count_nonzero(
@@ -646,6 +1203,18 @@ def build_adaptive_subset_boxes(
         "proxy_box_count": len(merged),
         "proxy_integer_inventory_sha256": _canonical_sha256(integer_digest_payload),
         "merge": merge_record,
+        "first_pass": {
+            "accepted_cell_count_before_merge": first_merge_record[
+                "initial_cell_count"
+            ],
+            "proxy_box_count": len(first_merged),
+            "minimum_exact_subset_margin_mm": float(
+                np.min(first_merged_margins)
+            ),
+            "merge": first_merge_record,
+        },
+        "targeted_refinement_passes": targeted_passes,
+        "final_complete_source_surface_scan": final_surface_scan,
         "passed": True,
     }
     octree = {
@@ -656,6 +1225,8 @@ def build_adaptive_subset_boxes(
         "leaf_size_mm": leaf_size.tolist(),
         "grid_units_per_axis": grid["grid_units_per_axis"],
         "depth_records": depth_records,
+        "first_pass_unresolved_boundary_cell_count": len(first_unresolved_mm),
+        "targeted_selected_unresolved_cell_count": total_selected_unresolved,
         "outside_cell_count": outside_count,
         "unresolved_boundary_cell_count": len(unresolved),
         "unresolved_boundary_maximum_mm": float(np.max(boundary_bounds)),
@@ -673,6 +1244,9 @@ def build_adaptive_subset_boxes(
         "bounded_work": {
             "query_chunk_size": parameters.query_chunk_size,
             "max_frontier_cells": parameters.max_frontier_cells,
+            "max_targeted_frontier_cells": parameters.max_targeted_frontier_cells,
+            "max_adaptive_surface_patches": parameters.max_adaptive_surface_patches,
+            "maximum_targeted_pass_count_including_seed_prepass": 7,
             "max_proxy_boxes_after_merge": parameters.max_proxy_boxes_after_merge,
         },
         "wall_seconds_observed": time.monotonic() - started,
@@ -714,38 +1288,78 @@ def _proxy_triangle_mesh(boxes_mm: np.ndarray) -> np.ndarray:
     )
 
 
+def _split_triangle_longest_edge(triangles: np.ndarray) -> np.ndarray:
+    """Bisect each patch on its longest edge without four-way skinny growth."""
+
+    result = np.empty((2 * len(triangles), 3, 3), dtype=np.float64)
+    for index, triangle in enumerate(triangles):
+        a, b, c = triangle
+        lengths = (
+            float(np.linalg.norm(b - a)),
+            float(np.linalg.norm(c - b)),
+            float(np.linalg.norm(a - c)),
+        )
+        edge = int(np.argmax(lengths))
+        if edge == 0:
+            midpoint = (a + b) / 2.0
+            first, second = (a, midpoint, c), (midpoint, b, c)
+        elif edge == 1:
+            midpoint = (b + c) / 2.0
+            first, second = (b, midpoint, a), (midpoint, c, a)
+        else:
+            midpoint = (c + a) / 2.0
+            first, second = (c, midpoint, b), (midpoint, a, b)
+        result[2 * index] = first
+        result[2 * index + 1] = second
+    return np.ascontiguousarray(result)
+
+
+def _certificate_from_surface_scan(
+    scan: dict[str, Any], parameters: OctreeParameters
+) -> dict[str, Any]:
+    """Normalise a complete adaptive scan into the published certificate."""
+
+    certified = float(scan["maximum_certified_safe_upper_mm"])
+    return {
+        "direction": "exact_STEP_boundary_to_proxy_box_union",
+        "method": scan["method"],
+        "internal_acceptance_bound_mm": parameters.internal_boundary_target_mm,
+        "release_threshold_mm": parameters.boundary_threshold_mm,
+        "certified_safe_patch_count": scan["certified_safe_patch_count"],
+        "certificate_red_patch_count": scan["certificate_red_patch_count"],
+        "source_faceting_bound_mm": parameters.source_faceting_bound_mm,
+        "certified_upper_bound_mm": certified,
+        "complete_source_surface_partition": scan["complete_surface_partition"],
+        "surface_partition_sha256": scan["partition_sha256"],
+        "iteration_records": scan["iteration_records"],
+        "finite_witness_maximum_is_not_the_bound": True,
+        "passed": bool(
+            int(scan["certificate_red_patch_count"]) == 0
+            and scan["passed"]
+            and certified <= parameters.internal_boundary_target_mm + 1.0e-12
+            and certified <= parameters.boundary_threshold_mm + 1.0e-12
+        ),
+    }
+
+
 def certify_source_to_proxy_surface(
     source_triangles: np.ndarray,
     boxes_mm: np.ndarray,
     parameters: OctreeParameters,
 ) -> dict[str, Any]:
-    """Bound every source-surface point to the exact box union."""
+    """Adaptively cover every source triangle under the actual distance field.
 
-    proxy_triangles = _proxy_triangle_mesh(boxes_mm)
-    proxy_index = _FcpwTriangleUpperBoundIndex(proxy_triangles)
-    witnesses, covering_radius = _subdivided_surface_witnesses(
-        source_triangles, parameters.source_witness_covering_radius_mm
+    Each leaf patch publishes ``distance(centroid, proxy) + patch_radius +
+    STEP_faceting``.  Point-to-set distance is 1-Lipschitz, so this is a bound
+    for every point of that complete patch, not a finite-sample claim.  Only
+    ambiguous patches are bisected, and longest-edge bisection avoids the
+    former four-way explosion on skinny OCCT triangles.
+    """
+
+    _, scan = _scan_source_patches_for_undercoverage(
+        source_triangles, boxes_mm, parameters
     )
-    distances = proxy_index.distances(witnesses)
-    witness_maximum = float(np.max(distances))
-    certified = math.fsum(
-        (witness_maximum, covering_radius, parameters.source_faceting_bound_mm)
-    )
-    witness_digest = hashlib.sha256(
-        np.ascontiguousarray(witnesses, dtype="<f8").tobytes()
-        + np.ascontiguousarray(distances, dtype="<f8").tobytes()
-    ).hexdigest()
-    return {
-        "direction": "exact_STEP_boundary_to_proxy_box_union",
-        "method": "adaptive_source_triangle_cover_FCPW_candidates_float64_replay",
-        "witness_count": len(witnesses),
-        "witness_maximum_mm": witness_maximum,
-        "source_surface_covering_radius_mm": covering_radius,
-        "source_faceting_bound_mm": parameters.source_faceting_bound_mm,
-        "certified_upper_bound_mm": certified,
-        "witness_set_sha256": witness_digest,
-        "passed": bool(certified <= parameters.boundary_threshold_mm + 1.0e-12),
-    }
+    return _certificate_from_surface_scan(scan, parameters)
 
 
 def _point_in_boxes(points: np.ndarray, boxes_mm: np.ndarray, tolerance: float = 1.0e-12) -> np.ndarray:
@@ -994,7 +1608,10 @@ def build_component_record(
     started = time.monotonic()
     source_triangles, tessellation = load_absolute_step_mesh(spec)
     boxes_mm, construction, _ = build_adaptive_subset_boxes(source_triangles, params)
-    source_to_proxy = certify_source_to_proxy_surface(source_triangles, boxes_mm, params)
+    source_to_proxy = _certificate_from_surface_scan(
+        construction["exact_subset"]["final_complete_source_surface_scan"],
+        params,
+    )
     proxy_to_source = {
         "direction": "proxy_box_union_boundary_to_exact_STEP_boundary",
         "method": "exhaustive_octree_unresolved_neighbor_interval_bound",
@@ -1038,6 +1655,12 @@ def build_component_record(
             "source_faceting_bound_mm": params.source_faceting_bound_mm,
             "fcpw_float_guard_mm": params.fcpw_float_guard_mm,
             "source_witness_covering_radius_mm": params.source_witness_covering_radius_mm,
+            "internal_boundary_target_mm": params.internal_boundary_target_mm,
+            "targeted_seed_distance_mm": params.targeted_seed_distance_mm,
+            "targeted_refinement_radius_mm": params.targeted_refinement_radius_mm,
+            "targeted_max_cell_edge_mm": params.targeted_max_cell_edge_mm,
+            "max_targeted_frontier_cells": params.max_targeted_frontier_cells,
+            "max_adaptive_surface_patches": params.max_adaptive_surface_patches,
         },
         "octree_result": construction["octree"],
         "runtime_piece_inventory": _boxes_inventory(boxes_mm),

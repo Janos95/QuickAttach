@@ -233,6 +233,39 @@ def _component_parameters(record: dict[str, Any]) -> generator.OctreeParameters:
                 generator.SOURCE_WITNESS_COVERING_RADIUS_MM,
             )
         ),
+        internal_boundary_target_mm=float(
+            source.get(
+                "internal_boundary_target_mm",
+                generator.INTERNAL_BOUNDARY_TARGET_MM,
+            )
+        ),
+        targeted_seed_distance_mm=float(
+            source.get("targeted_seed_distance_mm", generator.TARGETED_SEED_DISTANCE_MM)
+        ),
+        targeted_refinement_radius_mm=float(
+            source.get(
+                "targeted_refinement_radius_mm",
+                generator.TARGETED_REFINEMENT_RADIUS_MM,
+            )
+        ),
+        targeted_max_cell_edge_mm=float(
+            source.get(
+                "targeted_max_cell_edge_mm",
+                generator.TARGETED_MAX_CELL_EDGE_MM,
+            )
+        ),
+        max_targeted_frontier_cells=int(
+            source.get(
+                "max_targeted_frontier_cells",
+                generator.MAX_TARGETED_FRONTIER_CELLS,
+            )
+        ),
+        max_adaptive_surface_patches=int(
+            source.get(
+                "max_adaptive_surface_patches",
+                generator.MAX_ADAPTIVE_SURFACE_PATCHES,
+            )
+        ),
     )
 
 
