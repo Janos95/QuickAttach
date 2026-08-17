@@ -96,6 +96,18 @@ DEVELOPMENT_TESTS = (
         "test_retired_negative_z_suffix_and_complete_cam_overlap_stay_red",
     ),
     qualified(
+        "CoreCaptureGravityBiasFeedforwardTests",
+        "test_contract_source_and_authority_mutations_fail_closed",
+    ),
+    qualified(
+        "CoreCaptureGravityBiasFeedforwardTests",
+        "test_prewrite_identity_and_code_drift_abort_before_control",
+    ),
+    qualified(
+        "CoreCaptureGravityBiasFeedforwardTests",
+        "test_one_controller_step_replays_raw_state_and_stays_honestly_red",
+    ),
+    qualified(
         "ControllerSourceSafetyTests",
         "test_controller_call_graph_never_teleports_physical_state",
     ),

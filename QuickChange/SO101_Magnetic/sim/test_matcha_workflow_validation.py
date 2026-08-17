@@ -25,7 +25,7 @@ import textwrap
 import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from types import ModuleType, SimpleNamespace
+from types import CodeType, ModuleType, SimpleNamespace
 from typing import Any, Iterable
 from unittest import mock
 
@@ -1508,6 +1508,16 @@ def core_capture_route_contract_errors(
         "embedded_state_bytes_sha256": CORE_CAPTURE_ROUTE_EMBEDDED_BYTES_SHA256,
         "source_state_sha256": CORE_CAPTURE_ROUTE_SOURCE_STATE_SHA256,
         "q_roster_sha256": CORE_CAPTURE_ROUTE_Q_SHA256,
+        "desired_start_q_sha256": canonical_json_sha256(
+            {
+                "gripper_capture_lateral_align": [
+                    -0.72, -1.11771, 1.13502, -0.01731, 0.0
+                ],
+                "gripper_capture_axial_open_side": states[0]["q_rad"],
+                "gripper_capture_coupled_recenter": states[243]["q_rad"],
+                "gripper_capture_centered_final": states[259]["q_rad"],
+            }
+        ) if states else None,
         "phase_row_ranges": {
             name: details["row_range"]
             for name, details in CORE_CAPTURE_ROUTE_ACTIONS.items()
@@ -4009,6 +4019,2374 @@ def core_cam_tab_result_errors(
         errors.append("result:physical_lock_confirmed")
     if result.get("release_ready") is not False:
         errors.append("result:release_ready")
+    return errors
+
+
+CORE_CAPTURE_GRAVITY_BIAS_ACTIONS = (
+    "gripper_capture_lateral_align",
+    "gripper_capture_axial_open_side",
+    "gripper_capture_coupled_recenter",
+    "gripper_capture_centered_final",
+)
+CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256 = (
+    "a84c10e16c890b5e1ee4e4479c0d15d7e07a75f2afae17c62e639e8adc55cc27"
+)
+CORE_CAPTURE_GRAVITY_BIAS_IDENTITY_SHA256 = (
+    "6337ad59be6d90d8e9c72211ee6cd6f5305361dbb0dedafaa89492a972c5c003"
+)
+CORE_CAPTURE_GRAVITY_BIAS_DESIRED_START_SHA256 = (
+    "fa630130c3e7a911e81bb01c681ee82a070569256a317cbb8a9474fe441df668"
+)
+CORE_CAPTURE_GRAVITY_BIAS_ROUTE_IDENTITY_SHA256 = (
+    "6451fadc64d30fb64523671d7568e4912d7631026c0be8dc336a55d995e7c283"
+)
+CORE_CAPTURE_GRAVITY_BIAS_NON_ARM_QPOS_SHA256 = (
+    "0c73793cef16963cc3272489395f735acc98ef1efd77f816fff02798b941469d"
+)
+CORE_CAPTURE_GRAVITY_BIAS_CALLGRAPH_SHA256 = (
+    "89f5970cfbcda100a50960795804ee49a39cb8460228e257860caf92e6b7dddf"
+)
+CORE_CAPTURE_GRAVITY_BIAS_BYTECODE_SHA256 = (
+    "68c9a2fcd64d81913582b74fbf9bca53b697c1a0eb091257d6ad5caa79bcddf1"
+)
+CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY_SHA256 = (
+    "40995993893abbd315a2c95806291116f0a641bb6e8db54fbb576b6a08477d1f"
+)
+CORE_CAPTURE_GRAVITY_BIAS_GUARDS_SHA256 = (
+    "a30d3c871580b36a8f18eca6f07b6d4e5eee34cbecf50093aaca7c4cb1d3ee40"
+)
+CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_SHA256 = (
+    "0bc63776a5a71bae5b3ba0786f2851ff461bd82bf7126b3a37b6ada632187a22"
+)
+CORE_CAPTURE_GRAVITY_BIAS_ACTION_ROSTER_SHA256 = (
+    "563c827f618b8ff51649272db1c41d3949b55df93908a4f9b218f9c7aeead271"
+)
+CORE_CAPTURE_GRAVITY_BIAS_FUNCTION_HASHES = {
+    "_current_core_capture_route_identity_preimage": {
+        "code_object_sha256": "db5cab09486e17d827298b3660226fc31ab2368a721ba3d0f22b6f51473532b9",
+        "normalized_ast_sha256": "f0860ad02136cbbbb947a4c50de0d7772c1cadb1fa056b486702269e0ddc1400",
+        "source_sha256": "887c97b800d39b97f6bfcb772c9958421affc5754c488572b26dbe11184b4189",
+    },
+    "_current_core_capture_gravity_bias_formula": {
+        "code_object_sha256": "ecd0c98eae7bd2ea43f9fc342730a6a9e03df80e941c30c081198525830cebd2",
+        "normalized_ast_sha256": "a4a57804498e9ff0ddc8f6fe30aab2bfa501a9f5a2f6c4fcf449844e5c04b3ef",
+        "source_sha256": "d69801ef96976942c136df6836247590e1fd488547b0d860e0eb6ddc3cd87192",
+    },
+    "_current_core_capture_gravity_bias_guard_thresholds": {
+        "code_object_sha256": "0f082a73e1b12bdd1de67298227ebe82def4ef97cf55323d4cb6d19a420c5f99",
+        "normalized_ast_sha256": "d1e0ea6daed8b33149290c52ad1936060e60525f9a24bbd2a58ac202c409ed8b",
+        "source_sha256": "18e9b5e955e7ac3ff7fde8b2f733e2c37edc51e9661cbd06b66ab77e3a8b5cf4",
+    },
+    "_core_capture_gravity_bias_model_digests": {
+        "code_object_sha256": "53dafb7977991a46c7770a1c079cce41dae7c4704c316731f859b320394b3750",
+        "normalized_ast_sha256": "07efb8c30a9d646a1b09170961bcf146ddaf2cafb6462287236b38e8fa4eebb6",
+        "source_sha256": "bafe1fe6660bd22220dfc621ce49e6adbf767e7832e4b56c125d83c5925d75ef",
+    },
+    "_core_capture_move_actions": {
+        "code_object_sha256": "22fa84bb3b3ea159c42e8d7d50d9987bb445653f64198158e7ea7349831bc60a",
+        "normalized_ast_sha256": "b327106b4085f0035ca96fd0cf4dd57a79f72c82c7e46205f0948c2eaec3e7a1",
+        "source_sha256": "c259459e0c313025d09967b73cc439166c3271bce04b077de539d3f8bf37e119",
+    },
+    "_move_action_desired_q": {
+        "code_object_sha256": "45cf6d26fdf9ba7cc11f7d4ada38cd55ea2897068b601fc6a3ed1c84082cec9b",
+        "normalized_ast_sha256": "19587e57dfa2b27b9f47e3da21f34a8391c6a961305f6f96675a90ade9c6b035",
+        "source_sha256": "f946e4b873a1cf636de51ebfd0a9c06b7b19d1a987f1066fc2b274691b81cf14",
+    },
+    "_forward_scratch_arm_configuration": {
+        "code_object_sha256": "b661244a8a9ccc3e7b1d420ca2d04144ec8c5fe44cf80e2e621d727708ab9180",
+        "normalized_ast_sha256": "5fa53cbf090c73e95ca8a614fe789a2a69d06eb7d7f468ffa8909c56ff63b802",
+        "source_sha256": "3789322274800ad9ae02dff3b39e2fb4c5f0df032506028dd8a5730e0775a496",
+    },
+    "_core_capture_gravity_bias_control": {
+        "code_object_sha256": "984c35f45f085fabf35e0a90cc847867c9b5ebc049ea9aa73b06b626ad2d6a0c",
+        "normalized_ast_sha256": "1c7a66c27a1308fb798fb4897c5ea4701c0e7540d0d9c640f407ab58bbbdc495",
+        "source_sha256": "e3af3d2a67a0e2f8817a6bf2ca3508f17443ef85d7177866456791d216f8e2c2",
+    },
+    "_current_core_capture_gravity_bias_lightweight_identity_snapshot": {
+        "code_object_sha256": "a914e0707f89c6dff610d60fe95305668100c7d5b50801043a637610818af204",
+        "normalized_ast_sha256": "85d8e603e03b7810e3ba2d6fc37ffc758ac671beef113591aaaf661eda365511",
+        "source_sha256": "f382cc675c678800dfbf0646dbca347df7807725ef89994ed1b89e0d95669799",
+    },
+    "_core_capture_gravity_bias_prewrite_snapshot": {
+        "code_object_sha256": "3e85b28ea27d80cf0c0141833b2a02e058dac470e49c2e86348ecf18f464503c",
+        "normalized_ast_sha256": "d0c0195b72c1e157b38d28c3ac16fdb34ecd302d3134d70432d1f527546eef0d",
+        "source_sha256": "3793c7f04bbb3792f504e1d2451220d12fad7277cf13965ae959228116034b6f",
+    },
+    "MatchaWorkflowController._command_move": {
+        "code_object_sha256": "0e99b5ffae5793a7ac4d5246f67732fa6a16f9b473e269a040c3e630122a0d64",
+        "normalized_ast_sha256": "7ff41d90cca92c0053c0b0d7362be7e6272c3857fd598c542e4cf2d75340a7ad",
+        "source_sha256": "c71c602dad86d0b8dc73d8143f3e2c1bbf82748446c44bcf1763f96ea5169eab",
+    },
+}
+CORE_CAPTURE_GRAVITY_BIAS_EXPECTED_HASHES = {
+    "gravity_sha256": "ae1e8d988bda31f91f37b3360818f46f5216924d49e011e065e323fe23f3bf2e",
+    "body_mass_sha256": "2b48d4c24c8566f669be8ceef579e7b080fd278106d17d9021cb6daf166a72da",
+    "body_inertia_sha256": "cb0059bc8551f4b945204d5a54a5216547de9beeae22a52518ac60f34ced603b",
+    "body_ipos_sha256": "f8beb657fa4fa0ab619838d5968d5b17b902649d471d9bf9bac8f0fac0a686e2",
+    "body_iquat_sha256": "63253ecaa2d99939ddf36e6525e230bd0b77d7b2e4c28402a943b25bb9a78deb",
+    "inertial_bundle_sha256": "5b384d20e2eb3b530f0772241c7e9611887c60ce25a73dcad20e7d5e0be3f98d",
+    "arm_gainprm_sha256": "6d15e750d44986e760901cb224115639c75fc49ab17d23f94c74c8678a663a74",
+    "arm_gear_sha256": "9c380cb1330e9755842a38183a344f8f159a3224ef409800723e9e10babbcaef",
+    "arm_ctrlrange_sha256": "7996351eb41db1364c708be82e65566ef357a359000c965ee48278552b5df209",
+    "arm_forcerange_sha256": "2b1c560a63c760ed53819eca8ed65031871b4415028102367cb36718389f575a",
+}
+
+
+def _expected_gravity_bias_formula() -> dict[str, Any]:
+    return {
+        "schema_version": "2.0",
+        "eligible_actions": sorted(CORE_CAPTURE_GRAVITY_BIAS_ACTIONS),
+        "desired_route_authority": (
+            "immutable_source_route_q_roster_and_per_action_desired_start"
+        ),
+        "scratch_state": (
+            "private_MjData_distinct_from_live_at_desired_q_with_all_qvel_zero"
+        ),
+        "scratch_position_update": (
+            "mj_differentiatePos_then_mj_integratePos_then_mj_forward"
+        ),
+        "bias_source": "scratch_data.qfrc_bias[arm_dof_ids]",
+        "offset_formula": (
+            "qfrc_bias/(actuator_gainprm[arm_actuator_ids,0]*"
+            "actuator_gear[arm_actuator_ids,0])"
+        ),
+        "offset_sign": "positive",
+        "unsaturated_control_formula": "q_des+gravity_bias_offset",
+        "applied_control_formula": (
+            "clip(unsaturated_control,actuator_ctrlrange)"
+        ),
+        "saturation_policy": "any_saturation_fails_development_evidence",
+        "runtime_isolation": {
+            "scratch_and_live_object_identity_must_differ": True,
+            "evaluator_receives_no_live_MjData_argument": True,
+            "live_qpos_qvel_snapshots_must_be_bitwise_unchanged": True,
+            "all_scratch_qvel_must_be_exact_zero": True,
+            "non_arm_scratch_qpos_digest_must_remain_frozen": True,
+            "failure_aborts_before_ctrl_write": True,
+        },
+        "prewrite_revalidation": (
+            "fresh_route_formula_guard_desired_action_ast_bytecode_and_"
+            "compiled_dynamics_identity_before_desired_q_and_ctrl_write"
+        ),
+        "prohibited_inputs": [
+            "qfrc_constraint",
+            "mj_contactForce",
+            "mj_inverse",
+            "live_qpos_write",
+            "live_qvel_write",
+        ],
+        "authority_scope": "development_free_space_tracking_only",
+    }
+
+
+def _expected_gravity_bias_guard_thresholds() -> dict[str, Any]:
+    return {
+        "endpoint_maximum_q_error_rad": 0.002,
+        "endpoint_maximum_abs_qvel_rad_s": 0.02,
+        "endpoint_maximum_fk_position_error_m": 0.00005,
+        "endpoint_maximum_fk_orientation_error_rad": math.radians(0.1),
+        "endpoint_maximum_abs_source_x_error_mm": 0.040,
+        "endpoint_required_contiguous_controller_ticks": 4,
+        "free_space_maximum_abs_q_error_rad": 0.002,
+        "free_space_maximum_abs_preseat_error_mm": 0.050,
+        "free_space_maximum_abs_source_x_error_mm": 0.040,
+        "free_space_maximum_abs_transverse_y_mm": 0.010,
+        "free_space_maximum_orientation_error_rad": math.radians(0.1),
+        "free_space_maximum_raw_cam_contact_count": 0,
+        "state_time_anchor_absolute_tolerance_s": 1.0e-10,
+        "adjacent_state_time_absolute_tolerance_s": 1.0e-12,
+        "all_four_phases_and_endpoints_required_for_pass": True,
+        "any_saturation_fails": True,
+        "abort_must_be_absent": True,
+    }
+
+
+def _expected_gravity_bias_ast_policy() -> dict[str, Any]:
+    return {
+        "schema_version": "1.0",
+        "audited_functions": [
+            "_current_core_capture_route_identity_preimage",
+            "_current_core_capture_gravity_bias_formula",
+            "_current_core_capture_gravity_bias_guard_thresholds",
+            "_core_capture_gravity_bias_model_digests",
+            "_core_capture_move_actions",
+            "_move_action_desired_q",
+            "_forward_scratch_arm_configuration",
+            "_core_capture_gravity_bias_control",
+            "_current_core_capture_gravity_bias_lightweight_identity_snapshot",
+            "_core_capture_gravity_bias_prewrite_snapshot",
+            "MatchaWorkflowController._command_move",
+        ],
+        "allowed_direct_mujoco_calls": [
+            "mj_differentiatePos", "mj_forward", "mj_integratePos"
+        ],
+        "allowed_scratch_state_attributes": ["qfrc_bias", "qpos", "qvel"],
+        "allowed_model_feedforward_arrays": [
+            "actuator_ctrlrange", "actuator_gainprm", "actuator_gear"
+        ],
+        "prohibited_attributes": ["qfrc_constraint"],
+        "prohibited_calls": ["mj_contactForce", "mj_inverse"],
+        "prohibited_assignment_targets": [
+            "self.data.qpos", "self.data.qvel"
+        ],
+        "command_branch_live_state_policy": (
+            "outer_live_qpos_qvel_snapshots_before_and_after_evaluator;"
+            "evaluator_receives_no_live_MjData;no_live_assignment"
+        ),
+    }
+
+
+def _independent_ast_attribute_path(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        parent = _independent_ast_attribute_path(node.value)
+        return f"{parent}.{node.attr}" if parent else None
+    if isinstance(node, ast.Subscript):
+        return _independent_ast_attribute_path(node.value)
+    return None
+
+
+def _independent_code_object_sha256(code: CodeType) -> str:
+    """Hash executable instructions and symbols without production helpers."""
+
+    def constant_record(value: object) -> object:
+        if isinstance(value, CodeType):
+            return {
+                "nested_code_sha256": _independent_code_object_sha256(value)
+            }
+        if isinstance(value, bytes):
+            return {"bytes_hex": value.hex()}
+        if isinstance(value, tuple):
+            return [constant_record(item) for item in value]
+        if value is None or isinstance(value, (bool, int, float, str)):
+            return value
+        return {"type": type(value).__name__, "repr": repr(value)}
+
+    return canonical_json_sha256(
+        {
+            "co_code_hex": code.co_code.hex(),
+            "co_consts": [constant_record(value) for value in code.co_consts],
+            "co_names": list(code.co_names),
+            "co_varnames": list(code.co_varnames),
+            "co_freevars": list(code.co_freevars),
+            "co_cellvars": list(code.co_cellvars),
+            "co_argcount": code.co_argcount,
+            "co_posonlyargcount": code.co_posonlyargcount,
+            "co_kwonlyargcount": code.co_kwonlyargcount,
+            "co_nlocals": code.co_nlocals,
+            "co_stacksize": code.co_stacksize,
+            "co_flags": code.co_flags,
+        }
+    )
+
+
+def _independent_gravity_bias_source_audit(
+    demo: ModuleType,
+) -> dict[str, Any]:
+    """Independently hash and allowlist the complete control callgraph."""
+
+    policy = _expected_gravity_bias_ast_policy()
+    functions: dict[str, Any] = {
+        "_current_core_capture_route_identity_preimage": (
+            demo._current_core_capture_route_identity_preimage
+        ),
+        "_current_core_capture_gravity_bias_formula": (
+            demo._current_core_capture_gravity_bias_formula
+        ),
+        "_current_core_capture_gravity_bias_guard_thresholds": (
+            demo._current_core_capture_gravity_bias_guard_thresholds
+        ),
+        "_core_capture_gravity_bias_model_digests": (
+            demo._core_capture_gravity_bias_model_digests
+        ),
+        "_core_capture_move_actions": demo._core_capture_move_actions,
+        "_move_action_desired_q": demo._move_action_desired_q,
+        "_forward_scratch_arm_configuration": (
+            demo._forward_scratch_arm_configuration
+        ),
+        "_core_capture_gravity_bias_control": (
+            demo._core_capture_gravity_bias_control
+        ),
+        "_current_core_capture_gravity_bias_lightweight_identity_snapshot": (
+            demo._current_core_capture_gravity_bias_lightweight_identity_snapshot
+        ),
+        "_core_capture_gravity_bias_prewrite_snapshot": (
+            demo._core_capture_gravity_bias_prewrite_snapshot
+        ),
+        "MatchaWorkflowController._command_move": (
+            demo.MatchaWorkflowController._command_move
+        ),
+    }
+    records: list[dict[str, Any]] = []
+    counts = {
+        "direct_live_qpos_write_count": 0,
+        "direct_live_qvel_write_count": 0,
+        "qfrc_constraint_read_count": 0,
+        "mj_contact_force_call_count": 0,
+        "mj_inverse_call_count": 0,
+        "unapproved_direct_mujoco_call_count": 0,
+        "unapproved_scratch_state_attribute_count": 0,
+        "unapproved_model_feedforward_array_count": 0,
+    }
+    errors: list[str] = []
+    allowed_mujoco = frozenset(policy["allowed_direct_mujoco_calls"])
+    allowed_scratch = frozenset(policy["allowed_scratch_state_attributes"])
+    allowed_model = frozenset(policy["allowed_model_feedforward_arrays"])
+    for name, function in functions.items():
+        try:
+            source = textwrap.dedent(inspect.getsource(function))
+            tree = ast.parse(source)
+        except (OSError, TypeError, SyntaxError) as exc:
+            errors.append(f"{name}:{type(exc).__name__}")
+            continue
+        normalized = ast.dump(
+            tree, annotate_fields=True, include_attributes=False
+        )
+        records.append(
+            {
+                "name": name,
+                "source_sha256": hashlib.sha256(source.encode()).hexdigest(),
+                "normalized_ast_sha256": hashlib.sha256(
+                    normalized.encode()
+                ).hexdigest(),
+                "code_object_sha256": _independent_code_object_sha256(
+                    function.__code__
+                ),
+            }
+        )
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Attribute):
+                if node.attr == "qfrc_constraint":
+                    counts["qfrc_constraint_read_count"] += 1
+                base = _independent_ast_attribute_path(node.value)
+                if base == "scratch_data" and node.attr not in allowed_scratch:
+                    counts["unapproved_scratch_state_attribute_count"] += 1
+                if (
+                    name == "_core_capture_gravity_bias_control"
+                    and base == "model"
+                    and node.attr not in allowed_model
+                ):
+                    counts["unapproved_model_feedforward_array_count"] += 1
+            if isinstance(node, ast.Call):
+                call_path = _independent_ast_attribute_path(node.func)
+                call_name = call_path.rsplit(".", 1)[-1] if call_path else ""
+                if call_name == "mj_contactForce":
+                    counts["mj_contact_force_call_count"] += 1
+                if call_name == "mj_inverse":
+                    counts["mj_inverse_call_count"] += 1
+                if (
+                    call_path
+                    and call_path.startswith("mujoco.")
+                    and call_name not in allowed_mujoco
+                ):
+                    counts["unapproved_direct_mujoco_call_count"] += 1
+            if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+                targets = (
+                    list(node.targets)
+                    if isinstance(node, ast.Assign)
+                    else [node.target]
+                )
+                for target in targets:
+                    path = _independent_ast_attribute_path(target)
+                    if path == "self.data.qpos":
+                        counts["direct_live_qpos_write_count"] += 1
+                    if path == "self.data.qvel":
+                        counts["direct_live_qvel_write_count"] += 1
+    callgraph_sha256 = canonical_json_sha256(records)
+    bytecode_sha256 = canonical_json_sha256(
+        [
+            {
+                "name": record["name"],
+                "code_object_sha256": record["code_object_sha256"],
+            }
+            for record in records
+        ]
+    )
+    policy_sha256 = canonical_json_sha256(policy)
+    records_match = bool(
+        all(
+            record.get(key)
+            == CORE_CAPTURE_GRAVITY_BIAS_FUNCTION_HASHES[record["name"]][key]
+            for record in records
+            for key in (
+                "source_sha256",
+                "normalized_ast_sha256",
+                "code_object_sha256",
+            )
+        )
+    )
+    passed = bool(
+        not errors
+        and [record["name"] for record in records]
+        == policy["audited_functions"]
+        and all(count == 0 for count in counts.values())
+        and records_match
+        and callgraph_sha256 == CORE_CAPTURE_GRAVITY_BIAS_CALLGRAPH_SHA256
+        and bytecode_sha256 == CORE_CAPTURE_GRAVITY_BIAS_BYTECODE_SHA256
+        and policy_sha256 == CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY_SHA256
+    )
+    return {
+        "schema_version": "1.0",
+        "policy": policy,
+        "expected_policy_sha256": CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY_SHA256,
+        "observed_policy_sha256": policy_sha256,
+        "expected_transitive_callgraph_sha256": (
+            CORE_CAPTURE_GRAVITY_BIAS_CALLGRAPH_SHA256
+        ),
+        "observed_transitive_callgraph_sha256": callgraph_sha256,
+        "expected_transitive_bytecode_sha256": (
+            CORE_CAPTURE_GRAVITY_BIAS_BYTECODE_SHA256
+        ),
+        "observed_transitive_bytecode_sha256": bytecode_sha256,
+        "function_records": records,
+        "prohibited_operation_counts": counts,
+        "transitive_function_bindings_match_frozen": records_match,
+        "inspection_errors": errors,
+        "passed": passed,
+    }
+
+
+def _independent_float64_bytes_sha256(value: Any) -> str:
+    array = np.ascontiguousarray(np.asarray(value, dtype="<f8"))
+    return hashlib.sha256(array.tobytes()).hexdigest()
+
+
+def _independent_forward_scratch_arm_configuration(
+    model: Any,
+    data: Any,
+    mujoco: Any,
+    arm_qpos_ids: np.ndarray,
+    arm_q_rad: np.ndarray,
+) -> None:
+    target = np.array(data.qpos, dtype=np.float64, copy=True)
+    target[arm_qpos_ids] = np.asarray(arm_q_rad, dtype=np.float64)
+    velocity = np.empty(model.nv, dtype=np.float64)
+    mujoco.mj_differentiatePos(
+        model, velocity, 1.0, data.qpos, target
+    )
+    mujoco.mj_integratePos(model, data.qpos, velocity, 1.0)
+    mujoco.mj_forward(model, data)
+
+
+def _independent_gravity_bias_model_record(
+    model: Any, demo: ModuleType
+) -> dict[str, Any]:
+    actuator_ids = np.asarray(
+        [model.actuator(name).id for name in demo.ARM_ACTUATORS], dtype=int
+    )
+    gain = np.asarray(model.actuator_gainprm[actuator_ids], dtype=np.float64)
+    gear = np.asarray(model.actuator_gear[actuator_ids], dtype=np.float64)
+    ctrlrange = np.asarray(
+        model.actuator_ctrlrange[actuator_ids], dtype=np.float64
+    )
+    forcerange = np.asarray(
+        model.actuator_forcerange[actuator_ids], dtype=np.float64
+    )
+    hashes = {
+        "gravity_sha256": _independent_float64_bytes_sha256(model.opt.gravity),
+        "body_mass_sha256": _independent_float64_bytes_sha256(model.body_mass),
+        "body_inertia_sha256": _independent_float64_bytes_sha256(
+            model.body_inertia
+        ),
+        "body_ipos_sha256": _independent_float64_bytes_sha256(model.body_ipos),
+        "body_iquat_sha256": _independent_float64_bytes_sha256(
+            model.body_iquat
+        ),
+        "arm_gainprm_sha256": _independent_float64_bytes_sha256(gain),
+        "arm_gear_sha256": _independent_float64_bytes_sha256(gear),
+        "arm_ctrlrange_sha256": _independent_float64_bytes_sha256(ctrlrange),
+        "arm_forcerange_sha256": _independent_float64_bytes_sha256(forcerange),
+    }
+    hashes["inertial_bundle_sha256"] = canonical_json_sha256(
+        {
+            "body_inertia": hashes["body_inertia_sha256"],
+            "body_ipos": hashes["body_ipos_sha256"],
+            "body_iquat": hashes["body_iquat_sha256"],
+        }
+    )
+    return {
+        "gravity_vector_m_s2": [float(value) for value in model.opt.gravity],
+        **hashes,
+        "arm_kp": [float(value) for value in gain[:, 0]],
+        "arm_joint_gear": [float(value) for value in gear[:, 0]],
+        "arm_ctrlrange": [
+            [float(value) for value in row] for row in ctrlrange
+        ],
+        "arm_forcerange_nm": [
+            [float(value) for value in row] for row in forcerange
+        ],
+    }
+
+
+def _expected_gravity_bias_dynamics_binding(
+    model: Any, demo: ModuleType
+) -> dict[str, Any]:
+    observed = _independent_gravity_bias_model_record(model, demo)
+    matches = {
+        f"{name.removesuffix('_sha256')}_matches": (
+            observed[name] == expected
+        )
+        for name, expected in CORE_CAPTURE_GRAVITY_BIAS_EXPECTED_HASHES.items()
+    }
+    return {
+        "schema_version": "1.0",
+        "digest_preimage": (
+            "canonical_little_endian_float64_bytes;inertial_bundle_is_"
+            "canonical_json_of_body_inertia_body_ipos_body_iquat_hashes"
+        ),
+        "expected_hashes": copy.deepcopy(
+            CORE_CAPTURE_GRAVITY_BIAS_EXPECTED_HASHES
+        ),
+        "observed": observed,
+        "matches": matches,
+        "expected_formula_sha256": CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256,
+        "observed_formula_sha256": CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256,
+        "formula_matches": True,
+        "passed": bool(all(matches.values())),
+    }
+
+
+def _independent_gravity_bias_desired_starts(
+    route_contract: dict[str, Any],
+) -> dict[str, list[float]]:
+    states = route_contract["source_states"]
+    return {
+        CORE_CAPTURE_GRAVITY_BIAS_ACTIONS[0]: [
+            -0.72, -1.11771, 1.13502, -0.01731, 0.0
+        ],
+        CORE_CAPTURE_GRAVITY_BIAS_ACTIONS[1]: [
+            float(value) for value in states[0]["q_rad"]
+        ],
+        CORE_CAPTURE_GRAVITY_BIAS_ACTIONS[2]: [
+            float(value) for value in states[243]["q_rad"]
+        ],
+        CORE_CAPTURE_GRAVITY_BIAS_ACTIONS[3]: [
+            float(value) for value in states[259]["q_rad"]
+        ],
+    }
+
+
+def _independent_gravity_bias_action_records(
+    route_contract: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Reconstruct the four executable actions from frozen route rows."""
+
+    states = route_contract["source_states"]
+    spans = (
+        (CORE_CAPTURE_GRAVITY_BIAS_ACTIONS[0], 0.25, 1.0, 0, 1),
+        (CORE_CAPTURE_GRAVITY_BIAS_ACTIONS[1], 1.60, 3.0, 1, 244),
+        (CORE_CAPTURE_GRAVITY_BIAS_ACTIONS[2], 0.50, 1.5, 244, 260),
+        (CORE_CAPTURE_GRAVITY_BIAS_ACTIONS[3], 0.50, 1.5, 260, 276),
+    )
+    return [
+        {
+            "name": name,
+            "kind": "move",
+            "tool": "gripper",
+            "duration_s": duration_s,
+            "timeout_s": timeout_s,
+            "target_q": [float(value) for value in states[stop - 1]["q_rad"]],
+            "joint_waypoints": [
+                [float(value) for value in states[index]["q_rad"]]
+                for index in range(start, stop)
+            ],
+        }
+        for name, duration_s, timeout_s, start, stop in spans
+    ]
+
+
+def expected_core_capture_gravity_bias_contract(
+    demo: ModuleType,
+    model: Any,
+    route_contract: dict[str, Any],
+) -> dict[str, Any]:
+    desired_starts = _independent_gravity_bias_desired_starts(route_contract)
+    desired_start_sha256 = canonical_json_sha256(desired_starts)
+    dynamics = _expected_gravity_bias_dynamics_binding(model, demo)
+    source_model_sha256 = (
+        "eedc60724d743b8c16deb7a0d10d4c1c73819fdba680722cb479105e4a09bdea"
+    )
+    compiled_sha256 = _independent_compiled_model_xml_equivalent_sha256(model)
+    scratch = demo.mujoco.MjData(model)
+    demo.initialize(model, scratch)
+    active_sha256 = _independent_initialized_active_geometry_sha256(
+        model, scratch, demo.mujoco
+    )
+    robot_xml = REPOSITORY_ROOT / "Simulation/SO101/so101_new_calib.xml"
+    formula = _expected_gravity_bias_formula()
+    guard_thresholds = _expected_gravity_bias_guard_thresholds()
+    source_audit = _independent_gravity_bias_source_audit(demo)
+    action_records = _independent_gravity_bias_action_records(route_contract)
+    action_roster_sha256 = canonical_json_sha256(action_records)
+    lightweight_preimage = {
+        "capture_route_contract_identity_sha256": (
+            CORE_CAPTURE_GRAVITY_BIAS_ROUTE_IDENTITY_SHA256
+        ),
+        "desired_start_q_sha256": desired_start_sha256,
+        "move_action_roster_sha256": action_roster_sha256,
+        "formula_sha256": canonical_json_sha256(formula),
+        "guard_thresholds_sha256": canonical_json_sha256(guard_thresholds),
+        "transitive_callgraph_sha256": source_audit[
+            "observed_transitive_callgraph_sha256"
+        ],
+        "transitive_bytecode_sha256": source_audit[
+            "observed_transitive_bytecode_sha256"
+        ],
+        "ast_policy_sha256": source_audit["observed_policy_sha256"],
+        "source_audit_code_object_sha256": (
+            "37d6475ec7fb112f057f605e7ef184fb0614f4568858fdfb9de978d700c76a17"
+        ),
+        "lightweight_guard_code_object_sha256": (
+            "a914e0707f89c6dff610d60fe95305668100c7d5b50801043a637610818af204"
+        ),
+    }
+    lightweight_component_matches = {
+        "route_identity_matches": True,
+        "desired_start_q_matches": True,
+        "move_action_roster_matches": True,
+        "formula_matches": True,
+        "guard_thresholds_match": True,
+        "callgraph_matches": True,
+        "bytecode_matches": True,
+        "ast_policy_matches": True,
+    }
+    lightweight_identity = {
+        "schema_version": "1.0",
+        "observed_identity_preimage": lightweight_preimage,
+        "expected_identity_sha256": (
+            CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_SHA256
+        ),
+        "observed_identity_sha256": canonical_json_sha256(
+            lightweight_preimage
+        ),
+        "component_matches": lightweight_component_matches,
+        "public_objects_match_fresh_reconstruction": True,
+        "public_digests_match_private_frozen_literals": True,
+        "source_audit_binding_matches": True,
+        "builder_bindings_match_frozen": True,
+        "source_audit": source_audit,
+        "move_action_records": action_records,
+        "passed": bool(
+            source_audit["passed"]
+            and action_roster_sha256
+            == CORE_CAPTURE_GRAVITY_BIAS_ACTION_ROSTER_SHA256
+            and canonical_json_sha256(lightweight_preimage)
+            == CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_SHA256
+        ),
+    }
+    identity = {
+        "robot_xml_sha256": sha256_file(robot_xml),
+        "model_xml_sha256": source_model_sha256,
+        "compiled_model_xml_equivalent_sha256": (
+            "fe3014b0aa0decad9f807f6a96a81a05b5622bed7071bb254d4045658224f94f"
+        ),
+        "initialized_active_collision_geometry_sha256": (
+            "98d04acb1bbdb614eaa8cd827da7417c82e8f6ecc0e25b93f7e2f573ccf06773"
+        ),
+        "capture_route_contract_identity_sha256": (
+            CORE_CAPTURE_GRAVITY_BIAS_ROUTE_IDENTITY_SHA256
+        ),
+        "desired_start_q_sha256": desired_start_sha256,
+        **copy.deepcopy(CORE_CAPTURE_GRAVITY_BIAS_EXPECTED_HASHES),
+        "initialized_non_arm_qpos_sha256": (
+            CORE_CAPTURE_GRAVITY_BIAS_NON_ARM_QPOS_SHA256
+        ),
+        "formula_sha256": canonical_json_sha256(formula),
+        "guard_thresholds": guard_thresholds,
+        "transitive_callgraph_sha256": (
+            CORE_CAPTURE_GRAVITY_BIAS_CALLGRAPH_SHA256
+        ),
+        "transitive_bytecode_sha256": (
+            CORE_CAPTURE_GRAVITY_BIAS_BYTECODE_SHA256
+        ),
+        "ast_policy_sha256": CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY_SHA256,
+        "lightweight_identity_sha256": (
+            CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_SHA256
+        ),
+    }
+    component_matches = {key: True for key in identity}
+    route_preimage = route_contract["contract_identity_digest_preimage"]
+    route_identity_sha256 = canonical_json_sha256(route_preimage)
+    identity_revalidation = {
+        "schema_version": "1.0",
+        "expected_identity_preimage": copy.deepcopy(identity),
+        "observed_identity_preimage": copy.deepcopy(identity),
+        "expected_identity_sha256": CORE_CAPTURE_GRAVITY_BIAS_IDENTITY_SHA256,
+        "observed_identity_sha256": canonical_json_sha256(identity),
+        "component_matches": component_matches,
+        "route_identity": {
+            "expected_sha256": (
+                CORE_CAPTURE_GRAVITY_BIAS_ROUTE_IDENTITY_SHA256
+            ),
+            "observed_preimage": copy.deepcopy(route_preimage),
+            "observed_sha256": route_identity_sha256,
+            "matches": bool(
+                route_identity_sha256
+                == CORE_CAPTURE_GRAVITY_BIAS_ROUTE_IDENTITY_SHA256
+            ),
+        },
+        "formula": {
+            "expected_sha256": CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256,
+            "observed_sha256": canonical_json_sha256(formula),
+            "matches": bool(
+                canonical_json_sha256(formula)
+                == CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256
+            ),
+        },
+        "desired_start_q": {
+            "expected_sha256": (
+                CORE_CAPTURE_GRAVITY_BIAS_DESIRED_START_SHA256
+            ),
+            "observed_sha256": desired_start_sha256,
+            "matches": bool(
+                desired_start_sha256
+                == CORE_CAPTURE_GRAVITY_BIAS_DESIRED_START_SHA256
+            ),
+        },
+        "source_audit": source_audit,
+        "lightweight_identity": lightweight_identity,
+        "public_objects_match_fresh_reconstruction": True,
+        "passed": bool(
+            all(component_matches.values())
+            and route_identity_sha256
+            == CORE_CAPTURE_GRAVITY_BIAS_ROUTE_IDENTITY_SHA256
+            and canonical_json_sha256(formula)
+            == CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256
+            and desired_start_sha256
+            == CORE_CAPTURE_GRAVITY_BIAS_DESIRED_START_SHA256
+            and source_audit["passed"]
+            and lightweight_identity["passed"]
+            and canonical_json_sha256(identity)
+            == CORE_CAPTURE_GRAVITY_BIAS_IDENTITY_SHA256
+        ),
+    }
+    actuator_ids = [model.actuator(name).id for name in demo.ARM_ACTUATORS]
+    arm_actuators = [
+        {
+            "name": name,
+            "kp": float(model.actuator_gainprm[actuator_id, 0]),
+            "gear": float(model.actuator_gear[actuator_id, 0]),
+            "ctrlrange_rad": [
+                float(value) for value in model.actuator_ctrlrange[actuator_id]
+            ],
+            "forcerange_nm": [
+                float(value) for value in model.actuator_forcerange[actuator_id]
+            ],
+        }
+        for name, actuator_id in zip(
+            demo.ARM_ACTUATORS, actuator_ids, strict=True
+        )
+    ]
+    return {
+        "schema_version": "1.0",
+        "contract_kind": (
+            "development_only_capture_route_gravity_bias_position_feedforward"
+        ),
+        "contract_identity_digest_preimage": identity,
+        "contract_identity_sha256": canonical_json_sha256(identity),
+        "formula": formula,
+        "formula_sha256": canonical_json_sha256(formula),
+        "identity_revalidation": identity_revalidation,
+        "source_ast_audit": source_audit,
+        "guard_thresholds": guard_thresholds,
+        "source_binding": {
+            "robot_xml": {
+                "path": "Simulation/SO101/so101_new_calib.xml",
+                "bytes": robot_xml.stat().st_size,
+                "sha256": sha256_file(robot_xml),
+            },
+            "assembled_model_xml_sha256": source_model_sha256,
+            "compiled_model_xml_equivalent_sha256": compiled_sha256,
+            "initialized_active_collision_geometry_sha256": active_sha256,
+            "capture_route_contract_identity_sha256": route_contract[
+                "contract_identity_sha256"
+            ],
+            "capture_route_source_state_sha256": route_contract[
+                "source_state_sha256"
+            ],
+            "capture_route_q_roster_sha256": route_contract[
+                "q_roster_sha256"
+            ],
+            "desired_start_q_by_action": desired_starts,
+            "desired_start_q_sha256": desired_start_sha256,
+        },
+        "compiled_dynamics_binding": dynamics,
+        "arm_actuators": arm_actuators,
+        "evidence_requirements": {
+            "every_physics_substep_recorded": True,
+            "desired_q_and_biased_ctrl_are_separate": True,
+            "desired_action_start_never_seeded_from_biased_ctrl": True,
+            "wrong_sign_zero_gravity_gain_gear_and_model_mutations_fail": True,
+            "any_saturation_fails": True,
+            "raw_two_tab_by_five_cam_contact_counts": True,
+        },
+        "authority_scope": {
+            "development_free_space_tracking": True,
+            "contact_force_authority": False,
+            "friction_coefficient_authority": False,
+            "contact_parameter_authority": False,
+            "cam_dynamics_authority": False,
+            "physical_lock_authority": False,
+            "release_ready": False,
+        },
+        "release_ready": False,
+    }
+
+
+def core_capture_gravity_bias_contract_errors(
+    record: Any,
+    demo: ModuleType,
+    model: Any,
+    route_contract: dict[str, Any],
+) -> list[str]:
+    expected = expected_core_capture_gravity_bias_contract(
+        demo, model, route_contract
+    )
+    return [
+        f"gravity_bias_contract:{path}"
+        for path in _evidence_mismatches(record, expected)
+    ]
+
+
+def core_capture_gravity_bias_source_errors(source: str) -> list[str]:
+    """Reject hidden physical-state writes or non-bias force inputs."""
+
+    tree = ast.parse(source)
+    module_functions = {
+        node.name: node
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+    controller = next(
+        (
+            node
+            for node in tree.body
+            if isinstance(node, ast.ClassDef)
+            and node.name == "MatchaWorkflowController"
+        ),
+        None,
+    )
+    if controller is None:
+        return ["gravity_bias_source:controller_missing"]
+    methods = {
+        node.name: node
+        for node in controller.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+    required_functions = {
+        "_current_core_capture_route_identity_preimage",
+        "_current_core_capture_gravity_bias_formula",
+        "_current_core_capture_gravity_bias_guard_thresholds",
+        "_core_capture_gravity_bias_model_digests",
+        "_core_capture_move_actions",
+        "_move_action_desired_q",
+        "_core_capture_gravity_bias_control",
+        "_forward_scratch_arm_configuration",
+        "_current_core_capture_gravity_bias_lightweight_identity_snapshot",
+        "_core_capture_gravity_bias_prewrite_snapshot",
+    }
+    required_methods = {
+        "__init__",
+        "_advance_action",
+        "_command_move",
+        "_record_core_capture_gravity_bias_feedforward",
+        "_core_capture_gravity_bias_evidence_report",
+    }
+    errors: list[str] = []
+    if not required_functions.issubset(module_functions):
+        errors.append("gravity_bias_source:module_helpers")
+    if not required_methods.issubset(methods):
+        errors.append("gravity_bias_source:controller_methods")
+    selected = [
+        *(module_functions[name] for name in required_functions if name in module_functions),
+        *(methods[name] for name in required_methods if name in methods),
+    ]
+    prohibited_attributes = {"qfrc_constraint"}
+    prohibited_calls = {"mj_inverse", "mj_contactForce"}
+    for function in selected:
+        for node in ast.walk(function):
+            if isinstance(node, ast.Attribute) and node.attr in prohibited_attributes:
+                errors.append(
+                    f"gravity_bias_source:{function.name}:{node.attr}"
+                )
+            if isinstance(node, ast.Call) and called_name(node) in prohibited_calls:
+                errors.append(
+                    f"gravity_bias_source:{function.name}:{called_name(node)}"
+                )
+            targets: list[ast.AST] = []
+            if isinstance(node, ast.Assign):
+                targets = list(node.targets)
+            elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
+                targets = [node.target]
+            for target in targets:
+                if target_state_field(target) in {"qpos", "qvel"}:
+                    errors.append(
+                        f"gravity_bias_source:{function.name}:state_write"
+                    )
+    control = module_functions.get("_core_capture_gravity_bias_control")
+    if control is not None:
+        control_arguments = [argument.arg for argument in control.args.args]
+        if control_arguments != [
+            "model",
+            "scratch_data",
+            "arm_qpos_ids",
+            "non_arm_qpos_ids",
+            "arm_dof_ids",
+            "arm_actuator_ids",
+            "desired_q",
+            "expected_non_arm_qpos_sha256",
+        ]:
+            errors.append("gravity_bias_source:control_signature")
+        qfrc_bias_reads = sum(
+            isinstance(node, ast.Attribute) and node.attr == "qfrc_bias"
+            for node in ast.walk(control)
+        )
+        if qfrc_bias_reads != 1:
+            errors.append("gravity_bias_source:qfrc_bias_read_count")
+    init_method = methods.get("__init__")
+    if init_method is not None:
+        scratch_assignments = []
+        for node in ast.walk(init_method):
+            if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+                continue
+            targets = (
+                list(node.targets)
+                if isinstance(node, ast.Assign)
+                else [node.target]
+            )
+            if any(
+                isinstance(target, ast.Attribute)
+                and target.attr
+                in {
+                    "core_capture_gravity_bias_scratch_data",
+                    "core_capture_gravity_bias_telemetry_fk_data",
+                }
+                for target in targets
+            ):
+                scratch_assignments.append(ast.unparse(node.value))
+        if len(scratch_assignments) != 2 or any(
+            expression == "self.data" for expression in scratch_assignments
+        ):
+            errors.append("gravity_bias_source:scratch_alias")
+    desired_start_assignments: list[tuple[str, ast.AST]] = []
+    for method_name in ("__init__", "_advance_action"):
+        method = methods.get(method_name)
+        if method is None:
+            continue
+        for node in ast.walk(method):
+            if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+                continue
+            targets = list(node.targets) if isinstance(node, ast.Assign) else [node.target]
+            if any(
+                isinstance(target, ast.Attribute)
+                and target.attr == "desired_action_start_q"
+                for target in targets
+            ):
+                desired_start_assignments.append((method_name, node.value))
+    if len(desired_start_assignments) != 2:
+        errors.append("gravity_bias_source:desired_start_assignment_count")
+    expected_start_names = {
+        "__init__": "initial_desired_start",
+        "_advance_action": "next_desired_start",
+    }
+    for method_name, value in desired_start_assignments:
+        expression = ast.unparse(value)
+        method_expression = ast.unparse(methods[method_name])
+        if (
+            expression != f"np.asarray({expected_start_names[method_name]}, dtype=np.float64).copy()"
+            or "CORE_CAPTURE_ROUTE_DESIRED_START_Q" not in method_expression
+        ):
+            errors.append("gravity_bias_source:desired_start_not_frozen")
+    audited_nodes = {
+        name: (
+            methods.get(name.rsplit(".", 1)[-1])
+            if name.startswith("MatchaWorkflowController.")
+            else module_functions.get(name)
+        )
+        for name in _expected_gravity_bias_ast_policy()["audited_functions"]
+    }
+    for name, node in audited_nodes.items():
+        if node is None:
+            errors.append(f"gravity_bias_source:{name}:missing")
+            continue
+        normalized = ast.dump(
+            ast.Module(body=[node], type_ignores=[]),
+            annotate_fields=True,
+            include_attributes=False,
+        )
+        if hashlib.sha256(normalized.encode()).hexdigest() != (
+            CORE_CAPTURE_GRAVITY_BIAS_FUNCTION_HASHES[name][
+                "normalized_ast_sha256"
+            ]
+        ):
+            errors.append(f"gravity_bias_source:{name}:ast_sha256")
+    return errors
+
+
+def _independent_move_action_desired_q(
+    action: Any,
+    desired_start_q: list[float],
+    elapsed_s: float,
+) -> tuple[np.ndarray, float]:
+    alpha = min(1.0, max(0.0, elapsed_s / float(action.duration_s)))
+    smooth = alpha**3 * (10.0 + alpha * (-15.0 + 6.0 * alpha))
+    start = np.asarray(desired_start_q, dtype=np.float64)
+    if action.joint_waypoints:
+        route = np.asarray(
+            (tuple(start), *action.joint_waypoints), dtype=np.float64
+        )
+        position = smooth * (len(route) - 1)
+        segment = min(int(math.floor(position)), len(route) - 2)
+        fraction = position - segment
+        desired = route[segment] + fraction * (
+            route[segment + 1] - route[segment]
+        )
+    else:
+        target = np.asarray(action.target_q, dtype=np.float64)
+        desired = start + smooth * (target - start)
+    return desired, smooth
+
+
+def _independent_expected_p_x_mm(
+    action_name: str, smooth: float
+) -> tuple[float, float]:
+    if action_name == CORE_CAPTURE_GRAVITY_BIAS_ACTIONS[0]:
+        return 55.0, 0.20 * smooth
+    if action_name == CORE_CAPTURE_GRAVITY_BIAS_ACTIONS[1]:
+        return 55.0 - 48.6 * smooth, 0.20
+    if action_name == CORE_CAPTURE_GRAVITY_BIAS_ACTIONS[2]:
+        return 6.4 - 3.2 * smooth, 0.20 * (1.0 - smooth)
+    if action_name == CORE_CAPTURE_GRAVITY_BIAS_ACTIONS[3]:
+        return 3.2 * (1.0 - smooth), 0.0
+    raise ValueError(action_name)
+
+
+def _gravity_bias_endpoint_record_errors(
+    record: Any,
+    expected: dict[str, Any],
+    thresholds: dict[str, Any],
+    controller_tick_substeps: int = 20,
+) -> list[str]:
+    """Validate one move-complete record against private-step replay."""
+
+    if not isinstance(record, dict):
+        return ["endpoint:missing"]
+    errors = [
+        f"endpoint:{path}"
+        for path in _evidence_mismatches(record, expected)
+    ]
+    if record.get("event") != "move_complete":
+        errors.append("endpoint:event")
+    if record.get("endpoint_dwell_ticks") != thresholds.get(
+        "endpoint_required_contiguous_controller_ticks"
+    ):
+        errors.append("endpoint:dwell")
+    endpoint_substep = record.get("physics_substep_count")
+    if (
+        isinstance(endpoint_substep, bool)
+        or not isinstance(endpoint_substep, int)
+        or endpoint_substep <= 0
+        or endpoint_substep % controller_tick_substeps != 0
+    ):
+        errors.append("endpoint:controller_tick_grid")
+    for field, threshold_name in (
+        ("endpoint_q_error_rad", "endpoint_maximum_q_error_rad"),
+        ("endpoint_max_abs_qvel_rad_s", "endpoint_maximum_abs_qvel_rad_s"),
+        ("endpoint_fk_position_error_m", "endpoint_maximum_fk_position_error_m"),
+        (
+            "endpoint_fk_orientation_error_rad",
+            "endpoint_maximum_fk_orientation_error_rad",
+        ),
+    ):
+        value = _finite_real(record.get(field))
+        threshold = _finite_real(thresholds.get(threshold_name))
+        if value is None or threshold is None or value > threshold:
+            errors.append(f"endpoint:{field}:threshold")
+    return errors
+
+
+def core_capture_gravity_bias_result_errors(
+    result: Any,
+    contract: dict[str, Any],
+    demo: ModuleType,
+    model: Any,
+    route_contract: dict[str, Any],
+) -> list[str]:
+    """Replay every bounded feedforward sample from independent model state."""
+
+    if not isinstance(result, dict):
+        return ["gravity_bias_result:missing"]
+    evidence = result.get("core_capture_gravity_bias_feedforward_evidence")
+    if not isinstance(evidence, dict):
+        return ["gravity_bias_evidence:missing"]
+    expected_keys = {
+        "schema_version", "evidence_kind", "runtime_contract_api",
+        "contract_identity_sha256", "identity_binding", "model_binding",
+        "dynamics_binding",
+        "physics_timestep_s", "desired_route_q_roster_sha256",
+        "desired_start_q_by_action", "frozen_action_roster_matches",
+        "raw_samples", "raw_samples_sha256", "recomputed_telemetry",
+        "recomputed_telemetry_sha256", "raw_sample_count",
+        "first_physics_substep_count", "last_physics_substep_count",
+        "sample_counts_by_phase", "producer_counts_by_phase",
+        "contact_audit_counts_by_phase", "phase_counts_consistent",
+        "state_index_and_time_contiguous", "final_sample_coverage_anchored",
+        "observed_phase_order", "expected_phase_order",
+        "sample_phase_order_is_valid_prefix", "every_physics_substep_recorded",
+        "all_formula_replay_passed", "all_samples_replayed_from_actual_model",
+        "all_runtime_scratch_isolation_passed",
+        "all_telemetry_recomputed_from_raw_fields_and_fresh_fk",
+        "raw_contact_count_closure_passed", "immutable_desired_route_replayed",
+        "any_saturation", "saturation_sample_count",
+        "maximum_abs_gravity_bias_offset_rad",
+        "maximum_abs_tracking_error_to_desired_rad",
+        "maximum_actuator_torque_utilization",
+        "maximum_ctrl_range_utilization", "completed_route_endpoint_actions",
+        "completed_route_endpoint_action_order", "endpoint_order_is_valid_prefix",
+        "route_endpoint_records", "align_and_axial_endpoints_completed",
+        "all_four_phases_observed", "all_four_route_endpoints_completed",
+        "align_and_axial_free_space_closed",
+        "align_and_axial_tracking_thresholds", "first_cam_contact_record",
+        "first_rejected_cam_contact_record", "prohibited_operation_counts",
+        "source_ast_allowlist_audit", "prohibited_operations_verified",
+        "contact_force_authority",
+        "friction_coefficient_authority", "contact_parameter_authority",
+        "cam_dynamics_authority", "passed", "release_ready",
+    }
+    errors: list[str] = []
+    if set(evidence) != expected_keys:
+        errors.append("gravity_bias_evidence:keys")
+    desired_starts = _independent_gravity_bias_desired_starts(route_contract)
+    expected_header = {
+        "schema_version": "1.0",
+        "evidence_kind": (
+            "real_mujoco_every_substep_development_gravity_bias_feedforward"
+        ),
+        "runtime_contract_api": (
+            "core_capture_gravity_bias_feedforward_runtime_contract"
+        ),
+        "contract_identity_sha256": CORE_CAPTURE_GRAVITY_BIAS_IDENTITY_SHA256,
+        "physics_timestep_s": 0.00025,
+        "desired_route_q_roster_sha256": route_contract["q_roster_sha256"],
+        "desired_start_q_by_action": desired_starts,
+        "contact_force_authority": False,
+        "friction_coefficient_authority": False,
+        "contact_parameter_authority": False,
+        "cam_dynamics_authority": False,
+        "release_ready": False,
+    }
+    for key, expected in expected_header.items():
+        if _evidence_mismatches(evidence.get(key), expected, key):
+            errors.append(f"gravity_bias_evidence:{key}")
+
+    expected_identity_snapshot = contract.get("identity_revalidation")
+    expected_identity_binding = {
+        "controller_init": expected_identity_snapshot,
+        "evidence_recompute": expected_identity_snapshot,
+        "unchanged_since_controller_init": True,
+        "control_function_binding_matches": True,
+        "passed": bool(
+            isinstance(expected_identity_snapshot, dict)
+            and expected_identity_snapshot.get("passed") is True
+        ),
+    }
+    if _evidence_mismatches(
+        evidence.get("identity_binding"), expected_identity_binding
+    ):
+        errors.append("gravity_bias_evidence:identity_binding")
+    identity_passed = expected_identity_binding["passed"]
+
+    compiled_sha = _independent_compiled_model_xml_equivalent_sha256(model)
+    initialized = demo.mujoco.MjData(model)
+    demo.initialize(model, initialized)
+    active_sha = _independent_initialized_active_geometry_sha256(
+        model, initialized, demo.mujoco
+    )
+    binding_contract = {
+        "model_binding": {
+            "model_xml_sha256": contract["source_binding"][
+                "assembled_model_xml_sha256"
+            ],
+            "compiled_model_xml_equivalent_sha256": contract[
+                "source_binding"
+            ]["compiled_model_xml_equivalent_sha256"],
+            "initialized_active_collision_geometry_sha256": contract[
+                "source_binding"
+            ]["initialized_active_collision_geometry_sha256"],
+        }
+    }
+    binding_observations = {
+        "controller_init_compiled": compiled_sha,
+        "controller_init_active": active_sha,
+        "evidence_compiled": compiled_sha,
+        "evidence_active": active_sha,
+    }
+    binding_errors, binding_passed = _core_cam_actual_model_binding_errors(
+        evidence.get("model_binding"),
+        binding_contract,
+        binding_observations,
+    )
+    errors.extend(
+        f"gravity_bias_evidence:{error}" for error in binding_errors
+    )
+    expected_dynamics = _expected_gravity_bias_dynamics_binding(model, demo)
+    expected_dynamics_record = {
+        "controller_init": expected_dynamics,
+        "evidence_recompute": expected_dynamics,
+        "unchanged_since_controller_init": True,
+        "passed": bool(binding_passed and expected_dynamics["passed"]),
+    }
+    if _evidence_mismatches(
+        evidence.get("dynamics_binding"), expected_dynamics_record
+    ):
+        errors.append("gravity_bias_evidence:dynamics_binding")
+    dynamics_passed = expected_dynamics_record["passed"]
+
+    samples = evidence.get("raw_samples")
+    if not isinstance(samples, list):
+        errors.append("gravity_bias_evidence:raw_samples")
+        samples = []
+    if evidence.get("raw_samples_sha256") != canonical_json_sha256(samples):
+        errors.append("gravity_bias_evidence:raw_samples_sha256")
+    if evidence.get("raw_sample_count") != len(samples):
+        errors.append("gravity_bias_evidence:raw_sample_count")
+    published_telemetry = evidence.get("recomputed_telemetry")
+    if not isinstance(published_telemetry, list):
+        errors.append("gravity_bias_evidence:recomputed_telemetry")
+        published_telemetry = []
+    if evidence.get("recomputed_telemetry_sha256") != canonical_json_sha256(
+        published_telemetry
+    ):
+        errors.append("gravity_bias_evidence:recomputed_telemetry_sha256")
+    expected_sample_keys = {
+        "physics_substep_count", "sim_time_s", "action",
+        "contract_identity_sha256", "command_elapsed_s",
+        "prewrite_identity_sha256", "prewrite_identity_passed",
+        "positive_lock_slider_qpos_address",
+        "command_smooth_fraction", "desired_action_start_q_rad",
+        "desired_arm_q_rad", "scratch_desired_arm_q_rad",
+        "scratch_is_distinct_from_live",
+        "live_qpos_unchanged_during_bias_evaluation",
+        "live_qvel_unchanged_during_bias_evaluation",
+        "expected_non_arm_qpos_sha256",
+        "observed_non_arm_qpos_before_sha256",
+        "observed_non_arm_qpos_after_sha256",
+        "all_scratch_qvel_zero_before", "all_scratch_qvel_zero_after",
+        "scratch_arm_qvel_rad_s", "scratch_qfrc_bias_n_m", "kp", "gear",
+        "kp_times_gear", "gravity_bias_offset_rad",
+        "unsaturated_control_rad", "applied_control_rad",
+        "saturated_by_joint", "any_saturation", "live_arm_q_rad",
+        "live_arm_qvel_rad_s", "live_full_qpos", "live_full_qvel",
+        "tracking_error_to_desired_rad", "actuator_torque_nm",
+        "actuator_torque_utilization", "ctrl_range_utilization", "fk",
+        "cached_post_mj_step_transform_fk",
+        "raw_two_tab_by_five_cam_contact_counts", "raw_live_contact_count",
+        "raw_all_contact_geom_pairs", "raw_tab_cam_contact_count",
+        "raw_all_cam_contact_count", "raw_other_cam_contact_count", "finite",
+    }
+    actions = {
+        action.name: action for action in demo._core_capture_move_actions()
+    }
+    actual_action_records = [
+        {
+            "name": action.name,
+            "kind": action.kind,
+            "tool": action.tool,
+            "duration_s": action.duration_s,
+            "timeout_s": action.timeout_s,
+            "target_q": list(action.target_q or ()),
+            "joint_waypoints": [
+                list(row) for row in action.joint_waypoints
+            ],
+        }
+        for action in demo._core_capture_move_actions()
+    ]
+    expected_action_records = _independent_gravity_bias_action_records(
+        route_contract
+    )
+    action_roster_matches = bool(
+        actual_action_records == expected_action_records
+        and canonical_json_sha256(actual_action_records)
+        == CORE_CAPTURE_GRAVITY_BIAS_ACTION_ROSTER_SHA256
+    )
+    if not action_roster_matches:
+        errors.append("gravity_bias_evidence:runtime_action_roster")
+    if evidence.get("frozen_action_roster_matches") is not True:
+        errors.append("gravity_bias_evidence:frozen_action_roster_matches")
+    arm_qpos = np.asarray(
+        [model.joint(name).qposadr[0] for name in demo.ARM_JOINTS], dtype=int
+    )
+    arm_dof = np.asarray(
+        [model.joint(name).dofadr[0] for name in demo.ARM_JOINTS], dtype=int
+    )
+    arm_actuators = np.asarray(
+        [model.actuator(name).id for name in demo.ARM_ACTUATORS], dtype=int
+    )
+    non_arm_qpos = np.asarray(
+        sorted(set(range(model.nq)) - set(arm_qpos.tolist())), dtype=int
+    )
+    slider_qpos_address = int(
+        model.joint("qc_positive_lock_slider_joint").qposadr[0]
+    )
+    scratch = demo.mujoco.MjData(model)
+    demo.initialize(model, scratch)
+    _independent_forward_scratch_arm_configuration(
+        model,
+        scratch,
+        demo.mujoco,
+        arm_qpos,
+        np.asarray(scratch.qpos, dtype=np.float64)[arm_qpos],
+    )
+    expected_non_arm_qpos_sha256 = _independent_float64_bytes_sha256(
+        np.asarray(scratch.qpos, dtype=np.float64)[non_arm_qpos]
+    )
+    fk_data = demo.mujoco.MjData(model)
+    demo.initialize(model, fk_data)
+    physical_replay_data = demo.mujoco.MjData(model)
+    demo.initialize(model, physical_replay_data)
+    dock_id = int(model.body("dock_gripper").id)
+    mating_id = int(model.site("robot_mating_face").id)
+    kp_model = np.asarray(
+        model.actuator_gainprm[arm_actuators, 0], dtype=np.float64
+    )
+    gear_model = np.asarray(
+        model.actuator_gear[arm_actuators, 0], dtype=np.float64
+    )
+    ctrlrange = np.asarray(
+        model.actuator_ctrlrange[arm_actuators], dtype=np.float64
+    )
+    forcerange = np.asarray(
+        model.actuator_forcerange[arm_actuators], dtype=np.float64
+    )
+    formula_passes: list[bool] = []
+    model_replay_passes: list[bool] = []
+    isolation_passes: list[bool] = []
+    telemetry_passes: list[bool] = []
+    recomputed_telemetry: list[dict[str, Any]] = []
+    route_passes: list[bool] = []
+    contact_passes: list[bool] = []
+    sample_validity: list[bool] = []
+    endpoint_replay_by_substep: dict[int, dict[str, Any]] = {}
+    for sample_index, sample in enumerate(samples):
+        prefix = f"gravity_bias_sample:{sample_index}"
+        if not isinstance(sample, dict) or set(sample) != expected_sample_keys:
+            errors.append(f"{prefix}:keys")
+            formula_passes.append(False)
+            model_replay_passes.append(False)
+            isolation_passes.append(False)
+            telemetry_passes.append(False)
+            route_passes.append(False)
+            contact_passes.append(False)
+            sample_validity.append(False)
+            continue
+        try:
+            action_name = str(sample["action"])
+            action = actions[action_name]
+            desired_start = desired_starts[action_name]
+            desired, smooth = _independent_move_action_desired_q(
+                action, desired_start, float(sample["command_elapsed_s"])
+            )
+            route_ok = bool(
+                not _evidence_mismatches(
+                    sample["desired_action_start_q_rad"], desired_start
+                )
+                and not _evidence_mismatches(
+                    sample["desired_arm_q_rad"], desired.tolist()
+                )
+                and _number_matches(
+                    sample["command_smooth_fraction"], smooth
+                )
+                and sample["contract_identity_sha256"]
+                == CORE_CAPTURE_GRAVITY_BIAS_IDENTITY_SHA256
+                and sample["prewrite_identity_sha256"]
+                == CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_SHA256
+                and sample["prewrite_identity_passed"] is True
+                and sample["positive_lock_slider_qpos_address"]
+                == slider_qpos_address
+            )
+            route_passes.append(route_ok)
+            if not route_ok:
+                errors.append(f"{prefix}:desired_route")
+
+            scratch.qpos[arm_qpos] = desired
+            scratch.qvel[:] = 0.0
+            demo.mujoco.mj_forward(model, scratch)
+            bias = np.asarray(scratch.qfrc_bias[arm_dof], dtype=np.float64)
+            denominator = kp_model * gear_model
+            offset = bias / denominator
+            unsaturated = desired + offset
+            applied = np.clip(
+                unsaturated, ctrlrange[:, 0], ctrlrange[:, 1]
+            )
+            saturated = np.not_equal(applied, unsaturated)
+            model_expected = {
+                "scratch_desired_arm_q_rad": desired.tolist(),
+                "scratch_arm_qvel_rad_s": [0.0] * len(arm_dof),
+                "scratch_qfrc_bias_n_m": bias.tolist(),
+                "kp": kp_model.tolist(),
+                "gear": gear_model.tolist(),
+                "kp_times_gear": denominator.tolist(),
+                "gravity_bias_offset_rad": offset.tolist(),
+                "unsaturated_control_rad": unsaturated.tolist(),
+                "applied_control_rad": applied.tolist(),
+                "saturated_by_joint": [bool(value) for value in saturated],
+                "any_saturation": bool(np.any(saturated)),
+            }
+            model_ok = all(
+                not _evidence_mismatches(sample.get(key), expected, key)
+                for key, expected in model_expected.items()
+            )
+            model_replay_passes.append(model_ok)
+            if not model_ok:
+                errors.append(f"{prefix}:model_replay")
+            isolation_ok = bool(
+                sample["scratch_is_distinct_from_live"] is True
+                and sample[
+                    "live_qpos_unchanged_during_bias_evaluation"
+                ] is True
+                and sample[
+                    "live_qvel_unchanged_during_bias_evaluation"
+                ] is True
+                and sample["all_scratch_qvel_zero_before"] is True
+                and sample["all_scratch_qvel_zero_after"] is True
+                and sample["expected_non_arm_qpos_sha256"]
+                == CORE_CAPTURE_GRAVITY_BIAS_NON_ARM_QPOS_SHA256
+                and sample["observed_non_arm_qpos_before_sha256"]
+                == CORE_CAPTURE_GRAVITY_BIAS_NON_ARM_QPOS_SHA256
+                and sample["observed_non_arm_qpos_after_sha256"]
+                == CORE_CAPTURE_GRAVITY_BIAS_NON_ARM_QPOS_SHA256
+                and expected_non_arm_qpos_sha256
+                == CORE_CAPTURE_GRAVITY_BIAS_NON_ARM_QPOS_SHA256
+            )
+            isolation_passes.append(isolation_ok)
+            if not isolation_ok:
+                errors.append(f"{prefix}:scratch_isolation")
+            published_bias = np.asarray(
+                sample["scratch_qfrc_bias_n_m"], dtype=np.float64
+            )
+            published_kp = np.asarray(sample["kp"], dtype=np.float64)
+            published_gear = np.asarray(sample["gear"], dtype=np.float64)
+            published_offset = np.asarray(
+                sample["gravity_bias_offset_rad"], dtype=np.float64
+            )
+            published_unsaturated = np.asarray(
+                sample["unsaturated_control_rad"], dtype=np.float64
+            )
+            formula_ok = bool(
+                np.array_equal(
+                    published_offset,
+                    published_bias / (published_kp * published_gear),
+                )
+                and np.array_equal(
+                    published_unsaturated, desired + published_offset
+                )
+                and np.array_equal(
+                    np.asarray(sample["applied_control_rad"]),
+                    np.clip(
+                        published_unsaturated,
+                        ctrlrange[:, 0], ctrlrange[:, 1],
+                    ),
+                )
+                and bool(sample["finite"])
+            )
+            formula_passes.append(formula_ok)
+            if not formula_ok:
+                errors.append(f"{prefix}:formula")
+
+            live_q = np.asarray(sample["live_arm_q_rad"], dtype=np.float64)
+            live_qvel = np.asarray(
+                sample["live_arm_qvel_rad_s"], dtype=np.float64
+            )
+            live_full_qpos = np.asarray(
+                sample["live_full_qpos"], dtype=np.float64
+            )
+            live_full_qvel = np.asarray(
+                sample["live_full_qvel"], dtype=np.float64
+            )
+            published_slider_address = sample[
+                "positive_lock_slider_qpos_address"
+            ]
+            slider_address_ok = bool(
+                isinstance(published_slider_address, int)
+                and not isinstance(published_slider_address, bool)
+                and published_slider_address == slider_qpos_address
+                and 0 <= published_slider_address < model.nq
+            )
+            slider_q_mm = (
+                float(live_full_qpos[slider_qpos_address]) * 1000.0
+                if live_full_qpos.shape == (model.nq,)
+                else math.nan
+            )
+            expected_tracking = live_q - desired
+            actuator_torque = np.asarray(
+                sample["actuator_torque_nm"], dtype=np.float64
+            )
+            physical_replay_data.ctrl[arm_actuators] = applied
+            demo.mujoco.mj_step(model, physical_replay_data)
+            expected_actuator_torque = np.asarray(
+                physical_replay_data.actuator_force[arm_actuators],
+                dtype=np.float64,
+            )
+            physical_replay_ok = bool(
+                np.array_equal(
+                    live_full_qpos,
+                    np.asarray(physical_replay_data.qpos, dtype=np.float64),
+                )
+                and np.array_equal(
+                    live_full_qvel,
+                    np.asarray(physical_replay_data.qvel, dtype=np.float64),
+                )
+                and np.array_equal(
+                    actuator_torque, expected_actuator_torque
+                )
+            )
+            model_ok = bool(model_ok and physical_replay_ok)
+            model_replay_passes[-1] = model_ok
+            if not physical_replay_ok:
+                errors.append(f"{prefix}:physical_dynamics_replay")
+            replay_dock_position = np.asarray(
+                physical_replay_data.xpos[dock_id], dtype=np.float64
+            )
+            replay_dock_rotation = np.asarray(
+                physical_replay_data.xmat[dock_id], dtype=np.float64
+            ).reshape(3, 3)
+            replay_mating_position = np.asarray(
+                physical_replay_data.site_xpos[mating_id], dtype=np.float64
+            )
+            replay_mating_rotation = np.asarray(
+                physical_replay_data.site_xmat[mating_id], dtype=np.float64
+            ).reshape(3, 3)
+            replay_local_position = (
+                replay_mating_position - replay_dock_position
+            ) @ replay_dock_rotation
+            target_preseat_mm, target_source_x_mm = (
+                _independent_expected_p_x_mm(action_name, 1.0)
+            )
+            target_local_position = np.asarray(
+                [target_source_x_mm, 0.0, -target_preseat_mm],
+                dtype=np.float64,
+            ) * 0.001
+            endpoint_position_error_m = float(
+                np.linalg.norm(
+                    replay_local_position - target_local_position
+                )
+            )
+            replay_relative_rotation = (
+                replay_dock_rotation.T @ replay_mating_rotation
+            )
+            endpoint_orientation_error_rad = math.acos(
+                np.clip(
+                    (float(np.trace(replay_relative_rotation)) - 1.0)
+                    / 2.0,
+                    -1.0,
+                    1.0,
+                )
+            )
+            endpoint_q_error_rad = float(
+                np.max(
+                    np.abs(
+                        live_q
+                        - np.asarray(action.target_q, dtype=np.float64)
+                    )
+                )
+            )
+            endpoint_max_abs_qvel_rad_s = float(
+                np.max(np.abs(live_qvel))
+            )
+            endpoint_substep = int(sample["physics_substep_count"])
+            endpoint_time_s = float(sample["sim_time_s"])
+            endpoint_route_evidence = {
+                "action": action_name,
+                "target_preseat_mm": target_preseat_mm,
+                "target_source_x_mm": target_source_x_mm,
+                "observed_preseat_mm": (
+                    -float(replay_local_position[2]) * 1000.0
+                ),
+                "observed_x_mm": (
+                    float(replay_local_position[0]) * 1000.0
+                ),
+                "source_x_error_mm": (
+                    float(replay_local_position[0]) * 1000.0
+                    - target_source_x_mm
+                ),
+                "observed_transverse_y_mm": (
+                    float(replay_local_position[1]) * 1000.0
+                ),
+                "position_error_m": endpoint_position_error_m,
+                "orientation_error_rad": endpoint_orientation_error_rad,
+                "physics_substep_count": endpoint_substep,
+                "sim_time_s": endpoint_time_s,
+            }
+            endpoint_replay_by_substep[endpoint_substep] = {
+                "event": "move_complete",
+                "action": action_name,
+                "physics_substep_count": endpoint_substep,
+                "sim_time_s": endpoint_time_s,
+                "endpoint_q_error_rad": endpoint_q_error_rad,
+                "endpoint_max_abs_qvel_rad_s": (
+                    endpoint_max_abs_qvel_rad_s
+                ),
+                "endpoint_fk_position_error_m": endpoint_position_error_m,
+                "endpoint_fk_orientation_error_rad": (
+                    endpoint_orientation_error_rad
+                ),
+                "endpoint_dwell_ticks": int(
+                    contract["guard_thresholds"][
+                        "endpoint_required_contiguous_controller_ticks"
+                    ]
+                ),
+                "route_endpoint_evidence": endpoint_route_evidence,
+            }
+            force_limit = np.max(np.abs(forcerange), axis=1)
+            expected_torque_util = np.divide(
+                np.abs(expected_actuator_torque), force_limit,
+                out=np.zeros_like(expected_actuator_torque),
+                where=force_limit > 0.0,
+            )
+            ctrl_midpoint = np.mean(ctrlrange, axis=1)
+            ctrl_half = 0.5 * (ctrlrange[:, 1] - ctrlrange[:, 0])
+            expected_ctrl_util = np.divide(
+                np.abs(applied - ctrl_midpoint), ctrl_half,
+                out=np.zeros_like(applied), where=ctrl_half > 0.0,
+            )
+            arithmetic_ok = bool(
+                not _evidence_mismatches(
+                    sample["tracking_error_to_desired_rad"],
+                    expected_tracking.tolist(),
+                )
+                and not _evidence_mismatches(
+                    sample["actuator_torque_utilization"],
+                    expected_torque_util.tolist(),
+                )
+                and not _evidence_mismatches(
+                    sample["actuator_torque_nm"],
+                    expected_actuator_torque.tolist(),
+                )
+                and not _evidence_mismatches(
+                    sample["ctrl_range_utilization"],
+                    expected_ctrl_util.tolist(),
+                )
+                and np.all(np.isfinite(live_q))
+                and np.all(np.isfinite(live_qvel))
+                and np.all(np.isfinite(actuator_torque))
+                and np.all(np.isfinite(expected_actuator_torque))
+                and np.all(np.isfinite(live_full_qpos))
+                and np.all(np.isfinite(live_full_qvel))
+                and live_full_qpos.shape == (model.nq,)
+                and live_full_qvel.shape == (model.nv,)
+                and np.array_equal(live_q, live_full_qpos[arm_qpos])
+                and np.array_equal(live_qvel, live_full_qvel[arm_dof])
+            )
+            # The authoritative telemetry is a fresh forward pass at the
+            # recorded post-step generalized state.  Cached transforms from
+            # ``mj_step`` are preserved separately and never used as FK
+            # authority.
+            fk_data.qpos[:] = live_full_qpos
+            fk_data.qvel[:] = live_full_qvel
+            demo.mujoco.mj_forward(model, fk_data)
+            dock_position = np.asarray(fk_data.xpos[dock_id], dtype=np.float64)
+            dock_rotation = np.asarray(
+                fk_data.xmat[dock_id], dtype=np.float64
+            ).reshape(3, 3)
+            mating_position = np.asarray(
+                fk_data.site_xpos[mating_id], dtype=np.float64
+            )
+            mating_rotation = np.asarray(
+                fk_data.site_xmat[mating_id], dtype=np.float64
+            ).reshape(3, 3)
+            local_mm = (mating_position - dock_position) @ dock_rotation * 1000.0
+            preseat_mm = -float(local_mm[2])
+            source_x_mm = float(local_mm[0])
+            expected_p, expected_x = _independent_expected_p_x_mm(
+                action_name, smooth
+            )
+            relative_rotation = dock_rotation.T @ mating_rotation
+            orientation = math.acos(
+                np.clip((float(np.trace(relative_rotation)) - 1.0) / 2.0, -1.0, 1.0)
+            )
+            source_q_max = max(
+                0.05, min(3.0, max(0.0, preseat_mm) - source_x_mm - 3.15)
+            )
+            expected_fk = {
+                "sampling_semantics": (
+                    "fresh_private_scratch_mj_forward_at_recorded_post_step_qpos"
+                ),
+                "expected_preseat_mm": expected_p,
+                "preseat_mm": preseat_mm,
+                "preseat_error_mm": preseat_mm - expected_p,
+                "expected_source_x_mm": expected_x,
+                "source_x_mm": source_x_mm,
+                "source_x_error_mm": source_x_mm - expected_x,
+                "transverse_y_mm": float(local_mm[1]),
+                "orientation_error_rad": orientation,
+                "slider_q_mm": slider_q_mm,
+                "source_q_max_mm": source_q_max,
+            }
+            fk_ok = bool(
+                slider_address_ok
+                and not _evidence_mismatches(sample["fk"], expected_fk)
+            )
+            cached_fk = sample["cached_post_mj_step_transform_fk"]
+            cached_ok = bool(
+                isinstance(cached_fk, dict)
+                and set(cached_fk) == {
+                    "sampling_semantics", "preseat_mm", "source_x_mm",
+                    "transverse_y_mm", "orientation_error_rad",
+                    "slider_q_mm", "source_q_max_mm",
+                }
+                and cached_fk.get("sampling_semantics")
+                == (
+                    "live_cached_transforms_after_mj_step_not_qpos_replay_authority"
+                )
+                and all(
+                    _finite_real(cached_fk.get(key)) is not None
+                    for key in set(cached_fk) - {"sampling_semantics"}
+                )
+            )
+            if not arithmetic_ok:
+                errors.append(f"{prefix}:arithmetic")
+            if not fk_ok:
+                errors.append(f"{prefix}:fk")
+            if not cached_ok:
+                errors.append(f"{prefix}:cached_fk")
+
+            raw_contacts = sample["raw_all_contact_geom_pairs"]
+            raw_indices_ok = bool(
+                isinstance(raw_contacts, list)
+                and [item.get("contact_index") for item in raw_contacts]
+                == list(range(len(raw_contacts)))
+                and sample["raw_live_contact_count"] == len(raw_contacts)
+            )
+            expected_pair_names = [
+                [tab_name, cam_name]
+                for tab_name in (
+                    "qc_col_lock_slider_tab_part_000",
+                    "qc_col_lock_slider_tab_part_001",
+                )
+                for cam_name in (
+                    "dock_gripper_cam_collision",
+                    "dock_gripper_cam_axial_lead_collision",
+                    "dock_gripper_cam_hold_finger_collision",
+                    "dock_gripper_cam_outer_root_lower_collision",
+                    "dock_gripper_cam_outer_root_upper_collision",
+                )
+            ]
+            pair_records = sample["raw_two_tab_by_five_cam_contact_counts"]
+            pair_ok = bool(
+                isinstance(pair_records, list)
+                and [item.get("pair") for item in pair_records]
+                == expected_pair_names
+            )
+            classified: set[int] = set()
+            if raw_indices_ok and pair_ok:
+                for pair_record, pair_names in zip(
+                    pair_records, expected_pair_names, strict=True
+                ):
+                    indices = [
+                        int(item["contact_index"])
+                        for item in raw_contacts
+                        if frozenset(item.get("geom_pair", []))
+                        == frozenset(pair_names)
+                    ]
+                    pair_ok &= (
+                        pair_record.get("contact_indices") == indices
+                        and pair_record.get("contact_count") == len(indices)
+                    )
+                    classified.update(indices)
+            cam_names = frozenset(pair[1] for pair in expected_pair_names)
+            all_cam = {
+                int(item["contact_index"])
+                for item in raw_contacts
+                if any(name in cam_names for name in item.get("geom_pair", []))
+            } if raw_indices_ok else set()
+            contact_ok = bool(
+                raw_indices_ok and pair_ok
+                and sample["raw_tab_cam_contact_count"] == len(classified)
+                and sample["raw_all_cam_contact_count"] == len(all_cam)
+                and sample["raw_other_cam_contact_count"]
+                == len(all_cam - classified)
+            )
+            contact_passes.append(contact_ok)
+            if not contact_ok:
+                errors.append(f"{prefix}:contact_closure")
+            derived_finite = bool(
+                np.all(np.isfinite(desired))
+                and np.all(np.isfinite(live_q))
+                and np.all(np.isfinite(live_qvel))
+                and np.all(np.isfinite(live_full_qpos))
+                and np.all(np.isfinite(live_full_qvel))
+                and np.all(np.isfinite(published_bias))
+                and np.all(np.isfinite(published_kp))
+                and np.all(np.isfinite(published_gear))
+                and np.all(np.isfinite(published_offset))
+                and np.all(np.isfinite(published_unsaturated))
+                and np.all(np.isfinite(applied))
+                and np.all(np.isfinite(actuator_torque))
+                and np.all(np.isfinite(expected_torque_util))
+                and np.all(np.isfinite(expected_ctrl_util))
+                and all(
+                    _finite_real(value) is not None
+                    for key, value in expected_fk.items()
+                    if key != "sampling_semantics"
+                )
+            )
+            telemetry_ok = bool(
+                arithmetic_ok
+                and fk_ok
+                and bool(sample["finite"]) is derived_finite
+            )
+            telemetry_passes.append(telemetry_ok)
+            telemetry_record = {
+                "physics_substep_count": int(
+                    sample["physics_substep_count"]
+                ),
+                "action": action_name,
+                "tracking_error_to_desired_rad": (
+                    expected_tracking.tolist()
+                ),
+                "actuator_torque_utilization": (
+                    expected_torque_util.tolist()
+                ),
+                "ctrl_range_utilization": expected_ctrl_util.tolist(),
+                "fk": {
+                    key: value
+                    for key, value in expected_fk.items()
+                    if key != "sampling_semantics"
+                },
+                "finite": derived_finite,
+                "passed": telemetry_ok,
+                "raw_all_cam_contact_count": len(all_cam),
+            }
+            recomputed_telemetry.append(telemetry_record)
+            if (
+                sample_index >= len(published_telemetry)
+                or _evidence_mismatches(
+                    published_telemetry[sample_index], telemetry_record
+                )
+            ):
+                errors.append(f"{prefix}:recomputed_telemetry")
+            sample_validity.append(
+                bool(
+                    route_ok and model_ok and formula_ok and isolation_ok
+                    and telemetry_ok and contact_ok
+                )
+            )
+        except (KeyError, TypeError, ValueError, IndexError, FloatingPointError):
+            errors.append(f"{prefix}:malformed")
+            while len(formula_passes) <= sample_index:
+                formula_passes.append(False)
+            while len(model_replay_passes) <= sample_index:
+                model_replay_passes.append(False)
+            while len(isolation_passes) <= sample_index:
+                isolation_passes.append(False)
+            while len(telemetry_passes) <= sample_index:
+                telemetry_passes.append(False)
+            while len(route_passes) <= sample_index:
+                route_passes.append(False)
+            while len(contact_passes) <= sample_index:
+                contact_passes.append(False)
+            sample_validity.append(False)
+
+    if len(published_telemetry) != len(recomputed_telemetry):
+        errors.append("gravity_bias_evidence:recomputed_telemetry_count")
+
+    cam_contact_records = result.get(
+        "core_cam_tab_contact_evidence", {}
+    ).get("raw_contact_records", [])
+    if not isinstance(cam_contact_records, list):
+        errors.append("gravity_bias_evidence:cam_contact_records")
+        cam_contact_records = []
+    independently_classified_contacts: list[tuple[dict[str, Any], bool]] = []
+    for contact_index, contact_record in enumerate(cam_contact_records):
+        classification_errors, classification_passed, _ = (
+            _independent_cam_tab_record_classification(contact_record)
+        )
+        if classification_errors:
+            errors.append(
+                f"gravity_bias_evidence:cam_contact_record:{contact_index}"
+            )
+        if isinstance(contact_record, dict):
+            independently_classified_contacts.append(
+                (contact_record, classification_passed)
+            )
+    expected_first_cam_contact = (
+        copy.deepcopy(independently_classified_contacts[0][0])
+        if independently_classified_contacts
+        else None
+    )
+    expected_first_rejected_cam_contact = next(
+        (
+            copy.deepcopy(contact_record)
+            for contact_record, classification_passed
+            in independently_classified_contacts
+            if not classification_passed
+        ),
+        None,
+    )
+    if _evidence_mismatches(
+        evidence.get("first_cam_contact_record"),
+        expected_first_cam_contact,
+    ):
+        errors.append("gravity_bias_evidence:first_cam_contact_record")
+    if _evidence_mismatches(
+        evidence.get("first_rejected_cam_contact_record"),
+        expected_first_rejected_cam_contact,
+    ):
+        errors.append(
+            "gravity_bias_evidence:first_rejected_cam_contact_record"
+        )
+
+    phase_counts = {
+        name: sum(
+            isinstance(sample, dict) and sample.get("action") == name
+            for sample in samples
+        )
+        for name in CORE_CAPTURE_GRAVITY_BIAS_ACTIONS
+    }
+    observed_order: list[str] = []
+    for sample in samples:
+        if not isinstance(sample, dict):
+            continue
+        name = str(sample.get("action"))
+        if not observed_order or observed_order[-1] != name:
+            observed_order.append(name)
+    expected_order = list(CORE_CAPTURE_GRAVITY_BIAS_ACTIONS)
+    phase_order_ok = observed_order == expected_order[: len(observed_order)]
+    state_contiguous = bool(
+        samples
+        and all(isinstance(sample, dict) for sample in samples)
+        and samples[0].get("physics_substep_count") == 1
+        and samples[-1].get("physics_substep_count") == len(samples)
+        and all(
+            sample.get("physics_substep_count") == index
+            and _number_matches(sample.get("sim_time_s"), index * 0.00025, 1.0e-10)
+            for index, sample in enumerate(samples, start=1)
+        )
+        and all(
+            _number_matches(
+                float(current["sim_time_s"])
+                - float(previous["sim_time_s"]),
+                0.00025,
+                1.0e-12,
+            )
+            for previous, current in zip(samples, samples[1:])
+        )
+    )
+    endpoint_records = evidence.get("route_endpoint_records")
+    if not isinstance(endpoint_records, list):
+        endpoint_records = []
+        errors.append("gravity_bias_evidence:endpoint_records")
+    endpoint_order = [
+        str(item.get("action")) for item in endpoint_records
+        if isinstance(item, dict)
+    ]
+    endpoint_prefix = bool(
+        endpoint_order == expected_order[: len(endpoint_order)]
+        and len(endpoint_order) == len(set(endpoint_order))
+    )
+    route_endpoint_journal = result.get("route_alignment", {}).get(
+        "phase_endpoint_journal_evidence"
+    )
+    if _evidence_mismatches(route_endpoint_journal, endpoint_records):
+        errors.append("gravity_bias_evidence:endpoint_route_journal")
+    result_journal_endpoints = [
+        record
+        for record in result.get("journal", [])
+        if isinstance(record, dict)
+        and record.get("event") == "move_complete"
+        and record.get("action") in CORE_CAPTURE_GRAVITY_BIAS_ACTIONS
+    ] if isinstance(result.get("journal"), list) else []
+    if _evidence_mismatches(result_journal_endpoints, endpoint_records):
+        errors.append("gravity_bias_evidence:endpoint_result_journal")
+    endpoint_records_passed = True
+    samples_by_substep = {
+        int(sample["physics_substep_count"]): sample
+        for sample in samples
+        if isinstance(sample, dict)
+        and isinstance(sample.get("physics_substep_count"), int)
+        and not isinstance(sample.get("physics_substep_count"), bool)
+    }
+    physics_timestep_s = float(model.opt.timestep)
+    controller_tick_substeps = int(round(0.005 / physics_timestep_s))
+    if not math.isclose(
+        controller_tick_substeps * physics_timestep_s,
+        0.005,
+        rel_tol=0.0,
+        abs_tol=1.0e-15,
+    ):
+        errors.append("gravity_bias_evidence:endpoint_controller_tick")
+    for endpoint_index, endpoint_record in enumerate(endpoint_records):
+        expected_endpoint = endpoint_replay_by_substep.get(
+            endpoint_record.get("physics_substep_count")
+            if isinstance(endpoint_record, dict)
+            else None
+        )
+        endpoint_errors = _gravity_bias_endpoint_record_errors(
+            endpoint_record,
+            expected_endpoint or {},
+            contract["guard_thresholds"],
+            controller_tick_substeps,
+        )
+        if endpoint_errors or expected_endpoint is None:
+            endpoint_records_passed = False
+            errors.extend(
+                f"gravity_bias_evidence:endpoint:{endpoint_index}:{error}"
+                for error in endpoint_errors
+            )
+            if expected_endpoint is None:
+                errors.append(
+                    f"gravity_bias_evidence:endpoint:{endpoint_index}:sample"
+                )
+        if isinstance(endpoint_record, dict) and expected_endpoint is not None:
+            action_name = endpoint_record.get("action")
+            action = actions.get(action_name)
+            endpoint_substep = endpoint_record.get("physics_substep_count")
+            dwell_ticks = int(
+                contract["guard_thresholds"][
+                    "endpoint_required_contiguous_controller_ticks"
+                ]
+            )
+            guard_substeps = (
+                [
+                    int(endpoint_substep)
+                    - controller_tick_substeps * offset
+                    for offset in reversed(range(dwell_ticks))
+                ]
+                if isinstance(endpoint_substep, int)
+                and not isinstance(endpoint_substep, bool)
+                else []
+            )
+            dwell_replay_passed = bool(
+                action is not None
+                and len(guard_substeps) == dwell_ticks
+                and int(endpoint_substep) % controller_tick_substeps == 0
+                and all(
+                    substep in endpoint_replay_by_substep
+                    and substep in samples_by_substep
+                    and samples_by_substep[substep].get("action")
+                    == action_name
+                    and _finite_real(
+                        samples_by_substep[substep].get(
+                            "command_elapsed_s"
+                        )
+                    )
+                    is not None
+                    and float(
+                        samples_by_substep[substep]["command_elapsed_s"]
+                    )
+                    >= float(action.duration_s)
+                    and _number_matches(
+                        samples_by_substep[substep].get(
+                            "command_smooth_fraction"
+                        ),
+                        1.0,
+                    )
+                    and endpoint_replay_by_substep[substep][
+                        "endpoint_q_error_rad"
+                    ]
+                    <= contract["guard_thresholds"][
+                        "endpoint_maximum_q_error_rad"
+                    ]
+                    and endpoint_replay_by_substep[substep][
+                        "endpoint_max_abs_qvel_rad_s"
+                    ]
+                    <= contract["guard_thresholds"][
+                        "endpoint_maximum_abs_qvel_rad_s"
+                    ]
+                    and endpoint_replay_by_substep[substep][
+                        "endpoint_fk_position_error_m"
+                    ]
+                    <= contract["guard_thresholds"][
+                        "endpoint_maximum_fk_position_error_m"
+                    ]
+                    and endpoint_replay_by_substep[substep][
+                        "endpoint_fk_orientation_error_rad"
+                    ]
+                    <= contract["guard_thresholds"][
+                        "endpoint_maximum_fk_orientation_error_rad"
+                    ]
+                    and abs(
+                        endpoint_replay_by_substep[substep][
+                            "route_endpoint_evidence"
+                        ]["source_x_error_mm"]
+                    )
+                    <= contract["guard_thresholds"][
+                        "endpoint_maximum_abs_source_x_error_mm"
+                    ]
+                    for substep in guard_substeps
+                )
+            )
+            if not dwell_replay_passed:
+                endpoint_records_passed = False
+                errors.append(
+                    f"gravity_bias_evidence:endpoint:{endpoint_index}:dwell_replay"
+                )
+    completed_set = set(endpoint_order)
+    all_phases = all(count > 0 for count in phase_counts.values())
+    all_endpoints = completed_set == set(expected_order)
+    final_anchored = bool(
+        samples
+        and (
+            all_endpoints
+            and endpoint_records
+            and samples[-1].get("physics_substep_count")
+            == endpoint_records[-1].get("physics_substep_count")
+            or not all_endpoints
+            and samples[-1].get("physics_substep_count")
+            == result.get("physics_substep_count")
+        )
+    )
+    all_formula = bool(samples and len(formula_passes) == len(samples) and all(formula_passes))
+    all_model = bool(samples and len(model_replay_passes) == len(samples) and all(model_replay_passes))
+    all_isolation = bool(samples and len(isolation_passes) == len(samples) and all(isolation_passes))
+    all_telemetry = bool(samples and len(telemetry_passes) == len(samples) and all(telemetry_passes))
+    all_route = bool(samples and len(route_passes) == len(samples) and all(route_passes))
+    all_contacts = bool(samples and len(contact_passes) == len(samples) and all(contact_passes))
+    any_saturation = any(
+        isinstance(sample, dict) and bool(sample.get("any_saturation"))
+        for sample in samples
+    )
+    free_samples = [
+        record for record in recomputed_telemetry
+        if record.get("action") in CORE_CAPTURE_GRAVITY_BIAS_ACTIONS[:2]
+    ]
+    tracking_thresholds_pass = bool(
+        free_samples
+        and all(
+            max(abs(float(value)) for value in sample["tracking_error_to_desired_rad"])
+            <= 0.002
+            and abs(float(sample["fk"]["preseat_error_mm"])) <= 0.050
+            and abs(float(sample["fk"]["source_x_error_mm"])) <= 0.040
+            and abs(float(sample["fk"]["transverse_y_mm"])) <= 0.010
+            and float(sample["fk"]["orientation_error_rad"]) <= math.radians(0.1)
+            and int(sample["raw_all_cam_contact_count"]) == 0
+            and bool(sample["finite"])
+            for sample in free_samples
+        )
+    )
+    align_closed = bool(
+        all(phase_counts[name] > 0 and name in completed_set for name in expected_order[:2])
+        and all_formula and all_model and all_isolation and all_telemetry
+        and all_contacts and all_route and not any_saturation
+        and dynamics_passed and identity_passed and tracking_thresholds_pass
+    )
+    source_ast_audit = _independent_gravity_bias_source_audit(demo)
+    prohibited = source_ast_audit["prohibited_operation_counts"]
+    if _evidence_mismatches(
+        evidence.get("source_ast_allowlist_audit"), source_ast_audit
+    ):
+        errors.append("gravity_bias_evidence:source_ast_allowlist_audit")
+    prohibited_ok = bool(
+        source_ast_audit["passed"]
+        and evidence.get("prohibited_operation_counts") == prohibited
+        and all(count == 0 for count in prohibited.values())
+    )
+    expected_pass = bool(
+        dynamics_passed and identity_passed
+        and action_roster_matches
+        and evidence.get("frozen_action_roster_matches") is True
+        and endpoint_records_passed
+        and evidence.get("producer_counts_by_phase") == phase_counts
+        and evidence.get("contact_audit_counts_by_phase") == phase_counts
+        and state_contiguous and all_phases and all_endpoints
+        and endpoint_prefix and phase_order_ok and final_anchored
+        and all_formula and all_model and all_isolation and all_telemetry
+        and all_contacts and all_route
+        and align_closed and not any_saturation and prohibited_ok
+        and result.get("abort_reason") is None
+    )
+    aggregate = {
+        "first_physics_substep_count": 1 if samples else None,
+        "last_physics_substep_count": len(samples) if samples else None,
+        "sample_counts_by_phase": phase_counts,
+        "phase_counts_consistent": bool(
+            evidence.get("producer_counts_by_phase") == phase_counts
+            and evidence.get("contact_audit_counts_by_phase") == phase_counts
+            and len(samples) == sum(phase_counts.values())
+        ),
+        "state_index_and_time_contiguous": state_contiguous,
+        "final_sample_coverage_anchored": final_anchored,
+        "observed_phase_order": observed_order,
+        "expected_phase_order": expected_order,
+        "sample_phase_order_is_valid_prefix": phase_order_ok,
+        "every_physics_substep_recorded": bool(
+            evidence.get("producer_counts_by_phase") == phase_counts
+            and evidence.get("contact_audit_counts_by_phase") == phase_counts
+            and len(samples) == sum(phase_counts.values())
+            and state_contiguous
+            and final_anchored
+        ),
+        "all_formula_replay_passed": all_formula,
+        "all_samples_replayed_from_actual_model": all_model,
+        "all_runtime_scratch_isolation_passed": all_isolation,
+        "all_telemetry_recomputed_from_raw_fields_and_fresh_fk": (
+            all_telemetry
+        ),
+        "raw_contact_count_closure_passed": all_contacts,
+        "immutable_desired_route_replayed": all_route,
+        "any_saturation": any_saturation,
+        "saturation_sample_count": sum(
+            isinstance(sample, dict) and bool(sample.get("any_saturation"))
+            for sample in samples
+        ),
+        "completed_route_endpoint_actions": sorted(completed_set),
+        "completed_route_endpoint_action_order": endpoint_order,
+        "endpoint_order_is_valid_prefix": endpoint_prefix,
+        "align_and_axial_endpoints_completed": all(
+            name in completed_set for name in expected_order[:2]
+        ),
+        "all_four_phases_observed": all_phases,
+        "all_four_route_endpoints_completed": all_endpoints,
+        "align_and_axial_free_space_closed": align_closed,
+        "prohibited_operation_counts": prohibited,
+        "prohibited_operations_verified": prohibited_ok,
+        "passed": expected_pass,
+        "release_ready": False,
+    }
+    for key, expected in aggregate.items():
+        if _evidence_mismatches(evidence.get(key), expected, key):
+            errors.append(f"gravity_bias_evidence:{key}")
+    expected_thresholds = {
+        "observed_maximum_abs_q_error_to_desired_rad": max(
+            (
+                abs(float(value))
+                for sample in free_samples
+                for value in sample["tracking_error_to_desired_rad"]
+            ),
+            default=None,
+        ),
+        "maximum_abs_q_error_to_desired_rad": 0.002,
+        "observed_maximum_abs_preseat_error_mm": max(
+            (
+                abs(float(sample["fk"]["preseat_error_mm"]))
+                for sample in free_samples
+            ),
+            default=None,
+        ),
+        "maximum_abs_preseat_error_mm": 0.050,
+        "observed_maximum_abs_source_x_error_mm": max(
+            (
+                abs(float(sample["fk"]["source_x_error_mm"]))
+                for sample in free_samples
+            ),
+            default=None,
+        ),
+        "maximum_abs_source_x_error_mm": 0.040,
+        "observed_maximum_abs_transverse_y_mm": max(
+            (
+                abs(float(sample["fk"]["transverse_y_mm"]))
+                for sample in free_samples
+            ),
+            default=None,
+        ),
+        "maximum_abs_transverse_y_mm": 0.010,
+        "observed_maximum_orientation_error_rad": max(
+            (
+                float(sample["fk"]["orientation_error_rad"])
+                for sample in free_samples
+            ),
+            default=None,
+        ),
+        "maximum_orientation_error_rad": math.radians(0.1),
+        "observed_maximum_raw_cam_contact_count": max(
+            (
+                int(sample["raw_all_cam_contact_count"])
+                for sample in free_samples
+            ),
+            default=None,
+        ),
+        "maximum_raw_cam_contact_count": 0,
+        "passed": tracking_thresholds_pass,
+    }
+    if _evidence_mismatches(
+        evidence.get("align_and_axial_tracking_thresholds"),
+        expected_thresholds,
+    ):
+        errors.append("gravity_bias_evidence:tracking_thresholds")
+    metrics = {
+        "maximum_abs_gravity_bias_offset_rad": max(
+            (
+                abs(float(value)) for sample in samples if isinstance(sample, dict)
+                for value in sample.get("gravity_bias_offset_rad", [])
+            ), default=None,
+        ),
+        "maximum_abs_tracking_error_to_desired_rad": max(
+            (
+                abs(float(value)) for sample in recomputed_telemetry
+                for value in sample.get("tracking_error_to_desired_rad", [])
+            ), default=None,
+        ),
+        "maximum_actuator_torque_utilization": max(
+            (
+                float(value) for sample in recomputed_telemetry
+                for value in sample.get("actuator_torque_utilization", [])
+            ), default=None,
+        ),
+        "maximum_ctrl_range_utilization": max(
+            (
+                float(value) for sample in recomputed_telemetry
+                for value in sample.get("ctrl_range_utilization", [])
+            ), default=None,
+        ),
+    }
+    for key, expected in metrics.items():
+        if _evidence_mismatches(evidence.get(key), expected, key):
+            errors.append(f"gravity_bias_evidence:{key}")
+
+    free_records = result.get(
+        "core_capture_free_space_tracking_evidence", {}
+    ).get("raw_samples", [])
+    free_by_substep = {
+        record.get("physics_substep_count"): record
+        for record in free_records if isinstance(record, dict)
+    }
+    for index, sample in enumerate(samples):
+        if not isinstance(sample, dict) or sample.get("action") not in expected_order[:2]:
+            continue
+        free = free_by_substep.get(sample.get("physics_substep_count"))
+        if not isinstance(free, dict):
+            errors.append(f"gravity_bias_sample:{index}:free_crosslink_missing")
+            continue
+        crosslinks = (
+            (free.get("commanded_arm_q_rad"), sample.get("applied_control_rad")),
+            (free.get("observed_arm_q_rad"), sample.get("live_arm_q_rad")),
+            (free.get("observed_arm_qvel_rad_s"), sample.get("live_arm_qvel_rad_s")),
+            (
+                free.get("observed_preseat_mm"),
+                sample.get("cached_post_mj_step_transform_fk", {}).get(
+                    "preseat_mm"
+                ),
+            ),
+            (
+                free.get("observed_x_mm"),
+                sample.get("cached_post_mj_step_transform_fk", {}).get(
+                    "source_x_mm"
+                ),
+            ),
+            (free.get("cam_contact_count"), sample.get("raw_all_cam_contact_count")),
+        )
+        if any(_evidence_mismatches(left, right) for left, right in crosslinks):
+            errors.append(f"gravity_bias_sample:{index}:free_crosslink")
+
+    expected_development = bool(
+        result.get("completed") is True
+        and result.get("attachment_verified") is True
+        and result.get("attached_tool") == "gripper"
+        and result.get("locked") is False
+        and result.get("physical_lock_confirmed") is False
+        and result.get("core_cam_tab_contact_evidence", {}).get("passed") is True
+        and result.get("core_capture_free_space_tracking_evidence", {}).get("passed") is True
+        and expected_pass
+        and result.get("forbidden_contact_count") == 0
+        and result.get("abort_reason") is None
+    )
+    if result.get("development_geometry_milestone_passed") is not expected_development:
+        errors.append("gravity_bias_result:development_milestone")
+    if result.get("success") is not False:
+        errors.append("gravity_bias_result:success")
+    if result.get("release_ready") is not False:
+        errors.append("gravity_bias_result:release_ready")
     return errors
 
 
@@ -7402,6 +9780,486 @@ class CoreCamTabContactCheckpointATests(unittest.TestCase):
         )
         self.assertIs(exclusion["must_be_reaudited_before_authorization"], True)
         self.assertIs(self.contract["release_ready"], False)
+
+
+class CoreCaptureGravityBiasFeedforwardTests(unittest.TestCase):
+    """Bound the development-only feedforward to source and live state."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        require_path(MATCHA_DEMO, "matcha workflow controller")
+        cls.demo = import_file(
+            MATCHA_DEMO,
+            "matcha_workflow_demo_gravity_bias",
+            "matcha workflow gravity-bias controller",
+        )
+        cls.model = cls.demo.build_model()
+        cls.route_contract = cls.demo.core_capture_route_runtime_contract()
+        cls.contract = (
+            cls.demo.core_capture_gravity_bias_feedforward_runtime_contract()
+        )
+        cls.expected_contract = expected_core_capture_gravity_bias_contract(
+            cls.demo, cls.model, cls.route_contract
+        )
+        cls.source = MATCHA_DEMO.read_text()
+
+    def test_contract_source_and_authority_mutations_fail_closed(self) -> None:
+        demo = self.demo
+        self.assertEqual(
+            sha256_file(MATCHA_DEMO),
+            "6cbcd9b3eb13e1cc119ff8e5d99f0333d65b13e4eaab1c36752128a08a9b93a5",
+        )
+        self.assertEqual(
+            _evidence_mismatches(self.contract, self.expected_contract), []
+        )
+        self.assertEqual(core_capture_gravity_bias_source_errors(self.source), [])
+        self.assertEqual(
+            self.contract["contract_identity_sha256"],
+            CORE_CAPTURE_GRAVITY_BIAS_IDENTITY_SHA256,
+        )
+        self.assertEqual(
+            self.contract["identity_revalidation"]["lightweight_identity"]
+            ["observed_identity_sha256"],
+            CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_SHA256,
+        )
+        self.assertIs(self.contract["release_ready"], False)
+
+        contract_mutations: dict[str, dict[str, Any]] = {}
+        wrong_sign = copy.deepcopy(self.contract)
+        wrong_sign["formula"]["offset_sign"] = "negative"
+        wrong_sign["formula_sha256"] = canonical_json_sha256(
+            wrong_sign["formula"]
+        )
+        contract_mutations["wrong_sign"] = wrong_sign
+        widened = copy.deepcopy(self.contract)
+        widened["guard_thresholds"][
+            "free_space_maximum_abs_q_error_rad"
+        ] = 0.003
+        contract_mutations["threshold_widened"] = widened
+        biased_start = copy.deepcopy(self.contract)
+        biased_start["source_binding"]["desired_start_q_by_action"][
+            CORE_CAPTURE_GRAVITY_BIAS_ACTIONS[1]
+        ][0] += 1.0e-6
+        biased_start["source_binding"]["desired_start_q_sha256"] = (
+            canonical_json_sha256(
+                biased_start["source_binding"][
+                    "desired_start_q_by_action"
+                ]
+            )
+        )
+        contract_mutations["biased_action_start"] = biased_start
+        model_hash = copy.deepcopy(self.contract)
+        model_hash["source_binding"][
+            "compiled_model_xml_equivalent_sha256"
+        ] = "0" * 64
+        contract_mutations["model_hash"] = model_hash
+        promoted = copy.deepcopy(self.contract)
+        promoted["authority_scope"]["physical_lock_authority"] = True
+        promoted["authority_scope"]["release_ready"] = True
+        promoted["release_ready"] = True
+        contract_mutations["authority_promotion"] = promoted
+        for name, mutation in contract_mutations.items():
+            with self.subTest(contract_mutation=name):
+                self.assertNotEqual(
+                    _evidence_mismatches(mutation, self.expected_contract), []
+                )
+
+        mutated_model = demo.build_model()
+        original_gravity = np.array(
+            mutated_model.opt.gravity, dtype=np.float64, copy=True
+        )
+        mutated_model.opt.gravity[:] = 0.0
+        self.assertIs(
+            _expected_gravity_bias_dynamics_binding(
+                mutated_model, demo
+            )["passed"],
+            False,
+        )
+        mutated_model.opt.gravity[:] = original_gravity
+        shoulder_actuator = int(mutated_model.actuator("shoulder_pan").id)
+        original_gain = float(
+            mutated_model.actuator_gainprm[shoulder_actuator, 0]
+        )
+        mutated_model.actuator_gainprm[shoulder_actuator, 0] = (
+            original_gain + 1.0
+        )
+        self.assertIs(
+            _expected_gravity_bias_dynamics_binding(
+                mutated_model, demo
+            )["passed"],
+            False,
+        )
+        mutated_model.actuator_gainprm[shoulder_actuator, 0] = original_gain
+        initialized = demo.mujoco.MjData(mutated_model)
+        demo.initialize(mutated_model, initialized)
+        expected_active = _independent_initialized_active_geometry_sha256(
+            mutated_model, initialized, demo.mujoco
+        )
+        floor_id = int(mutated_model.geom("matcha_floor_collision").id)
+        mutated_model.geom_pos[floor_id, 2] += 1.0e-6
+        initialized = demo.mujoco.MjData(mutated_model)
+        demo.initialize(mutated_model, initialized)
+        self.assertNotEqual(
+            _independent_initialized_active_geometry_sha256(
+                mutated_model, initialized, demo.mujoco
+            ),
+            expected_active,
+        )
+
+        def replacement(old: str, new: str) -> str:
+            self.assertIn(old, self.source)
+            return self.source.replace(old, new, 1)
+
+        source_mutations = {
+            "wrong_sign": replacement(
+                "    offset = qfrc_bias / denominator\n",
+                "    offset = -qfrc_bias / denominator\n",
+            ),
+            "constraint_input": replacement(
+                "    qfrc_bias = np.asarray(\n",
+                "    forbidden = scratch_data.qfrc_constraint\n"
+                "    qfrc_bias = np.asarray(\n",
+            ),
+            "contact_force_input": replacement(
+                "    qfrc_bias = np.asarray(\n",
+                "    mujoco.mj_contactForce(model, scratch_data, 0, np.zeros(6))\n"
+                "    qfrc_bias = np.asarray(\n",
+            ),
+            "inverse_input": replacement(
+                "    mujoco.mj_integratePos(\n"
+                "        model,\n"
+                "        data.qpos,\n"
+                "        generalized_velocity,\n"
+                "        1.0,\n"
+                "    )\n"
+                "    mujoco.mj_forward(model, data)\n",
+                "    mujoco.mj_integratePos(\n"
+                "        model,\n"
+                "        data.qpos,\n"
+                "        generalized_velocity,\n"
+                "        1.0,\n"
+                "    )\n"
+                "    mujoco.mj_inverse(model, data)\n",
+            ),
+            "live_qpos_write": replacement(
+                "            live_qpos_before = np.asarray(\n",
+                "            self.data.qpos[0] = self.data.qpos[0]\n"
+                "            live_qpos_before = np.asarray(\n",
+            ),
+            "scratch_alias": replacement(
+                "        self.core_capture_gravity_bias_scratch_data = mujoco.MjData(model)\n",
+                "        self.core_capture_gravity_bias_scratch_data = self.data\n",
+            ),
+        }
+        for name, mutation in source_mutations.items():
+            with self.subTest(source_mutation=name):
+                self.assertNotEqual(
+                    core_capture_gravity_bias_source_errors(mutation), []
+                )
+
+        endpoint_fixture = {
+            "event": "move_complete",
+            "action": "gripper_capture_lateral_align",
+            "physics_substep_count": 1080,
+            "sim_time_s": 0.26999999999999796,
+            "endpoint_q_error_rad": 1.0929280654048412e-05,
+            "endpoint_max_abs_qvel_rad_s": 0.0005492046223591684,
+            "endpoint_fk_position_error_m": 9.784799785729311e-06,
+            "endpoint_fk_orientation_error_rad": 1.0929775727327563e-06,
+            "endpoint_dwell_ticks": 4,
+            "route_endpoint_evidence": {
+                "action": "gripper_capture_lateral_align",
+                "target_preseat_mm": 55.0,
+                "target_source_x_mm": 0.2,
+                "observed_preseat_mm": 55.00012463907181,
+                "observed_x_mm": 0.19852505913442162,
+                "source_x_error_mm": -0.0014749408655783947,
+                "observed_transverse_y_mm": -0.009672193204833866,
+                "position_error_m": 9.784799785729311e-06,
+                "orientation_error_rad": 1.0929775727327563e-06,
+                "physics_substep_count": 1080,
+                "sim_time_s": 0.26999999999999796,
+            },
+        }
+        self.assertEqual(
+            _gravity_bias_endpoint_record_errors(
+                endpoint_fixture,
+                endpoint_fixture,
+                self.contract["guard_thresholds"],
+            ),
+            [],
+        )
+        endpoint_mutations: dict[str, dict[str, Any]] = {}
+        for field, value in (
+            ("event", "forged"),
+            ("action", "gripper_capture_axial_open_side"),
+            ("physics_substep_count", 1079),
+            ("sim_time_s", 0.27025),
+            ("endpoint_q_error_rad", 0.001),
+            ("endpoint_max_abs_qvel_rad_s", 0.001),
+            ("endpoint_fk_position_error_m", 2.0e-05),
+            ("endpoint_fk_orientation_error_rad", 2.0e-05),
+            ("endpoint_dwell_ticks", 5),
+        ):
+            mutation = copy.deepcopy(endpoint_fixture)
+            mutation[field] = value
+            endpoint_mutations[field] = mutation
+        nested_endpoint = copy.deepcopy(endpoint_fixture)
+        nested_endpoint["route_endpoint_evidence"]["observed_x_mm"] += 1.0e-6
+        endpoint_mutations["route_endpoint_evidence"] = nested_endpoint
+        for name, mutation in endpoint_mutations.items():
+            with self.subTest(endpoint_mutation=name):
+                self.assertNotEqual(
+                    _gravity_bias_endpoint_record_errors(
+                        mutation,
+                        endpoint_fixture,
+                        self.contract["guard_thresholds"],
+                    ),
+                    [],
+                )
+
+    def test_prewrite_identity_and_code_drift_abort_before_control(self) -> None:
+        demo = self.demo
+
+        def exercise_mutation(mutate: Any, restore: Any) -> dict[str, Any]:
+            data = demo.mujoco.MjData(self.model)
+            demo.initialize(self.model, data)
+            controller = demo.MatchaWorkflowController(self.model, data)
+            initial_ctrl = np.array(data.ctrl, dtype=np.float64, copy=True)
+            initial_qpos = np.array(data.qpos, dtype=np.float64, copy=True)
+            initial_qvel = np.array(data.qvel, dtype=np.float64, copy=True)
+            initial_time = float(data.time)
+            mutate()
+            try:
+                with mock.patch.object(
+                    demo.mujoco,
+                    "mj_step",
+                    side_effect=AssertionError(
+                        "identity drift advanced physical state"
+                    ),
+                ):
+                    controller.step()
+            finally:
+                restore()
+            result = controller.result()
+            self.assertEqual(result["physics_substep_count"], 0)
+            self.assertTrue(
+                str(result["abort_reason"]).startswith("gravity_bias_")
+            )
+            self.assertTrue(np.array_equal(data.ctrl, initial_ctrl))
+            self.assertTrue(np.array_equal(data.qpos, initial_qpos))
+            self.assertTrue(np.array_equal(data.qvel, initial_qvel))
+            self.assertEqual(float(data.time), initial_time)
+            self.assertEqual(
+                result["core_capture_gravity_bias_feedforward_evidence"]
+                ["raw_samples"],
+                [],
+            )
+            return result
+
+        original_code = demo._move_action_desired_q.__code__
+
+        def replaced_desired_q(
+            action: Any, desired_action_start_q: Any, elapsed_s: float
+        ) -> tuple[np.ndarray, float]:
+            return np.zeros(5, dtype=np.float64), 0.0
+
+        exercise_mutation(
+            lambda: setattr(
+                demo._move_action_desired_q,
+                "__code__",
+                replaced_desired_q.__code__,
+            ),
+            lambda: setattr(
+                demo._move_action_desired_q, "__code__", original_code
+            ),
+        )
+
+        original_starts = demo.CORE_CAPTURE_ROUTE_DESIRED_START_Q
+        biased_starts = {
+            name: tuple(values) for name, values in original_starts.items()
+        }
+        biased_starts[CORE_CAPTURE_GRAVITY_BIAS_ACTIONS[0]] = tuple(
+            value + (1.0e-6 if index == 0 else 0.0)
+            for index, value in enumerate(
+                biased_starts[CORE_CAPTURE_GRAVITY_BIAS_ACTIONS[0]]
+            )
+        )
+        exercise_mutation(
+            lambda: setattr(
+                demo, "CORE_CAPTURE_ROUTE_DESIRED_START_Q", biased_starts
+            ),
+            lambda: setattr(
+                demo, "CORE_CAPTURE_ROUTE_DESIRED_START_Q", original_starts
+            ),
+        )
+
+    def test_one_controller_step_replays_raw_state_and_stays_honestly_red(
+        self,
+    ) -> None:
+        demo = self.demo
+        data = demo.mujoco.MjData(self.model)
+        demo.initialize(self.model, data)
+        controller = demo.MatchaWorkflowController(self.model, data)
+        controller.step()
+        result = controller.result()
+        self.assertEqual(
+            result["physics_substep_count"],
+            int(demo.PHYSICS_SUBSTEPS_PER_CONTROLLER_STEP),
+        )
+        self.assertEqual(
+            core_capture_gravity_bias_result_errors(
+                result,
+                self.contract,
+                demo,
+                self.model,
+                self.route_contract,
+            ),
+            [],
+        )
+        evidence = result["core_capture_gravity_bias_feedforward_evidence"]
+        self.assertEqual(len(evidence["raw_samples"]), 20)
+        self.assertTrue(
+            all(
+                sample["prewrite_identity_passed"] is True
+                and sample["prewrite_identity_sha256"]
+                == CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_SHA256
+                and sample["positive_lock_slider_qpos_address"] == 5
+                for sample in evidence["raw_samples"]
+            )
+        )
+        self.assertIs(evidence["passed"], False)
+        self.assertIs(evidence["release_ready"], False)
+        self.assertIs(result["success"], False)
+        self.assertIs(result["release_ready"], False)
+
+        def reseal(mutated: dict[str, Any]) -> dict[str, Any]:
+            mutated_evidence = mutated[
+                "core_capture_gravity_bias_feedforward_evidence"
+            ]
+            mutated_evidence["raw_samples_sha256"] = canonical_json_sha256(
+                mutated_evidence["raw_samples"]
+            )
+            mutated_evidence["recomputed_telemetry_sha256"] = (
+                canonical_json_sha256(
+                    mutated_evidence["recomputed_telemetry"]
+                )
+            )
+            return mutated
+
+        mutations: dict[str, dict[str, Any]] = {}
+        wrong_sign = copy.deepcopy(result)
+        wrong_sign["core_capture_gravity_bias_feedforward_evidence"][
+            "raw_samples"
+        ][0]["gravity_bias_offset_rad"][0] *= -1.0
+        mutations["wrong_sign"] = reseal(wrong_sign)
+        missing_row = copy.deepcopy(result)
+        missing_row["core_capture_gravity_bias_feedforward_evidence"][
+            "raw_samples"
+        ].pop(3)
+        mutations["missing_row"] = reseal(missing_row)
+        biased_start = copy.deepcopy(result)
+        biased_start["core_capture_gravity_bias_feedforward_evidence"][
+            "raw_samples"
+        ][0]["desired_action_start_q_rad"][0] += 1.0e-6
+        mutations["biased_start"] = reseal(biased_start)
+        prewrite_hash = copy.deepcopy(result)
+        prewrite_hash["core_capture_gravity_bias_feedforward_evidence"][
+            "raw_samples"
+        ][0]["prewrite_identity_sha256"] = "0" * 64
+        mutations["prewrite_hash"] = reseal(prewrite_hash)
+        slider_address = copy.deepcopy(result)
+        slider_address["core_capture_gravity_bias_feedforward_evidence"][
+            "raw_samples"
+        ][0]["positive_lock_slider_qpos_address"] = 4
+        mutations["slider_address"] = reseal(slider_address)
+        slider_raw_qpos = copy.deepcopy(result)
+        slider_raw_qpos["core_capture_gravity_bias_feedforward_evidence"][
+            "raw_samples"
+        ][0]["live_full_qpos"][5] += 1.0e-3
+        mutations["slider_raw_qpos"] = reseal(slider_raw_qpos)
+        self_attested_slider = copy.deepcopy(result)
+        self_attested_evidence = self_attested_slider[
+            "core_capture_gravity_bias_feedforward_evidence"
+        ]
+        self_attested_evidence["raw_samples"][0]["fk"][
+            "slider_q_mm"
+        ] += 1.0
+        self_attested_evidence["recomputed_telemetry"][0]["fk"][
+            "slider_q_mm"
+        ] += 1.0
+        mutations["self_attested_slider"] = reseal(self_attested_slider)
+        prohibited = copy.deepcopy(result)
+        prohibited["core_capture_gravity_bias_feedforward_evidence"][
+            "prohibited_operation_counts"
+        ]["mj_inverse_call_count"] = 1
+        mutations["prohibited_input"] = reseal(prohibited)
+        action_roster = copy.deepcopy(result)
+        action_roster["core_capture_gravity_bias_feedforward_evidence"][
+            "frozen_action_roster_matches"
+        ] = False
+        mutations["frozen_action_roster"] = reseal(action_roster)
+        first_cam = copy.deepcopy(result)
+        first_cam["core_capture_gravity_bias_feedforward_evidence"][
+            "first_cam_contact_record"
+        ] = {"forged": True}
+        mutations["first_cam_contact"] = reseal(first_cam)
+        first_rejected = copy.deepcopy(result)
+        first_rejected["core_capture_gravity_bias_feedforward_evidence"][
+            "first_rejected_cam_contact_record"
+        ] = 42
+        mutations["first_rejected_cam_contact"] = reseal(first_rejected)
+        coherent_torque = copy.deepcopy(result)
+        coherent_evidence = coherent_torque[
+            "core_capture_gravity_bias_feedforward_evidence"
+        ]
+        coherent_sample = coherent_evidence["raw_samples"][0]
+        coherent_sample["actuator_torque_nm"][0] += 1.0
+        first_actuator_id = int(
+            self.model.actuator(demo.ARM_ACTUATORS[0]).id
+        )
+        first_force_limit = float(
+            np.max(
+                np.abs(self.model.actuator_forcerange[first_actuator_id])
+            )
+        )
+        coherent_utilization = abs(
+            float(coherent_sample["actuator_torque_nm"][0])
+        ) / first_force_limit
+        coherent_sample["actuator_torque_utilization"][0] = (
+            coherent_utilization
+        )
+        coherent_evidence["recomputed_telemetry"][0][
+            "actuator_torque_utilization"
+        ][0] = coherent_utilization
+        coherent_evidence["maximum_actuator_torque_utilization"] = max(
+            float(value)
+            for telemetry in coherent_evidence["recomputed_telemetry"]
+            for value in telemetry["actuator_torque_utilization"]
+        )
+        mutations["coherent_torque_reseal"] = reseal(coherent_torque)
+        promoted = copy.deepcopy(result)
+        promoted_evidence = promoted[
+            "core_capture_gravity_bias_feedforward_evidence"
+        ]
+        promoted_evidence["contact_force_authority"] = True
+        promoted_evidence["passed"] = True
+        promoted_evidence["release_ready"] = True
+        promoted["success"] = True
+        promoted["release_ready"] = True
+        mutations["authority_promotion"] = reseal(promoted)
+        for name, mutation in mutations.items():
+            with self.subTest(result_mutation=name):
+                self.assertNotEqual(
+                    core_capture_gravity_bias_result_errors(
+                        mutation,
+                        self.contract,
+                        demo,
+                        self.model,
+                        self.route_contract,
+                    ),
+                    [],
+                )
 
 
 FORBIDDEN_STATE_FIELDS = {"qpos", "qvel", "time", "eq_data"}
