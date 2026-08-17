@@ -19,3 +19,7 @@ gripper retrofit,4,Ruthex RX-M3x5.7,heat-set insert,https://www.ruthex.de/en/pro
 gripper retrofit,4,M3x6,stock gripper to detachable tool plate,standard fastener,reuse original
 gripper retrofit,1,3-wire adapter harness,GND/+12V/TTL; mating stock connectors,electrical_pinout.csv,new; do not cut stock arm harness
 dock,1,so101_passive_tool_dock,printed PA12/PA-CF part,exports/so101_passive_tool_dock.step,new
+dock,1,so101_core_dock_support_bracket,printed PA12/PA-CF floor pedestal,exports/so101_core_dock_support_bracket.step,source checkpoint; do not fabricate before blockers close
+dock,2,ISO 10642 M4x25 A2,stop-to-support countersunk screw,standard/vendor authority pending,blocked
+dock,2,DIN 125 M4 + DIN 985 M4,washer and locknut for support head,standard/vendor authority pending,blocked
+dock,4,ISO 10642 M6x20,support-to-tapped-fixture countersunk screw,standard/vendor and fixture-substrate authority pending,blocked
