@@ -10,10 +10,12 @@ used only for named mechanical captures/locks after their physical guards.
 from __future__ import annotations
 
 import argparse
+import base64
 import copy
 import hashlib
 import json
 import math
+import struct
 import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -172,6 +174,377 @@ CORE_GUIDED_CAPTURE_BASE_Q = (
     (-0.500511760319716, 0.798861227911943, -0.298349467592227),
 )
 CORE_GUIDED_CAPTURE_LATERAL_OFFSET_M = 0.0002
+
+# Frozen source-coupled gripper capture route.  The embedded table stores
+# dock-local preseated distance, source X offset, and five arm joint values in
+# canonical little-endian float64 rows.  Keeping the exact binary roster here
+# avoids a runtime IK dependency while the public contract below exposes every
+# decoded row for independent FK replay.
+CORE_CAPTURE_ROUTE_STATE_BYTES_SHA256 = (
+    "e91e8699d4ef1d174d73341198e21499cbf615279e4e1a87a6fbe98929f0004c"
+)
+CORE_CAPTURE_ROUTE_SOURCE_STATE_SHA256 = (
+    "3fef8469bf8cbddff822d9a6a1a31de9de2872be4bfe75d87575f01c83b99966"
+)
+CORE_CAPTURE_ROUTE_Q_SHA256 = (
+    "107b40015a76fd55f09681164ae75aa12ae738a7385fba05ab4d94f7f29e40bd"
+)
+CORE_CAPTURE_ROUTE_PHASE_Q_SHA256 = {
+    "gripper_capture_axial_open_side": (
+        "2f06345e62fb5cbb4230bdee741addffba7810a39cb0d5681bad100e4c4f94ca"
+    ),
+    "gripper_capture_coupled_recenter": (
+        "6df3f9c5e6be3581970694462fa1f2805b121f02db00a3a7d1303ec5ecf27792"
+    ),
+    "gripper_capture_centered_final": (
+        "f6a6a64c60287807be1196735476b8abc81761e62135c2d50807e94aced63b27"
+    ),
+}
+CORE_CAPTURE_ROUTE_ALIGNMENT_Q_SHA256 = (
+    "39603d9ace7749f1001a27d04d36a4f33e071aff2367b213396c12f94e188299"
+)
+_CORE_CAPTURE_ROUTE_STATE_BASE64 = (
+    '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'
+)
+
+
+def _canonical_json_sha256(value: object) -> str:
+    return hashlib.sha256(
+        json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode()
+    ).hexdigest()
+
+
+def _decode_core_capture_route_source_states(
+) -> tuple[tuple[float, float, tuple[float, ...]], ...]:
+    raw = base64.b64decode(_CORE_CAPTURE_ROUTE_STATE_BASE64, validate=True)
+    if hashlib.sha256(raw).hexdigest() != CORE_CAPTURE_ROUTE_STATE_BYTES_SHA256:
+        raise RuntimeError("core capture route float64 bytes drifted")
+    values = np.frombuffer(raw, dtype="<f8")
+    if values.size != 276 * 7 or not np.all(np.isfinite(values)):
+        raise RuntimeError("core capture route has invalid shape or values")
+    rows = values.reshape(276, 7)
+    result = tuple(
+        (
+            float(row[0]),
+            float(row[1]),
+            tuple(float(value) for value in row[2:]),
+        )
+        for row in rows
+    )
+    state_records = [
+        {"preseat_mm": p_mm, "source_x_mm": x_mm, "q_rad": list(q_rad)}
+        for p_mm, x_mm, q_rad in result
+    ]
+    if (
+        _canonical_json_sha256(state_records)
+        != CORE_CAPTURE_ROUTE_SOURCE_STATE_SHA256
+    ):
+        raise RuntimeError("core capture route source-state digest drifted")
+    if (
+        _canonical_json_sha256([list(record[2]) for record in result])
+        != CORE_CAPTURE_ROUTE_Q_SHA256
+    ):
+        raise RuntimeError("core capture route joint digest drifted")
+    return result
+
+
+CORE_CAPTURE_ROUTE_SOURCE_STATES = _decode_core_capture_route_source_states()
+CORE_CAPTURE_ROUTE_PHASE_ROW_RANGES = {
+    "gripper_capture_axial_open_side": (0, 243),
+    "gripper_capture_coupled_recenter": (243, 259),
+    "gripper_capture_centered_final": (259, 275),
+}
+CORE_CAPTURE_ROUTE_PHASE_TIMING_S = {
+    "gripper_capture_lateral_align": (0.25, 1.0),
+    "gripper_capture_axial_open_side": (1.60, 3.0),
+    "gripper_capture_coupled_recenter": (0.50, 1.5),
+    "gripper_capture_centered_final": (0.50, 1.5),
+}
+CORE_CAPTURE_ROUTE_ENDPOINTS_MM = {
+    "gripper_capture_lateral_align": (55.0, 0.20),
+    "gripper_capture_axial_open_side": (6.4, 0.20),
+    "gripper_capture_coupled_recenter": (3.2, 0.0),
+    "gripper_capture_centered_final": (0.0, 0.0),
+}
+CORE_CAPTURE_ROUTE_ACTION_NAMES = frozenset(
+    CORE_CAPTURE_ROUTE_PHASE_TIMING_S
+)
+CORE_CAPTURE_ROUTE_ENDPOINT_Q_ERROR_RAD = 0.002
+CORE_CAPTURE_ROUTE_ENDPOINT_QVEL_RAD_S = 0.02
+CORE_CAPTURE_ROUTE_ENDPOINT_POSITION_ERROR_M = 0.00005
+CORE_CAPTURE_ROUTE_ENDPOINT_ORIENTATION_ERROR_RAD = math.radians(0.1)
+CORE_CAPTURE_ROUTE_ENDPOINT_DWELL_TICKS = 4
+CORE_CAPTURE_SOURCE_CORRIDOR_CONTINUOUS_CLEARANCE_MM = 0.249902439
+CORE_CAPTURE_SOURCE_CORRIDOR_MANUFACTURING_CLEARANCE_MM = 0.20
+CORE_CAPTURE_SOURCE_CORRIDOR_RESERVE_MM = 0.009902439
+CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM = 0.040
+CORE_CAPTURE_ROUTE_DENSE_FRACTIONS = tuple(
+    index / 100.0 for index in range(101)
+)
+CORE_CAPTURE_ROUTE_SOURCE_X_OPEN_MM = 0.20
+CORE_CAPTURE_ROUTE_RECENTER_START_PRESEAT_MM = 6.4
+CORE_CAPTURE_ROUTE_RECENTER_END_PRESEAT_MM = 3.2
+CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_DIGEST_PREIMAGE = {
+    "source_generator_sha256": qc.POGO_CAD_SOURCE_SHA256,
+    "positive_lock_cam_contract_sha256": (
+        qc.CORE_DOCK_CAM_CONTRACT_CANONICAL_SHA256
+    ),
+    "embedded_state_bytes_sha256": CORE_CAPTURE_ROUTE_STATE_BYTES_SHA256,
+    "source_state_sha256": CORE_CAPTURE_ROUTE_SOURCE_STATE_SHA256,
+    "q_roster_sha256": CORE_CAPTURE_ROUTE_Q_SHA256,
+    "phase_row_ranges": CORE_CAPTURE_ROUTE_PHASE_ROW_RANGES,
+    "phase_timing_s": CORE_CAPTURE_ROUTE_PHASE_TIMING_S,
+    "endpoint_guard": {
+        "q_error_rad": CORE_CAPTURE_ROUTE_ENDPOINT_Q_ERROR_RAD,
+        "qvel_rad_s": CORE_CAPTURE_ROUTE_ENDPOINT_QVEL_RAD_S,
+        "position_error_m": CORE_CAPTURE_ROUTE_ENDPOINT_POSITION_ERROR_M,
+        "orientation_error_rad": (
+            CORE_CAPTURE_ROUTE_ENDPOINT_ORIENTATION_ERROR_RAD
+        ),
+        "dwell_ticks": CORE_CAPTURE_ROUTE_ENDPOINT_DWELL_TICKS,
+    },
+    "live_source_corridor_max_error_mm": (
+        CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
+    ),
+}
+CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_SHA256 = _canonical_json_sha256(
+    CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_DIGEST_PREIMAGE
+)
+
+
+def _core_capture_source_x_mm(preseat_mm: float) -> float:
+    if not math.isfinite(preseat_mm) or preseat_mm < 0.0:
+        raise ValueError("preseat_mm must be finite and nonnegative")
+    if preseat_mm >= CORE_CAPTURE_ROUTE_RECENTER_START_PRESEAT_MM:
+        return CORE_CAPTURE_ROUTE_SOURCE_X_OPEN_MM
+    if preseat_mm <= CORE_CAPTURE_ROUTE_RECENTER_END_PRESEAT_MM:
+        return 0.0
+    return CORE_CAPTURE_ROUTE_SOURCE_X_OPEN_MM * (
+        (preseat_mm - CORE_CAPTURE_ROUTE_RECENTER_END_PRESEAT_MM)
+        / (
+            CORE_CAPTURE_ROUTE_RECENTER_START_PRESEAT_MM
+            - CORE_CAPTURE_ROUTE_RECENTER_END_PRESEAT_MM
+        )
+    )
 ALIGNED_CAPTURE_STATIC_MAX_LATERAL_DEVIATION_M = 0.000205
 CAM_RELIEF_CORRIDOR_M = 0.0005
 CORE_KEEPER_MAX_PENETRATION_MM = 0.020
@@ -428,20 +801,24 @@ CORE_POSITIVE_LOCK_CONTRACT = {
 def _aligned_capture_waypoints(
     tool: str, *, reverse: bool = False
 ) -> tuple[tuple[float, ...], ...]:
-    """Return frozen FK/IK waypoints for normal approach or withdrawal."""
+    """Return frozen FK/IK waypoints for normal approach or withdrawal.
+
+    The core gripper follows the source cam's coupled dock-local p/X law and
+    has no same-Z seated recenter row.  The controller executes this roster as
+    three separately time-scaled phases so both source-law breakpoints have
+    zero commanded endpoint velocity.
+    """
 
     if tool not in DOCK_CAPTURE_Q:
         raise ValueError(f"unsupported aligned capture tool {tool!r}")
-    pan = float(DOCK_CAPTURE_Q[tool][0])
-    base_rows = (
-        CORE_GUIDED_CAPTURE_BASE_Q if tool == "gripper" else ALIGNED_CAPTURE_BASE_Q
-    )
-    forward = tuple(
-        (pan, lift, elbow, wrist_flex, 0.0)
-        for lift, elbow, wrist_flex in base_rows
-    )
     if tool == "gripper":
-        forward = (*forward, tuple(float(value) for value in DOCK_CAPTURE_Q[tool]))
+        forward = tuple(record[2] for record in CORE_CAPTURE_ROUTE_SOURCE_STATES)
+    else:
+        pan = float(DOCK_CAPTURE_Q[tool][0])
+        forward = tuple(
+            (pan, lift, elbow, wrist_flex, 0.0)
+            for lift, elbow, wrist_flex in ALIGNED_CAPTURE_BASE_Q
+        )
     if not reverse:
         return forward
     # The caller starts at the seated row, so omit it and finish at the exact
@@ -531,21 +908,83 @@ class WorkflowAction:
             raise ValueError(f"last waypoint must equal target for {self.name}")
 
 
+def _core_capture_move_actions() -> tuple[WorkflowAction, ...]:
+    """Return four finite, zero-endpoint-velocity source-route actions."""
+
+    q_rows = tuple(record[2] for record in CORE_CAPTURE_ROUTE_SOURCE_STATES)
+    align_duration, align_timeout = CORE_CAPTURE_ROUTE_PHASE_TIMING_S[
+        "gripper_capture_lateral_align"
+    ]
+    axial_duration, axial_timeout = CORE_CAPTURE_ROUTE_PHASE_TIMING_S[
+        "gripper_capture_axial_open_side"
+    ]
+    recenter_duration, recenter_timeout = CORE_CAPTURE_ROUTE_PHASE_TIMING_S[
+        "gripper_capture_coupled_recenter"
+    ]
+    final_duration, final_timeout = CORE_CAPTURE_ROUTE_PHASE_TIMING_S[
+        "gripper_capture_centered_final"
+    ]
+    return (
+        WorkflowAction(
+            name="gripper_capture_lateral_align",
+            kind="move",
+            tool="gripper",
+            target_q=q_rows[0],
+            joint_waypoints=(q_rows[0],),
+            duration_s=align_duration,
+            timeout_s=align_timeout,
+        ),
+        WorkflowAction(
+            name="gripper_capture_axial_open_side",
+            kind="move",
+            tool="gripper",
+            target_q=q_rows[243],
+            joint_waypoints=q_rows[1:244],
+            duration_s=axial_duration,
+            timeout_s=axial_timeout,
+        ),
+        WorkflowAction(
+            name="gripper_capture_coupled_recenter",
+            kind="move",
+            tool="gripper",
+            target_q=q_rows[259],
+            joint_waypoints=q_rows[244:260],
+            duration_s=recenter_duration,
+            timeout_s=recenter_timeout,
+        ),
+        WorkflowAction(
+            name="gripper_capture_centered_final",
+            kind="move",
+            tool="gripper",
+            target_q=q_rows[275],
+            joint_waypoints=q_rows[260:276],
+            duration_s=final_duration,
+            timeout_s=final_timeout,
+        ),
+    )
+
+
 def _recovery_controller_actions(
     tool: str = "gripper", *, include_rack_exit: bool = False
 ) -> tuple[WorkflowAction, ...]:
     if tool not in ALL_TOOL_IDS:
         raise ValueError(f"unsupported recovery tool {tool}")
+    if tool == "gripper":
+        capture_moves = _core_capture_move_actions()
+    else:
+        capture_moves = (
+            WorkflowAction(
+                name=f"{tool}_to_capture",
+                kind="move",
+                tool=tool,
+                target_q=tuple(float(value) for value in DOCK_CAPTURE_Q[tool]),
+                joint_waypoints=_aligned_capture_waypoints(tool),
+                duration_s=1.5,
+                timeout_s=3.5,
+            ),
+        )
     capture_release = (
-        WorkflowAction(
-            name=f"{tool}_to_capture",
-            kind="move",
-            tool=tool,
-            target_q=tuple(float(value) for value in DOCK_CAPTURE_Q[tool]),
-            joint_waypoints=_aligned_capture_waypoints(tool),
-            duration_s=1.5,
-            timeout_s=3.5,
-        ),
+        *capture_moves,
         WorkflowAction(
             name=f"{tool}_physical_capture",
             kind="capture",
@@ -1850,6 +2289,689 @@ def initialize(model: mujoco.MjModel, data: mujoco.MjData) -> None:
             raise RuntimeError(f"Compiled {name} drifted")
 
 
+def initialized_active_collision_geometry_sha256(
+    model: mujoco.MjModel, data: mujoco.MjData
+) -> str:
+    """Hash every active geom parameter and its initialized world transform."""
+
+    records: list[dict[str, Any]] = []
+    for geom_id in range(model.ngeom):
+        if not (
+            int(model.geom_contype[geom_id])
+            or int(model.geom_conaffinity[geom_id])
+        ):
+            continue
+        record: dict[str, Any] = {
+            "geom_id": geom_id,
+            "name": str(model.geom(geom_id).name),
+            "body": str(model.body(int(model.geom_bodyid[geom_id])).name),
+            "type": int(model.geom_type[geom_id]),
+            "group": int(model.geom_group[geom_id]),
+            "contype": int(model.geom_contype[geom_id]),
+            "conaffinity": int(model.geom_conaffinity[geom_id]),
+            "pos_float_hex": [
+                float(value).hex() for value in model.geom_pos[geom_id]
+            ],
+            "quat_float_hex": [
+                float(value).hex() for value in model.geom_quat[geom_id]
+            ],
+            "size_float_hex": [
+                float(value).hex() for value in model.geom_size[geom_id]
+            ],
+            "initialized_world_pos_float_hex": [
+                float(value).hex() for value in data.geom_xpos[geom_id]
+            ],
+            "initialized_world_xmat_float_hex": [
+                float(value).hex() for value in data.geom_xmat[geom_id]
+            ],
+        }
+        if int(model.geom_type[geom_id]) == int(mujoco.mjtGeom.mjGEOM_MESH):
+            mesh_id = int(model.geom_dataid[geom_id])
+            vertex_start = int(model.mesh_vertadr[mesh_id])
+            vertex_count = int(model.mesh_vertnum[mesh_id])
+            face_start = int(model.mesh_faceadr[mesh_id])
+            face_count = int(model.mesh_facenum[mesh_id])
+            vertices = np.ascontiguousarray(
+                model.mesh_vert[
+                    vertex_start : vertex_start + vertex_count
+                ]
+            )
+            faces = np.ascontiguousarray(
+                model.mesh_face[face_start : face_start + face_count]
+            )
+            record["mesh"] = {
+                "vertex_count": vertex_count,
+                "face_count": face_count,
+                "vertex_dtype": vertices.dtype.str,
+                "face_dtype": faces.dtype.str,
+                "vertex_bytes_sha256": hashlib.sha256(
+                    vertices.tobytes()
+                ).hexdigest(),
+                "face_bytes_sha256": hashlib.sha256(
+                    faces.tobytes()
+                ).hexdigest(),
+            }
+        records.append(record)
+    return _canonical_json_sha256(records)
+
+
+def _forward_scratch_arm_configuration(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    arm_qpos_ids: np.ndarray,
+    arm_q_rad: np.ndarray,
+) -> None:
+    """Evaluate scratch FK through MuJoCo's generalized-position API.
+
+    This helper is used only by the static route contract on a private
+    ``MjData``.  It never belongs to the controller call graph and performs no
+    Python assignment to physical state.  ``mj_differentiatePos`` followed by
+    ``mj_integratePos`` is the same topology-aware replay primitive used by
+    the exact generalized-position trace contract.
+    """
+
+    target_qpos = np.array(data.qpos, dtype=np.float64, copy=True)
+    target_qpos[arm_qpos_ids] = np.asarray(arm_q_rad, dtype=np.float64)
+    generalized_velocity = np.empty(model.nv, dtype=np.float64)
+    mujoco.mj_differentiatePos(
+        model,
+        generalized_velocity,
+        1.0,
+        data.qpos,
+        target_qpos,
+    )
+    mujoco.mj_integratePos(
+        model,
+        data.qpos,
+        generalized_velocity,
+        1.0,
+    )
+    mujoco.mj_forward(model, data)
+
+
+def _small_rotation_angle(rotation: np.ndarray) -> float:
+    sine_vector = 0.5 * np.asarray(
+        [
+            rotation[2, 1] - rotation[1, 2],
+            rotation[0, 2] - rotation[2, 0],
+            rotation[1, 0] - rotation[0, 1],
+        ],
+        dtype=np.float64,
+    )
+    cosine = (float(np.trace(rotation)) - 1.0) / 2.0
+    return float(math.atan2(float(np.linalg.norm(sine_vector)), cosine))
+
+
+def _core_capture_route_dense_fk_evidence(
+    model: mujoco.MjModel,
+) -> dict[str, Any]:
+    """Replay the frozen joint-linear segments at every declared fraction."""
+
+    data = mujoco.MjData(model)
+    initialize(model, data)
+    arm_qpos = np.asarray(
+        [model.joint(name).qposadr[0] for name in ARM_JOINTS], dtype=int
+    )
+    dock_id = int(model.body("dock_gripper").id)
+    mating_id = int(model.site("robot_mating_face").id)
+    dock_position = np.asarray(data.xpos[dock_id], dtype=np.float64).copy()
+    dock_rotation = np.asarray(
+        data.xmat[dock_id], dtype=np.float64
+    ).reshape(3, 3).copy()
+
+    rows = CORE_CAPTURE_ROUTE_SOURCE_STATES
+    phase_rows = (
+        (
+            "gripper_capture_lateral_align",
+            (
+                (
+                    55.0,
+                    0.0,
+                    tuple(float(value) for value in DOCK_PRE_CAPTURE_Q["gripper"]),
+                ),
+                rows[0],
+            ),
+            "linear_lateral_alignment_at_p55",
+        ),
+        (
+            "gripper_capture_axial_open_side",
+            rows[0:244],
+            "source_piecewise_x_law",
+        ),
+        (
+            "gripper_capture_coupled_recenter",
+            rows[243:260],
+            "source_piecewise_x_law",
+        ),
+        (
+            "gripper_capture_centered_final",
+            rows[259:276],
+            "source_piecewise_x_law",
+        ),
+    )
+    phase_reports: list[dict[str, Any]] = []
+    for phase_name, phase_states, expected_x_kind in phase_rows:
+        maximum_preseat_error_mm = 0.0
+        maximum_x_error_mm = 0.0
+        maximum_abs_y_mm = 0.0
+        maximum_orientation_error_rad = 0.0
+        sample_count = 0
+        sample_hasher = hashlib.sha256()
+        sample_hasher.update(phase_name.encode() + b"\0")
+        previous_preseat_mm = math.inf
+        monotone_nonincreasing_preseat = True
+        for interval_index, (start, end) in enumerate(
+            zip(phase_states, phase_states[1:])
+        ):
+            start_p_mm, start_x_mm, start_q = start
+            end_p_mm, end_x_mm, end_q = end
+            start_q_array = np.asarray(start_q, dtype=np.float64)
+            end_q_array = np.asarray(end_q, dtype=np.float64)
+            for fraction_index, fraction in enumerate(
+                CORE_CAPTURE_ROUTE_DENSE_FRACTIONS
+            ):
+                q_value = start_q_array + fraction * (
+                    end_q_array - start_q_array
+                )
+                _forward_scratch_arm_configuration(
+                    model, data, arm_qpos, q_value
+                )
+                local_position_mm = (
+                    np.asarray(data.site_xpos[mating_id], dtype=np.float64)
+                    - dock_position
+                ) @ dock_rotation * 1000.0
+                observed_preseat_mm = -float(local_position_mm[2])
+                expected_preseat_mm = float(
+                    start_p_mm + fraction * (end_p_mm - start_p_mm)
+                )
+                if expected_x_kind == "source_piecewise_x_law":
+                    expected_x_mm = _core_capture_source_x_mm(
+                        max(0.0, observed_preseat_mm)
+                    )
+                else:
+                    expected_x_mm = float(
+                        start_x_mm + fraction * (end_x_mm - start_x_mm)
+                    )
+                mating_rotation = np.asarray(
+                    data.site_xmat[mating_id], dtype=np.float64
+                ).reshape(3, 3)
+                orientation_error_rad = _small_rotation_angle(
+                    dock_rotation.T @ mating_rotation
+                )
+                maximum_preseat_error_mm = max(
+                    maximum_preseat_error_mm,
+                    abs(observed_preseat_mm - expected_preseat_mm),
+                )
+                maximum_x_error_mm = max(
+                    maximum_x_error_mm,
+                    abs(float(local_position_mm[0]) - expected_x_mm),
+                )
+                maximum_abs_y_mm = max(
+                    maximum_abs_y_mm, abs(float(local_position_mm[1]))
+                )
+                maximum_orientation_error_rad = max(
+                    maximum_orientation_error_rad, orientation_error_rad
+                )
+                if observed_preseat_mm > previous_preseat_mm + 1.0e-9:
+                    monotone_nonincreasing_preseat = False
+                previous_preseat_mm = observed_preseat_mm
+                sample_hasher.update(
+                    struct.pack(
+                        "<IIddddd",
+                        interval_index,
+                        fraction_index,
+                        fraction,
+                        observed_preseat_mm,
+                        float(local_position_mm[0]),
+                        float(local_position_mm[1]),
+                        orientation_error_rad,
+                    )
+                )
+                sample_count += 1
+        if phase_name == "gripper_capture_lateral_align":
+            thresholds = {
+                "maximum_preseat_error_mm": 0.0002,
+                "maximum_source_x_error_mm": 0.0003,
+                "maximum_abs_transverse_y_mm": 0.010,
+                "maximum_orientation_error_rad": 1.0e-9,
+            }
+        else:
+            thresholds = {
+                "maximum_preseat_error_mm": 0.00005,
+                "maximum_source_x_error_mm": 0.0001,
+                "maximum_abs_transverse_y_mm": 0.010,
+                "maximum_orientation_error_rad": 1.0e-9,
+            }
+        observed = {
+            "maximum_preseat_error_mm": maximum_preseat_error_mm,
+            "maximum_source_x_error_mm": maximum_x_error_mm,
+            "maximum_abs_transverse_y_mm": maximum_abs_y_mm,
+            "maximum_orientation_error_rad": maximum_orientation_error_rad,
+        }
+        preseat_progression_passed = (
+            maximum_preseat_error_mm
+            <= thresholds["maximum_preseat_error_mm"]
+            if phase_name == "gripper_capture_lateral_align"
+            else monotone_nonincreasing_preseat
+        )
+        phase_reports.append(
+            {
+                "action": phase_name,
+                "interval_count": len(phase_states) - 1,
+                "sample_count": sample_count,
+                "expected_x_kind": expected_x_kind,
+                "monotone_nonincreasing_preseat": (
+                    monotone_nonincreasing_preseat
+                ),
+                "preseat_progression_kind": (
+                    "constant_within_bound"
+                    if phase_name == "gripper_capture_lateral_align"
+                    else "monotone_nonincreasing"
+                ),
+                "preseat_progression_passed": preseat_progression_passed,
+                "observed": observed,
+                "thresholds": thresholds,
+                "sample_sha256": sample_hasher.hexdigest(),
+                "passed": preseat_progression_passed
+                and all(observed[key] <= value for key, value in thresholds.items()),
+            }
+        )
+    return {
+        "sampling_contract": {
+            "order": "action_then_interval_then_fraction",
+            "fraction_count_per_interval": len(
+                CORE_CAPTURE_ROUTE_DENSE_FRACTIONS
+            ),
+            "fractions": list(CORE_CAPTURE_ROUTE_DENSE_FRACTIONS),
+            "endpoints_included_for_every_interval": True,
+            "sample_digest_preimage": (
+                "action_utf8+nul once, then little-endian "
+                "<uint32 interval,uint32 fraction_index,"
+                "float64 fraction,p_mm,x_mm,y_mm,orientation_rad>"
+            ),
+        },
+        "phases": phase_reports,
+        "passed": all(report["passed"] for report in phase_reports),
+    }
+
+
+def _move_action_command_kinematics(
+    action: WorkflowAction,
+    start_q: tuple[float, ...] | list[float],
+    controller_dt_s: float,
+) -> dict[str, Any]:
+    """Sample the controller's exact quintic/polyline command schedule."""
+
+    if action.kind != "move" or not action.joint_waypoints:
+        raise ValueError("command kinematics requires a waypoint move action")
+    times = np.arange(
+        0.0,
+        action.duration_s + 0.5 * controller_dt_s,
+        controller_dt_s,
+        dtype=np.float64,
+    )
+    route = np.asarray(
+        (tuple(start_q), *action.joint_waypoints), dtype=np.float64
+    )
+    commands: list[np.ndarray] = []
+    command_hasher = hashlib.sha256()
+    for sample_index, time_s in enumerate(times):
+        alpha = min(1.0, max(0.0, float(time_s) / action.duration_s))
+        smooth = alpha**3 * (10.0 + alpha * (-15.0 + 6.0 * alpha))
+        route_position = smooth * (len(route) - 1)
+        segment = min(int(math.floor(route_position)), len(route) - 2)
+        segment_fraction = route_position - segment
+        command = route[segment] + segment_fraction * (
+            route[segment + 1] - route[segment]
+        )
+        commands.append(command)
+        command_hasher.update(
+            struct.pack("<Id", sample_index, float(time_s))
+        )
+        command_hasher.update(
+            np.asarray(command, dtype="<f8").tobytes()
+        )
+    command_array = np.asarray(commands, dtype=np.float64)
+    velocities = np.diff(command_array, axis=0) / controller_dt_s
+    accelerations = np.diff(velocities, axis=0) / controller_dt_s
+    maximum_speed = float(np.max(np.abs(velocities)))
+    maximum_acceleration = float(np.max(np.abs(accelerations)))
+    bounds = {
+        "gripper_capture_lateral_align": (0.012, 0.15),
+        "gripper_capture_axial_open_side": (0.66, 1.40),
+        "gripper_capture_coupled_recenter": (0.12, 0.75),
+        "gripper_capture_centered_final": (0.12, 0.75),
+    }[action.name]
+    return {
+        "controller_dt_s": controller_dt_s,
+        "time_sample_rule": "arange(0,T+dt/2,dt)",
+        "time_sample_count": len(times),
+        "velocity_method": "first_forward_difference_over_dt",
+        "acceleration_method": "second_forward_difference_over_dt",
+        "maximum_abs_joint_speed_rad_s": maximum_speed,
+        "maximum_abs_joint_acceleration_rad_s2": maximum_acceleration,
+        "maximum_abs_joint_speed_bound_rad_s": bounds[0],
+        "maximum_abs_joint_acceleration_bound_rad_s2": bounds[1],
+        "command_sample_sha256": command_hasher.hexdigest(),
+        "command_sample_digest_preimage": (
+            "per sample little-endian <uint32 sample_index,float64 time_s> "
+            "then five little-endian float64 q values"
+        ),
+        "passed": maximum_speed <= bounds[0]
+        and maximum_acceleration <= bounds[1],
+    }
+
+
+@cache
+def _positive_lock_cam_capture_route_contract_cached() -> dict[str, Any]:
+    model = build_model()
+    initialized_data = mujoco.MjData(model)
+    initialize(model, initialized_data)
+    xml_text, _ = _build_xml_and_assets()
+    source_binding = {
+        "generator_file": {
+            "path": str(qc.POGO_CAD_SOURCE_PATH.relative_to(REPO_ROOT)),
+            "bytes": qc.POGO_CAD_SOURCE_BYTES,
+            "sha256": qc.POGO_CAD_SOURCE_SHA256,
+        },
+        "positive_lock_cam_contract_sha256": (
+            qc.CORE_DOCK_CAM_CONTRACT_CANONICAL_SHA256
+        ),
+        "route_functions": {
+            "lateral_x_mm": "positive_lock_cam_capture_lateral_offset_mm",
+            "slider_q_max_mm": "positive_lock_cam_capture_q_max_mm",
+        },
+    }
+    model_binding = {
+        "model_xml_sha256": hashlib.sha256(xml_text.encode()).hexdigest(),
+        "initialized_active_collision_geometry_sha256": (
+            initialized_active_collision_geometry_sha256(
+                model, initialized_data
+            )
+        ),
+        "physics_timestep_s": float(model.opt.timestep),
+    }
+    state_records = [
+        {"preseat_mm": p_mm, "source_x_mm": x_mm, "q_rad": list(q_rad)}
+        for p_mm, x_mm, q_rad in CORE_CAPTURE_ROUTE_SOURCE_STATES
+    ]
+    action_objects = _core_capture_move_actions()
+    action_records: list[dict[str, Any]] = []
+    alignment_q = [
+        [float(value) for value in DOCK_PRE_CAPTURE_Q["gripper"]],
+        list(CORE_CAPTURE_ROUTE_SOURCE_STATES[0][2]),
+    ]
+    if (
+        _canonical_json_sha256(alignment_q)
+        != CORE_CAPTURE_ROUTE_ALIGNMENT_Q_SHA256
+    ):
+        raise RuntimeError("core capture alignment digest drifted")
+    action_start_q_by_name = {
+        "gripper_capture_lateral_align": alignment_q[0],
+        "gripper_capture_axial_open_side": list(
+            CORE_CAPTURE_ROUTE_SOURCE_STATES[0][2]
+        ),
+        "gripper_capture_coupled_recenter": list(
+            CORE_CAPTURE_ROUTE_SOURCE_STATES[243][2]
+        ),
+        "gripper_capture_centered_final": list(
+            CORE_CAPTURE_ROUTE_SOURCE_STATES[259][2]
+        ),
+    }
+    controller_dt_s = (
+        float(model.opt.timestep) * PHYSICS_SUBSTEPS_PER_CONTROLLER_STEP
+    )
+    for action in action_objects:
+        if action.name == "gripper_capture_lateral_align":
+            row_range: list[int] | None = None
+            full_q_roster = alignment_q
+            expected_q_sha = CORE_CAPTURE_ROUTE_ALIGNMENT_Q_SHA256
+        else:
+            start, end = CORE_CAPTURE_ROUTE_PHASE_ROW_RANGES[action.name]
+            row_range = [start, end]
+            full_q_roster = [
+                list(record[2])
+                for record in CORE_CAPTURE_ROUTE_SOURCE_STATES[
+                    start : end + 1
+                ]
+            ]
+            expected_q_sha = CORE_CAPTURE_ROUTE_PHASE_Q_SHA256[action.name]
+        observed_q_sha = _canonical_json_sha256(full_q_roster)
+        if observed_q_sha != expected_q_sha:
+            raise RuntimeError(f"{action.name} route digest drifted")
+        action_records.append(
+            {
+                "name": action.name,
+                "kind": action.kind,
+                "tool": action.tool,
+                "duration_s": action.duration_s,
+                "timeout_s": action.timeout_s,
+                "source_row_range_inclusive": row_range,
+                "full_endpoint_inclusive_q_count": len(full_q_roster),
+                "joint_waypoint_count_excluding_action_start": len(
+                    action.joint_waypoints
+                ),
+                "endpoint_q_rad": list(action.target_q or ()),
+                "q_roster_sha256": observed_q_sha,
+                "time_scaling": "quintic_10a3_minus_15a4_plus_6a5",
+                "zero_commanded_endpoint_velocity": True,
+                "command_kinematics": _move_action_command_kinematics(
+                    action,
+                    action_start_q_by_name[action.name],
+                    controller_dt_s,
+                ),
+            }
+        )
+    waypoint_digest_preimage = {
+        "source_binding": source_binding,
+        "model_binding": model_binding,
+        "source_states": state_records,
+    }
+    dense_fk = _core_capture_route_dense_fk_evidence(model)
+    old_open_q = (
+        -0.72,
+        *CORE_GUIDED_CAPTURE_BASE_Q[-1],
+        0.0,
+    )
+    old_data = mujoco.MjData(model)
+    initialize(model, old_data)
+    arm_qpos = np.asarray(
+        [model.joint(name).qposadr[0] for name in ARM_JOINTS], dtype=int
+    )
+    dock = old_data.body("dock_gripper")
+    dock_position = np.asarray(dock.xpos, dtype=np.float64).copy()
+    dock_rotation = np.asarray(
+        dock.xmat, dtype=np.float64
+    ).reshape(3, 3).copy()
+    old_positions: list[list[float]] = []
+    for q_value in (old_open_q, tuple(DOCK_CAPTURE_Q["gripper"])):
+        _forward_scratch_arm_configuration(
+            model, old_data, arm_qpos, np.asarray(q_value, dtype=np.float64)
+        )
+        old_positions.append(
+            list(
+                (
+                    np.asarray(
+                        old_data.site("robot_mating_face").xpos,
+                        dtype=np.float64,
+                    )
+                    - dock_position
+                )
+                @ dock_rotation
+                * 1000.0
+            )
+        )
+    retired_same_z = {
+        "name": "constant_x_plus_0p20_then_same_z_recenter",
+        "endpoint_positions_dock_local_mm": old_positions,
+        "preseat_change_mm": (
+            -old_positions[1][2] + old_positions[0][2]
+        ),
+        "lateral_change_mm": old_positions[1][0] - old_positions[0][0],
+        "complete_source_cam_overlap_mm3": {
+            "slider_q_0p00mm": 0.2382911392405093,
+            "slider_q_0p05mm": 0.3369620253164586,
+        },
+        "overlap_authority": (
+            "independent_exact_OCCT_recomputation_required"
+        ),
+        "retired_single_action_command_kinematics": {
+            "duration_s": 1.5,
+            "maximum_abs_joint_speed_rad_s": 0.8784800468374154,
+            "maximum_abs_joint_acceleration_rad_s2": 138.03108797818098,
+            "rejected_for_nonzero_velocity_at_source_law_breakpoints": True,
+        },
+        "violates_source_piecewise_x_law": True,
+        "single_global_action_crosses_velocity_kinks": True,
+        "rejected": True,
+    }
+    endpoint_guard = {
+        "maximum_q_error_rad": CORE_CAPTURE_ROUTE_ENDPOINT_Q_ERROR_RAD,
+        "maximum_abs_qvel_rad_s": CORE_CAPTURE_ROUTE_ENDPOINT_QVEL_RAD_S,
+        "maximum_fk_position_error_m": (
+            CORE_CAPTURE_ROUTE_ENDPOINT_POSITION_ERROR_M
+        ),
+        "maximum_fk_orientation_error_rad": (
+            CORE_CAPTURE_ROUTE_ENDPOINT_ORIENTATION_ERROR_RAD
+        ),
+        "maximum_absolute_source_x_error_mm": (
+            CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
+        ),
+        "required_contiguous_controller_ticks": (
+            CORE_CAPTURE_ROUTE_ENDPOINT_DWELL_TICKS
+        ),
+        "advance_on_elapsed_time_only": False,
+    }
+    live_source_corridor_guard = {
+        "active_after_action": "gripper_capture_lateral_align",
+        "audited_actions": [
+            "gripper_capture_axial_open_side",
+            "gripper_capture_coupled_recenter",
+            "gripper_capture_centered_final",
+        ],
+        "audit_frequency": "after_every_mj_step",
+        "preseat_formula": "-dock_local_robot_mating_z_mm",
+        "lateral_x_formula": "dock_local_robot_mating_x_mm",
+        "maximum_absolute_source_x_error_mm": (
+            CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
+        ),
+        "bound_provenance_mm": {
+            "continuous_plate_cam_clearance": (
+                CORE_CAPTURE_SOURCE_CORRIDOR_CONTINUOUS_CLEARANCE_MM
+            ),
+            "manufacturing_clearance": (
+                CORE_CAPTURE_SOURCE_CORRIDOR_MANUFACTURING_CLEARANCE_MM
+            ),
+            "retained_reserve": CORE_CAPTURE_SOURCE_CORRIDOR_RESERVE_MM,
+            "available_tracking_error": (
+                CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
+            ),
+            "formula": "0.249902439 - 0.20 - 0.009902439 = 0.040",
+        },
+        "violation_abort_reason": "core_capture_source_corridor_violation",
+        "pass_requires": {
+            "audited_substeps_greater_than_zero": True,
+            "all_three_audited_actions_observed": True,
+            "all_four_route_endpoint_events_completed": True,
+            "maximum_error_within_bound": True,
+            "current_abort_absent": True,
+        },
+        "live_dynamics_authority": False,
+    }
+    blockers = [
+        "cam_contact_policy_not_authorized",
+        "live_dynamics_not_validated",
+        "closed_loop_source_law_tracking_not_implemented",
+        "live_mujoco_route_tracking_not_yet_certified",
+        "cam_tab_contact_force_and_depth_not_yet_certified",
+        "positive_lock_cam_friction_coefficient_unqualified",
+        "positive_lock_cam_load_capacity_unqualified",
+        "positive_lock_cam_dynamics_unqualified",
+    ]
+    report = {
+        "schema_version": "1.0",
+        "tool": "gripper",
+        "frame": "dock_gripper",
+        "route_kind": "source_coupled_positive_lock_cam_capture",
+        "embedded_state_bytes_sha256": (
+            CORE_CAPTURE_ROUTE_STATE_BYTES_SHA256
+        ),
+        "contract_identity_digest_preimage": copy.deepcopy(
+            CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_DIGEST_PREIMAGE
+        ),
+        "contract_identity_sha256": (
+            CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_SHA256
+        ),
+        "source_binding": source_binding,
+        "model_binding": model_binding,
+        "route_law": {
+            "preseat_from_fk": "-dock_local_robot_mating_z_mm",
+            "lateral_x_from_fk": "dock_local_robot_mating_x_mm",
+            "transverse_from_fk": "dock_local_robot_mating_y_mm",
+            "orientation_reference": "seated_dock_frame",
+            "x_breakpoints_mm": [
+                [55.0, 0.20],
+                [6.4, 0.20],
+                [3.2, 0.0],
+                [0.0, 0.0],
+            ],
+        },
+        "source_states": state_records,
+        "source_state_sha256": _canonical_json_sha256(state_records),
+        "q_roster_sha256": _canonical_json_sha256(
+            [record["q_rad"] for record in state_records]
+        ),
+        "canonical_waypoint_digest_preimage": waypoint_digest_preimage,
+        "canonical_waypoint_sha256": _canonical_json_sha256(
+            waypoint_digest_preimage
+        ),
+        "actions": action_records,
+        "endpoint_guard": endpoint_guard,
+        "live_source_corridor_guard": live_source_corridor_guard,
+        "dense_fk_evidence": dense_fk,
+        "retired_route_negative": retired_same_z,
+        "state_write_contract": {
+            "arm_command_target": "data.ctrl",
+            "direct_pogo_qpos_writes_after_initialization": 0,
+            "direct_slider_qpos_writes_after_initialization": 0,
+            "validation_method": "independent_ast_and_callgraph_required",
+        },
+        "authority_scope": {
+            "static_source_route_and_fk_authority": True,
+            "live_tracking_authority": False,
+            "contact_force_authority": False,
+            "friction_coefficient_authority": False,
+            "load_capacity_authority": False,
+            "dynamics_authority": False,
+            "blockers": blockers,
+            "release_ready": False,
+        },
+        "passed": dense_fk["passed"]
+        and all(
+            record["command_kinematics"]["passed"]
+            for record in action_records
+        ),
+        "release_ready": False,
+    }
+    if report["source_state_sha256"] != CORE_CAPTURE_ROUTE_SOURCE_STATE_SHA256:
+        raise RuntimeError("core capture public source-state digest drifted")
+    if report["q_roster_sha256"] != CORE_CAPTURE_ROUTE_Q_SHA256:
+        raise RuntimeError("core capture public joint digest drifted")
+    return report
+
+
+def positive_lock_cam_capture_route_contract() -> dict[str, Any]:
+    """Return independently replayable static route authority evidence."""
+
+    return copy.deepcopy(_positive_lock_cam_capture_route_contract_cached())
+
+
+def core_capture_route_runtime_contract() -> dict[str, Any]:
+    """Compatibility-free public name for the core runtime route contract."""
+
+    return positive_lock_cam_capture_route_contract()
+
+
 def initialized_summary(model: mujoco.MjModel, data: mujoco.MjData) -> dict[str, Any]:
     active_collision_ids = np.flatnonzero(
         (np.asarray(model.geom_contype) != 0) & (np.asarray(model.geom_conaffinity) != 0)
@@ -2047,6 +3169,16 @@ class MatchaWorkflowController:
         self.dock_gripper_cam_geom_id = self.dock_gripper_cam_geom_ids[0]
         self.action_index = 0
         self.action_started_s = float(data.time)
+        self.move_endpoint_dwell_ticks = 0
+        self.core_capture_source_corridor_armed = False
+        self.core_capture_source_corridor_max_error_mm = 0.0
+        self.core_capture_source_corridor_witness: dict[str, Any] | None = None
+        self.core_capture_source_corridor_audited_substeps = 0
+        self.core_capture_source_corridor_phase_counts = {
+            "gripper_capture_axial_open_side": 0,
+            "gripper_capture_coupled_recenter": 0,
+            "gripper_capture_centered_final": 0,
+        }
         # Trajectories start from the preceding actuator command, not the
         # instantaneous tracking state.  Switching a position servo from the
         # commanded capture datum to the slightly lagging qpos caused a small
@@ -3218,6 +4350,52 @@ class MatchaWorkflowController:
             self.max_route_orientation_error_rad, orientation_error
         )
 
+    def _audit_core_capture_source_corridor(
+        self, action: WorkflowAction
+    ) -> None:
+        """Fail closed on live FK drift from the source cam p/X law."""
+
+        audited_actions = {
+            "gripper_capture_axial_open_side",
+            "gripper_capture_coupled_recenter",
+            "gripper_capture_centered_final",
+        }
+        if (
+            not self.core_capture_source_corridor_armed
+            or action.name not in audited_actions
+        ):
+            return
+        self.core_capture_source_corridor_audited_substeps += 1
+        self.core_capture_source_corridor_phase_counts[action.name] += 1
+        mating = self.data.site("robot_mating_face")
+        dock = self.data.body("dock_gripper")
+        dock_rotation = np.asarray(
+            dock.xmat, dtype=np.float64
+        ).reshape(3, 3)
+        local_position_mm = (
+            np.asarray(mating.xpos, dtype=np.float64)
+            - np.asarray(dock.xpos, dtype=np.float64)
+        ) @ dock_rotation * 1000.0
+        preseat_mm = -float(local_position_mm[2])
+        expected_x_mm = _core_capture_source_x_mm(max(0.0, preseat_mm))
+        observed_x_mm = float(local_position_mm[0])
+        signed_error_mm = observed_x_mm - expected_x_mm
+        absolute_error_mm = abs(signed_error_mm)
+        if absolute_error_mm >= self.core_capture_source_corridor_max_error_mm:
+            self.core_capture_source_corridor_max_error_mm = absolute_error_mm
+            self.core_capture_source_corridor_witness = {
+                "action": action.name,
+                "sim_time_s": float(self.data.time),
+                "physics_substep_count": int(self.physics_substep_count),
+                "preseat_mm": preseat_mm,
+                "observed_x_mm": observed_x_mm,
+                "expected_source_x_mm": expected_x_mm,
+                "signed_error_mm": signed_error_mm,
+                "absolute_error_mm": absolute_error_mm,
+            }
+        if absolute_error_mm > CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM:
+            self._abort("core_capture_source_corridor_violation")
+
     def _abort(self, reason: str) -> None:
         if self.abort_reason is not None:
             return
@@ -3237,6 +4415,9 @@ class MatchaWorkflowController:
             mujoco.mj_step(self.model, self.data)
             self.physics_substep_count += 1
             self._record_route_alignment(action)
+            self._audit_core_capture_source_corridor(action)
+            if self.abort_reason is not None:
+                return
             if action.kind == "axial_disengage":
                 self._record_lock_stroke_contacts()
             if (
@@ -3291,6 +4472,16 @@ class MatchaWorkflowController:
         }
         journal_record.update(evidence)
         self.journal.append(journal_record)
+        if (
+            event == "move_complete"
+            and action.name == "gripper_capture_lateral_align"
+        ):
+            self.core_capture_source_corridor_armed = True
+        elif (
+            event == "move_complete"
+            and action.name == "gripper_capture_centered_final"
+        ):
+            self.core_capture_source_corridor_armed = False
         self.action_index += 1
         if self.action_index >= len(self.actions):
             self.completed = True
@@ -3304,6 +4495,7 @@ class MatchaWorkflowController:
             )
             return
         self.action_started_s = float(self.data.time)
+        self.move_endpoint_dwell_ticks = 0
         self.action_start_q = np.asarray(
             self.data.ctrl[self.arm_actuator_ids], dtype=float
         ).copy()
@@ -3314,6 +4506,56 @@ class MatchaWorkflowController:
                 "sim_time_s": float(self.data.time),
             }
         )
+
+    def _core_capture_route_endpoint_evidence(
+        self, action: WorkflowAction
+    ) -> dict[str, Any]:
+        """Return live dock-frame pose evidence at one route endpoint."""
+
+        if action.name not in CORE_CAPTURE_ROUTE_ENDPOINTS_MM:
+            raise ValueError(f"not a core capture route action: {action.name}")
+        preseat_mm, source_x_mm = CORE_CAPTURE_ROUTE_ENDPOINTS_MM[action.name]
+        dock = self.data.body("dock_gripper")
+        mating = self.data.site("robot_mating_face")
+        dock_rotation = np.asarray(dock.xmat, dtype=np.float64).reshape(3, 3)
+        local_position = (
+            np.asarray(mating.xpos, dtype=np.float64)
+            - np.asarray(dock.xpos, dtype=np.float64)
+        ) @ dock_rotation
+        expected_position = np.asarray(
+            [source_x_mm, 0.0, -preseat_mm], dtype=np.float64
+        ) * 0.001
+        position_error_m = float(
+            np.linalg.norm(local_position - expected_position)
+        )
+        mating_rotation = np.asarray(
+            mating.xmat, dtype=np.float64
+        ).reshape(3, 3)
+        relative_rotation = dock_rotation.T @ mating_rotation
+        orientation_error_rad = float(
+            math.acos(
+                np.clip(
+                    (float(np.trace(relative_rotation)) - 1.0) / 2.0,
+                    -1.0,
+                    1.0,
+                )
+            )
+        )
+        return {
+            "action": action.name,
+            "target_preseat_mm": preseat_mm,
+            "target_source_x_mm": source_x_mm,
+            "observed_preseat_mm": -float(local_position[2]) * 1000.0,
+            "observed_x_mm": float(local_position[0]) * 1000.0,
+            "source_x_error_mm": (
+                float(local_position[0]) * 1000.0 - source_x_mm
+            ),
+            "observed_transverse_y_mm": float(local_position[1]) * 1000.0,
+            "position_error_m": position_error_m,
+            "orientation_error_rad": orientation_error_rad,
+            "physics_substep_count": int(self.physics_substep_count),
+            "sim_time_s": float(self.data.time),
+        }
 
     def _command_move(self, action: WorkflowAction, elapsed_s: float) -> None:
         if action.target_q is None:
@@ -3348,6 +4590,46 @@ class MatchaWorkflowController:
                 np.max(np.abs(self.data.qpos[self.arm_qpos_ids] - target))
             )
             speed = float(np.max(np.abs(self.data.qvel[self.arm_dof_ids])))
+            if action.name in CORE_CAPTURE_ROUTE_ACTION_NAMES:
+                endpoint_evidence = (
+                    self._core_capture_route_endpoint_evidence(action)
+                )
+                position_error_m = float(endpoint_evidence["position_error_m"])
+                orientation_error_rad = float(
+                    endpoint_evidence["orientation_error_rad"]
+                )
+                endpoint_valid = (
+                    target_error <= CORE_CAPTURE_ROUTE_ENDPOINT_Q_ERROR_RAD
+                    and speed <= CORE_CAPTURE_ROUTE_ENDPOINT_QVEL_RAD_S
+                    and position_error_m
+                    <= CORE_CAPTURE_ROUTE_ENDPOINT_POSITION_ERROR_M
+                    and orientation_error_rad
+                    <= CORE_CAPTURE_ROUTE_ENDPOINT_ORIENTATION_ERROR_RAD
+                    and abs(float(endpoint_evidence["source_x_error_mm"]))
+                    <= CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
+                )
+                if endpoint_valid:
+                    self.move_endpoint_dwell_ticks += 1
+                else:
+                    self.move_endpoint_dwell_ticks = 0
+                if (
+                    self.move_endpoint_dwell_ticks
+                    >= CORE_CAPTURE_ROUTE_ENDPOINT_DWELL_TICKS
+                ):
+                    self._advance_action(
+                        "move_complete",
+                        endpoint_q_error_rad=target_error,
+                        endpoint_max_abs_qvel_rad_s=speed,
+                        endpoint_fk_position_error_m=position_error_m,
+                        endpoint_fk_orientation_error_rad=(
+                            orientation_error_rad
+                        ),
+                        endpoint_dwell_ticks=(
+                            CORE_CAPTURE_ROUTE_ENDPOINT_DWELL_TICKS
+                        ),
+                        route_endpoint_evidence=endpoint_evidence,
+                    )
+                return
             if target_error <= 0.025 and speed <= 0.20:
                 self._advance_action("move_complete")
 
@@ -3717,6 +4999,35 @@ class MatchaWorkflowController:
             if self.attached_tool is not None
             else None
         )
+        route_endpoint_records = [
+            copy.deepcopy(record)
+            for record in self.journal
+            if record.get("event") == "move_complete"
+            and record.get("action") in CORE_CAPTURE_ROUTE_ACTION_NAMES
+        ]
+        completed_route_endpoint_actions = {
+            str(record["action"]) for record in route_endpoint_records
+        }
+        corridor_observed = (
+            self.core_capture_source_corridor_audited_substeps > 0
+        )
+        corridor_all_phases_observed = all(
+            count > 0
+            for count in self.core_capture_source_corridor_phase_counts.values()
+        )
+        route_all_endpoints_completed = (
+            completed_route_endpoint_actions
+            == CORE_CAPTURE_ROUTE_ACTION_NAMES
+        )
+        live_source_corridor_passed = bool(
+            corridor_observed
+            and corridor_all_phases_observed
+            and route_all_endpoints_completed
+            and self.core_capture_source_corridor_witness is not None
+            and self.core_capture_source_corridor_max_error_mm
+            <= CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
+            and self.abort_reason is None
+        )
         return {
             "completed": self.completed,
             "success": self.success,
@@ -3764,10 +5075,26 @@ class MatchaWorkflowController:
             "max_tracking_error_rad": self.max_tracking_error_rad,
             "route_alignment": {
                 "method": (
-                    "source_approved_0.20mm_open_side_dense_fk_ik_waypoints"
+                    "source_coupled_positive_lock_cam_four_phase_dense_fk_ik_waypoints"
                 ),
-                "declared_static_max_lateral_deviation_m": (
-                    ALIGNED_CAPTURE_STATIC_MAX_LATERAL_DEVIATION_M
+                "runtime_contract_api": "core_capture_route_runtime_contract",
+                "contract_identity_sha256": (
+                    CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_SHA256
+                ),
+                "source_state_sha256": (
+                    CORE_CAPTURE_ROUTE_SOURCE_STATE_SHA256
+                ),
+                "q_roster_sha256": CORE_CAPTURE_ROUTE_Q_SHA256,
+                "embedded_state_bytes_sha256": (
+                    CORE_CAPTURE_ROUTE_STATE_BYTES_SHA256
+                ),
+                "phase_actions": list(CORE_CAPTURE_ROUTE_PHASE_TIMING_S),
+                "phase_endpoint_journal_evidence": route_endpoint_records,
+                "completed_endpoint_actions": sorted(
+                    completed_route_endpoint_actions
+                ),
+                "all_four_endpoints_completed": (
+                    route_all_endpoints_completed
                 ),
                 "measured_max_lateral_deviation_m": (
                     self.max_route_lateral_deviation_m
@@ -3776,8 +5103,36 @@ class MatchaWorkflowController:
                     self.max_route_orientation_error_rad
                 ),
                 "cam_relief_corridor_m": CAM_RELIEF_CORRIDOR_M,
+                "live_source_corridor": {
+                    "armed": self.core_capture_source_corridor_armed,
+                    "observed": corridor_observed,
+                    "audited_substeps": (
+                        self.core_capture_source_corridor_audited_substeps
+                    ),
+                    "audited_substeps_by_phase": dict(
+                        self.core_capture_source_corridor_phase_counts
+                    ),
+                    "all_three_phases_observed": (
+                        corridor_all_phases_observed
+                    ),
+                    "maximum_absolute_error_mm": (
+                        self.core_capture_source_corridor_max_error_mm
+                    ),
+                    "maximum_allowed_error_mm": (
+                        CORE_CAPTURE_SOURCE_CORRIDOR_MAX_ERROR_MM
+                    ),
+                    "witness": copy.deepcopy(
+                        self.core_capture_source_corridor_witness
+                    ),
+                    "violation_abort_reason": (
+                        "core_capture_source_corridor_violation"
+                    ),
+                    "passed": live_source_corridor_passed,
+                    "live_dynamics_authority": False,
+                },
                 "passed": (
                     self.max_route_lateral_deviation_m <= CAM_RELIEF_CORRIDOR_M
+                    and live_source_corridor_passed
                 ),
             },
             "max_actuator_utilization": dict(self.max_actuator_utilization),
