@@ -8,9 +8,9 @@
     },
     "occt_role": "STEP import/tessellation and six critical B-rep tangency diagnostics",
     "quick_change_interface_generator": {
-      "bytes": 87799,
+      "bytes": 109574,
       "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-      "sha256": "0b6776e6223b30d583010fbe2dd2f83886b2d2c8edd5af044ce5ed816b833263"
+      "sha256": "9edbf4fa918dba20eeee869bc6788de0b63bb5a43983999576c515808f27bbbc"
     },
     "rack_validator": {
       "bytes": 31131,
@@ -96,7 +96,7 @@
     "manifest": {
       "bytes": 8901,
       "path": "QuickChange/SO101_Magnetic/matcha_tools/exports/matcha_tool_manifest.json",
-      "sha256": "93fd5b9470f3ac6cf358c3458c7b22dfc4ee43d655a18eeadb6203af7bc30ecb"
+      "sha256": "aa74691d9dca5337f5a81656bd60bc0e2bf909de8dbeb42f34f491bfd206ad9e"
     },
     "manifest_schema": {
       "files": [
@@ -168,7 +168,7 @@
       "interface_authority": {
         "construction": "unmodified tool_plate(stock_gripper=False)",
         "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-        "sha256": "0b6776e6223b30d583010fbe2dd2f83886b2d2c8edd5af044ce5ed816b833263"
+        "sha256": "9edbf4fa918dba20eeee869bc6788de0b63bb5a43983999576c515808f27bbbc"
       },
       "rack": {
         "bay_names": [
@@ -40375,9 +40375,9 @@
     "normal_gripper_authority": "separate_core_stock_adapter_and_passive_dock_package",
     "normal_gripper_authority_files": [
       {
-        "bytes": 87799,
+        "bytes": 109574,
         "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-        "sha256": "0b6776e6223b30d583010fbe2dd2f83886b2d2c8edd5af044ce5ed816b833263"
+        "sha256": "9edbf4fa918dba20eeee869bc6788de0b63bb5a43983999576c515808f27bbbc"
       },
       {
         "bytes": 248872,
@@ -40385,9 +40385,9 @@
         "sha256": "ca2eb199b43ec63c38c49a4e954ed2238348bb10a03206abe6eb3233343cb526"
       },
       {
-        "bytes": 3320413,
+        "bytes": 3346361,
         "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_retrofit_assembly.step",
-        "sha256": "3487e09b193b483c7db6c9d4652b6beb4897c75a3acf9c48f8d387a9fbe91cfa"
+        "sha256": "ddd625bfd7944cfecc00a0273575d236b2530fea46396580441365df5f2fe499"
       },
       {
         "bytes": 174898,
