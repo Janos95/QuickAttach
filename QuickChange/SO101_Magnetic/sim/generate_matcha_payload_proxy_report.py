@@ -211,11 +211,17 @@ def _vertex_key(vertex: np.ndarray) -> tuple[int, int, int]:
     return tuple(int(value) for value in scaled)
 
 
-def _surface_topology(triangles: np.ndarray) -> dict[str, Any]:
+def _topology_index(
+    triangles: np.ndarray,
+) -> tuple[
+    dict[tuple[int, int, int], int],
+    dict[tuple[int, int], list[int]],
+    dict[tuple[int, int], int],
+]:
     vertex_ids: dict[tuple[int, int, int], int] = {}
-    edge_counts: dict[tuple[int, int], int] = {}
+    edge_triangles: dict[tuple[int, int], list[int]] = {}
     edge_orientations: dict[tuple[int, int], int] = {}
-    for triangle in triangles:
+    for triangle_index, triangle in enumerate(triangles):
         ids: list[int] = []
         for vertex in triangle:
             key = _vertex_key(vertex)
@@ -226,30 +232,128 @@ def _surface_topology(triangles: np.ndarray) -> dict[str, Any]:
             raise ValueError("topology quantisation collapsed a triangle")
         for first, second in zip(ids, (ids[1], ids[2], ids[0]), strict=True):
             edge = (min(first, second), max(first, second))
-            edge_counts[edge] = edge_counts.get(edge, 0) + 1
+            edge_triangles.setdefault(edge, []).append(triangle_index)
             edge_orientations[edge] = edge_orientations.get(edge, 0) + (
                 1 if first < second else -1
             )
-    watertight = bool(edge_counts) and all(count == 2 for count in edge_counts.values())
+    return vertex_ids, edge_triangles, edge_orientations
+
+
+def _triangle_connected_components(triangles: np.ndarray) -> tuple[np.ndarray, ...]:
+    _, edge_triangles, _ = _topology_index(triangles)
+    adjacency: list[set[int]] = [set() for _ in range(len(triangles))]
+    for incident in edge_triangles.values():
+        for first in incident:
+            adjacency[first].update(second for second in incident if second != first)
+    remaining = set(range(len(triangles)))
+    components: list[np.ndarray] = []
+    while remaining:
+        seed = min(remaining)
+        pending = [seed]
+        component: list[int] = []
+        remaining.remove(seed)
+        while pending:
+            current = pending.pop()
+            component.append(current)
+            for neighbour in sorted(adjacency[current], reverse=True):
+                if neighbour in remaining:
+                    remaining.remove(neighbour)
+                    pending.append(neighbour)
+        components.append(np.asarray(sorted(component), dtype=np.int64))
+    return tuple(components)
+
+
+def _shell_interior_point(
+    triangles: np.ndarray, index: _FcpwTriangleUpperBoundIndex
+) -> np.ndarray:
+    """Find a deterministic parity-interior witness independent of winding."""
+
+    for triangle in triangles:
+        normal = np.cross(triangle[1] - triangle[0], triangle[2] - triangle[0])
+        normal /= np.linalg.norm(normal)
+        shortest_edge = min(
+            float(np.linalg.norm(triangle[(edge + 1) % 3] - triangle[edge]))
+            for edge in range(3)
+        )
+        base_offset = max(1.0e-4, min(1.0e-3, shortest_edge * 1.0e-3))
+        centroid = np.mean(triangle, axis=0)
+        for multiplier in (1.0, 4.0, 16.0):
+            offset = base_offset * multiplier
+            minus = np.ascontiguousarray(centroid - offset * normal, dtype=np.float32)
+            plus = np.ascontiguousarray(centroid + offset * normal, dtype=np.float32)
+            minus_inside = bool(index._scene.contains(minus))
+            plus_inside = bool(index._scene.contains(plus))
+            if minus_inside != plus_inside:
+                return np.asarray(minus if minus_inside else plus, dtype=np.float64)
+    raise RuntimeError("could not establish a signed containment side for a shell")
+
+
+def _shell_nesting_records(
+    triangles: np.ndarray,
+) -> tuple[tuple[np.ndarray, _FcpwTriangleUpperBoundIndex, np.ndarray, int], ...]:
+    components = _triangle_connected_components(triangles)
+    prepared: list[tuple[np.ndarray, _FcpwTriangleUpperBoundIndex, np.ndarray]] = []
+    for component in components:
+        shell = np.ascontiguousarray(triangles[component])
+        index = _FcpwTriangleUpperBoundIndex(shell)
+        prepared.append((shell, index, _shell_interior_point(shell, index)))
+    records: list[tuple[np.ndarray, _FcpwTriangleUpperBoundIndex, np.ndarray, int]] = []
+    for shell_index, (shell, index, interior) in enumerate(prepared):
+        depth = sum(
+            bool(other_index._scene.contains(np.ascontiguousarray(interior, dtype=np.float32)))
+            for other_shell_index, (_, other_index, _) in enumerate(prepared)
+            if other_shell_index != shell_index
+        )
+        records.append((shell, index, interior, int(depth)))
+    return tuple(records)
+
+
+def _surface_topology(triangles: np.ndarray) -> dict[str, Any]:
+    vertex_ids, edge_triangles, edge_orientations = _topology_index(triangles)
+    watertight = bool(edge_triangles) and all(
+        len(incident) == 2 for incident in edge_triangles.values()
+    )
     orientation_consistent = watertight and all(
         orientation == 0 for orientation in edge_orientations.values()
     )
-    signed_volume = math.fsum(
-        float(a @ np.cross(b, c)) / 6.0 for a, b, c in triangles
-    )
-    extent = np.ptp(triangles.reshape(-1, 3), axis=0)
-    volume_tolerance = max(1.0e-15, float(np.prod(extent)) * 1.0e-12)
-    positive_volume = bool(
-        math.isfinite(signed_volume) and signed_volume > volume_tolerance
-    )
+    shell_records = _shell_nesting_records(triangles)
+    component_volumes: list[float] = []
+    component_depths: list[int] = []
+    component_expected_signs: list[int] = []
+    component_parity_matches: list[bool] = []
+    for component_triangles, _, _, depth in shell_records:
+        signed_volume = math.fsum(
+            float(a @ np.cross(b, c)) / 6.0 for a, b, c in component_triangles
+        )
+        extent = np.ptp(component_triangles.reshape(-1, 3), axis=0)
+        volume_tolerance = max(1.0e-15, float(np.prod(extent)) * 1.0e-12)
+        component_volumes.append(float(signed_volume))
+        expected_sign = 1 if depth % 2 == 0 else -1
+        component_depths.append(depth)
+        component_expected_signs.append(expected_sign)
+        component_parity_matches.append(
+            bool(
+                math.isfinite(signed_volume)
+                and expected_sign * signed_volume > volume_tolerance
+            )
+        )
+    positive_volume = bool(component_parity_matches) and all(component_parity_matches)
+    signed_volume = math.fsum(component_volumes)
+    if not math.isfinite(signed_volume) or signed_volume <= 1.0e-15:
+        positive_volume = False
     passed = bool(watertight and orientation_consistent and positive_volume)
     return {
         "watertight": watertight,
         "orientation_consistent": orientation_consistent,
         "positive_volume": positive_volume,
         "signed_volume_mm3": float(signed_volume),
+        "connected_component_count": len(shell_records),
+        "component_signed_volumes_mm3": component_volumes,
+        "component_nesting_depths": component_depths,
+        "component_expected_orientation_signs": component_expected_signs,
+        "component_orientation_matches_nesting_parity": component_parity_matches,
         "unique_vertex_count": len(vertex_ids),
-        "unique_edge_count": len(edge_counts),
+        "unique_edge_count": len(edge_triangles),
         "passed": passed,
     }
 
@@ -271,28 +375,40 @@ def _combined_topology(pieces: Iterable[np.ndarray]) -> dict[str, Any]:
 
 
 def _signed_piece_occupancy_passes(triangles: np.ndarray) -> bool:
-    """Exercise FCPW signed containment on deterministic face witnesses."""
+    """Check both material sides of every shell against the full parity union."""
 
-    index = _FcpwTriangleUpperBoundIndex(triangles)
-    sample_indices = np.linspace(
-        0, len(triangles) - 1, min(12, len(triangles)), dtype=int
-    )
-    for triangle_index in sample_indices:
-        triangle = triangles[int(triangle_index)]
-        normal = np.cross(triangle[1] - triangle[0], triangle[2] - triangle[0])
-        normal /= np.linalg.norm(normal)
-        shortest_edge = min(
-            float(np.linalg.norm(triangle[(edge + 1) % 3] - triangle[edge]))
-            for edge in range(3)
+    shell_records = _shell_nesting_records(triangles)
+
+    def material_contains(point: np.ndarray) -> bool:
+        query = np.ascontiguousarray(point, dtype=np.float32)
+        return bool(
+            sum(bool(index._scene.contains(query)) for _, index, _, _ in shell_records)
+            % 2
         )
-        offset = max(1.0e-4, min(1.0e-3, shortest_edge * 1.0e-3))
-        centroid = np.mean(triangle, axis=0)
-        inward = np.ascontiguousarray(centroid - offset * normal, dtype=np.float32)
-        outward = np.ascontiguousarray(centroid + offset * normal, dtype=np.float32)
-        if not bool(index._scene.contains(inward)):
-            return False
-        if bool(index._scene.contains(outward)):
-            return False
+
+    for component_triangles, _, _, _ in shell_records:
+        sample_indices = np.linspace(
+            0,
+            len(component_triangles) - 1,
+            min(12, len(component_triangles)),
+            dtype=int,
+        )
+        for triangle_index in sample_indices:
+            triangle = component_triangles[int(triangle_index)]
+            normal = np.cross(triangle[1] - triangle[0], triangle[2] - triangle[0])
+            normal /= np.linalg.norm(normal)
+            shortest_edge = min(
+                float(np.linalg.norm(triangle[(edge + 1) % 3] - triangle[edge]))
+                for edge in range(3)
+            )
+            offset = max(1.0e-4, min(1.0e-3, shortest_edge * 1.0e-3))
+            centroid = np.mean(triangle, axis=0)
+            inward = np.ascontiguousarray(centroid - offset * normal, dtype=np.float32)
+            outward = np.ascontiguousarray(centroid + offset * normal, dtype=np.float32)
+            if not material_contains(inward):
+                return False
+            if material_contains(outward):
+                return False
     return True
 
 
@@ -466,4 +582,3 @@ __all__ = [
     "_FcpwTriangleUpperBoundIndex",
     "certify_bidirectional_runtime_collision",
 ]
-
