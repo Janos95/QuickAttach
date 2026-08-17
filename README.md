@@ -285,9 +285,10 @@ dock/support interface is explicitly bolted and is not a collision allowlist.
 The earlier 162308.50715898623 mm3 support estimate is superseded by the exact
 Boolean result.
 
-This is deliberately a source-only, fail-closed checkpoint. Generated CAD,
-manifests, reports, and runtime placements are stale. `release_ready` remains
-false until fastener and fixture-substrate authority, PA12 process/material
+The deterministic core CAD, manifest, and clearance-report checkpoint has now
+been regenerated from this source. Runtime placements and the Matcha
+base-authority manifest still require explicit propagation. `release_ready`
+remains false until fastener and fixture-substrate authority, PA12 process/material
 allowables, anchor tests, runtime full-arm regeneration, and physical
 cam/contact/friction and reverse-insertion validation are complete.
 

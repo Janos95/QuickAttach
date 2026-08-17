@@ -364,9 +364,10 @@ screening-only 1.5 GPa load proxy gives 4.25271213611 N.m combined moment,
 0.5720 MPa bending stress, and 0.1940 mm tip deflection; these are not material
 or joint allowables.
 
-This checkpoint intentionally does not regenerate STEP/STL, manifests,
-reports, or runtime placements. `release_ready` remains false pending sourced
-M4/M6 hardware, an authoritative tapped floor substrate, PA12
+The deterministic core STEP/STL, manifest, and clearance-report checkpoint has
+now been regenerated from these sources. Runtime placements and the Matcha
+base-authority manifest still require explicit propagation. `release_ready`
+remains false pending sourced M4/M6 hardware, an authoritative tapped floor substrate, PA12
 modulus/strength/creep and tolerance evidence, anchor-strength tests, runtime
 full-arm regeneration, and physical cam/contact/friction and reverse-insertion
 validation.

@@ -1528,7 +1528,7 @@ def core_dock_support_contract() -> dict[str, object]:
         / (4.0 * post_length**2)
     )
     blockers = [
-        "generated_core_exports_and_runtime_placements_are_stale",
+        "runtime_placements_and_matcha_base_authority_are_stale",
         "vendor_or_normative_source_missing_for_selected_M4_and_M6_fasteners",
         "floor_fixture_substrate_and_M6_thread_authority_missing",
         "PA12_modulus_strength_creep_and_process_allowables_unqualified",
