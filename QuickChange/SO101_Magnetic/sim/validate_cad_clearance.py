@@ -77,6 +77,31 @@ EXPECTED_CORE_EXPORTS = (
     "so101_stock_gripper_retrofit_assembly.step",
 )
 
+DOCK_FEATURE_NAMES = (
+    "left_lower_rail",
+    "right_lower_rail",
+    "left_upper_rail",
+    "right_upper_rail",
+    "left_wall",
+    "right_wall",
+    "seating_stop",
+    "positive_lock_cam",
+)
+
+# These are complete, exact semantic pairs.  Nothing may enter this policy by
+# prefix or role.  The robot plate's left edge and the stock plate keeper faces
+# are deliberately coincident in the released CAD; every other dock contact is
+# forbidden except the separately audited slider/cam actuation envelope.
+INTENDED_ZERO_VOLUME_CONTACT_PAIRS = frozenset(
+    {
+        ("stock_tool_plate", "left_lower_rail"),
+        ("stock_tool_plate", "right_lower_rail"),
+        ("stock_tool_plate", "left_upper_rail"),
+        ("stock_tool_plate", "right_upper_rail"),
+        ("robot_plate", "left_lower_rail"),
+    }
+)
+
 
 def _load_cad_generator():
     spec = importlib.util.spec_from_file_location("core_quick_change_cad", CAD_GENERATOR_PATH)
@@ -652,6 +677,7 @@ def _mesh_sweep_record(
     passed = continuous_aabb_clearance >= MANUFACTURING_CLEARANCE_MM
     return {
         "component": moving.name,
+        "dock_component": "full_dock",
         "component_state": moving.state,
         "component_role": "calibrated_source_mesh_payload",
         "semantics": "forbidden_component_continuous_clearance",
@@ -816,6 +842,40 @@ def _mount_composition() -> dict[str, Any]:
     }
 
 
+def _thresholds_record() -> dict[str, Any]:
+    return {
+        "manufacturing_clearance_mm": MANUFACTURING_CLEARANCE_MM,
+        "numeric_distance_tolerance_mm": NUMERIC_DISTANCE_TOLERANCE_MM,
+        "overlap_volume_tolerance_mm3": OVERLAP_VOLUME_TOLERANCE_MM3,
+        "stop_gap_range_mm": [STOP_GAP_MIN_MM, STOP_GAP_MAX_MM],
+        "minimum_stud_to_cam_x_margin_mm": MIN_STUD_TO_CAM_X_MARGIN_MM,
+    }
+
+
+def _authorities_record() -> dict[str, Any]:
+    return {
+        "validator": _file_record(Path(__file__)),
+        "cad_generator": _file_record(CAD_GENERATOR_PATH),
+        "calibrated_robot_xml": _file_record(ROBOT_XML_PATH),
+        "official_fixed_gripper_step": _file_record(FIXED_GRIPPER_STEP_PATH),
+        "fixed_gripper_stl_crosscheck": _file_record(FIXED_GRIPPER_STL_PATH),
+        "moving_jaw_source_mesh": _file_record(MOVING_JAW_STL_PATH),
+        "core_exports": [
+            _file_record(CORE_EXPORT_DIR / name) for name in EXPECTED_CORE_EXPORTS
+        ],
+    }
+
+
+def _expected_inventory_names() -> list[str]:
+    return sorted(
+        [
+            component.name
+            for component in _tool_side_components() + _robot_side_components()
+        ]
+        + ["moving_jaw_closed_calibrated_stl"]
+    )
+
+
 def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
     positions = _sweep_positions(step_mm)
     dock = _dock_authority()
@@ -826,37 +886,28 @@ def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
     robot_components = _robot_side_components()
 
     path_results: list[dict[str, Any]] = []
-    stock_plate = next(
-        component for component in tool_components if component.name == "stock_tool_plate"
-    )
-    keeper_features = {
-        "left_lower_rail",
-        "right_lower_rail",
-        "left_upper_rail",
-        "right_upper_rail",
-    }
-    for feature_name in (
-        "left_lower_rail",
-        "right_lower_rail",
-        "left_upper_rail",
-        "right_upper_rail",
-        "left_wall",
-        "right_wall",
-        "seating_stop",
-        "positive_lock_cam",
-    ):
-        path_results.append(
-            _brep_sweep_record(
-                stock_plate,
-                dock[feature_name].val(),
-                positions,
-                dock_component=feature_name,
-                intended_zero_volume_contact=feature_name in keeper_features,
+    separated_components = {pair[0] for pair in INTENDED_ZERO_VOLUME_CONTACT_PAIRS}
+    for component in tool_components + robot_components:
+        if component.name not in separated_components:
+            continue
+        for feature_name in DOCK_FEATURE_NAMES:
+            pair = (component.name, feature_name)
+            path_results.append(
+                _brep_sweep_record(
+                    component,
+                    dock[feature_name].val(),
+                    positions,
+                    dock_component=feature_name,
+                    intended_zero_volume_contact=(
+                        pair in INTENDED_ZERO_VOLUME_CONTACT_PAIRS
+                    ),
+                )
             )
-        )
 
     for component in [
-        item for item in tool_components + robot_components if item.name != "stock_tool_plate"
+        item
+        for item in tool_components + robot_components
+        if item.name not in separated_components
     ]:
         forbidden_dock = (
             dock["dock_without_cam"].val()
@@ -921,17 +972,7 @@ def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
     if not stud_cam["passed"]:
         blockers.append("stud_cam_inequality")
 
-    authorities = {
-        "validator": _file_record(Path(__file__)),
-        "cad_generator": _file_record(CAD_GENERATOR_PATH),
-        "calibrated_robot_xml": _file_record(ROBOT_XML_PATH),
-        "official_fixed_gripper_step": _file_record(FIXED_GRIPPER_STEP_PATH),
-        "fixed_gripper_stl_crosscheck": _file_record(FIXED_GRIPPER_STL_PATH),
-        "moving_jaw_source_mesh": _file_record(MOVING_JAW_STL_PATH),
-        "core_exports": [
-            _file_record(CORE_EXPORT_DIR / name) for name in EXPECTED_CORE_EXPORTS
-        ],
-    }
+    authorities = _authorities_record()
     passed = not blockers
     return {
         "schema_version": SCHEMA_VERSION,
@@ -940,19 +981,16 @@ def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
         "release_ready": passed,
         "blockers": sorted(blockers),
         "authorities": authorities,
-        "thresholds": {
-            "manufacturing_clearance_mm": MANUFACTURING_CLEARANCE_MM,
-            "numeric_distance_tolerance_mm": NUMERIC_DISTANCE_TOLERANCE_MM,
-            "overlap_volume_tolerance_mm3": OVERLAP_VOLUME_TOLERANCE_MM3,
-            "stop_gap_range_mm": [STOP_GAP_MIN_MM, STOP_GAP_MAX_MM],
-            "minimum_stud_to_cam_x_margin_mm": MIN_STUD_TO_CAM_X_MARGIN_MM,
-        },
+        "thresholds": _thresholds_record(),
         "mount_composition": mount,
         "inventory": {
             "component_names": inventory,
             "component_count": len(inventory),
             "canonical_sha256": _canonical_sha256(inventory),
         },
+        "intended_zero_volume_contact_pairs": [
+            list(pair) for pair in sorted(INTENDED_ZERO_VOLUME_CONTACT_PAIRS)
+        ],
         "withdrawal_sweep": {
             "axis": [0.0, -1.0, 0.0],
             "start_mm": SWEEP_START_MM,
@@ -984,33 +1022,146 @@ def validate_report(report: dict[str, Any]) -> list[str]:
         "release_ready",
         "blockers",
         "authorities",
+        "thresholds",
         "mount_composition",
         "inventory",
+        "intended_zero_volume_contact_pairs",
         "withdrawal_sweep",
         "stop_envelope",
         "stud_cam_inequality",
+        "cam_actuation_diagnostics",
         "validation",
     }
     if not required.issubset(report):
         errors.append(f"missing_top_level_keys:{sorted(required - set(report))}")
         return errors
+    if report.get("schema_version") != SCHEMA_VERSION:
+        errors.append("schema_version_mismatch")
+    if report.get("units") != "mm":
+        errors.append("units_mismatch")
+    if report.get("thresholds") != _thresholds_record():
+        errors.append("thresholds_mismatch")
+    expected_contacts = [
+        list(pair) for pair in sorted(INTENDED_ZERO_VOLUME_CONTACT_PAIRS)
+    ]
+    if report.get("intended_zero_volume_contact_pairs") != expected_contacts:
+        errors.append("intended_contact_policy_mismatch")
+    if report.get("authorities") != _authorities_record():
+        errors.append("source_authority_record_mismatch")
+    if report.get("mount_composition") != _mount_composition():
+        errors.append("mount_composition_recomputation_mismatch")
+
     positions = report["withdrawal_sweep"].get("sampled_positions_mm", [])
     if not positions or positions[0] != 0.0 or positions[-1] != 80.0:
         errors.append("withdrawal_range_not_exact_0_to_80_mm")
+    try:
+        expected_positions = _sweep_positions(
+            float(report["withdrawal_sweep"].get("sample_step_mm"))
+        )
+    except (TypeError, ValueError, RuntimeError):
+        expected_positions = []
+        errors.append("invalid_withdrawal_sample_step")
+    if positions != expected_positions:
+        errors.append("withdrawal_positions_not_recomputed")
     if report["withdrawal_sweep"].get("sampled_positions_sha256") != _canonical_sha256(positions):
         errors.append("withdrawal_position_digest_mismatch")
     results = report["withdrawal_sweep"].get("results", [])
     if report["validation"].get("pair_result_count") != len(results):
         errors.append("pair_result_count_mismatch")
+    seen_result_keys: set[tuple[str, str, str]] = set()
+    observed_intended_contacts: set[tuple[str, str]] = set()
+    for index, result in enumerate(results):
+        component = result.get("component")
+        dock_component = result.get("dock_component")
+        state = result.get("component_state")
+        key = (str(component), str(dock_component), str(state))
+        if key in seen_result_keys:
+            errors.append(f"duplicate_path_result:{index}:{key}")
+        seen_result_keys.add(key)
+        semantics = result.get("semantics")
+        pair = (component, dock_component)
+        if semantics == "intended_stock_plate_keeper_tangency":
+            if pair not in INTENDED_ZERO_VOLUME_CONTACT_PAIRS:
+                errors.append(f"unnamed_intended_contact:{index}:{pair}")
+            else:
+                observed_intended_contacts.add(pair)
+            recomputed_result_passed = (
+                float(result.get("initial_distance_mm", math.inf))
+                <= NUMERIC_DISTANCE_TOLERANCE_MM
+                and float(
+                    result.get("maximum_sampled_overlap_volume_mm3", math.inf)
+                )
+                <= OVERLAP_VOLUME_TOLERANCE_MM3
+            )
+        elif result.get("method") == "occt_brep_distance_with_near_witness_boolean":
+            minimum = float(result.get("minimum_sampled_distance_mm", math.nan))
+            motion = float(result.get("maximum_between_sample_motion_bound_mm", math.nan))
+            continuous = float(result.get("continuous_certified_clearance_mm", math.nan))
+            if not math.isclose(continuous, minimum - motion, abs_tol=1.0e-12):
+                errors.append(f"continuous_clearance_arithmetic_mismatch:{index}")
+            recomputed_result_passed = (
+                continuous + NUMERIC_DISTANCE_TOLERANCE_MM
+                >= MANUFACTURING_CLEARANCE_MM
+                and float(
+                    result.get("maximum_sampled_overlap_volume_mm3", math.inf)
+                )
+                <= OVERLAP_VOLUME_TOLERANCE_MM3
+            )
+        elif result.get("method") == "continuous_source_mesh_aabb_bound_plus_fcpw_witness":
+            recomputed_result_passed = (
+                float(result.get("continuous_aabb_clearance_mm", -math.inf))
+                >= MANUFACTURING_CLEARANCE_MM
+                and result.get("mesh_screen", {}).get("clearance_authority") is False
+            )
+        else:
+            errors.append(f"unknown_path_result_method:{index}")
+            recomputed_result_passed = False
+        if result.get("passed") is not recomputed_result_passed:
+            errors.append(f"path_result_verdict_mismatch:{index}")
+    if observed_intended_contacts != set(INTENDED_ZERO_VOLUME_CONTACT_PAIRS):
+        errors.append("intended_contact_result_coverage_mismatch")
+
     failed = sum(not result.get("passed", False) for result in results)
     if report["validation"].get("failed_pair_result_count") != failed:
         errors.append("failed_pair_result_count_mismatch")
+
+    stop = report["stop_envelope"]
+    stop_children = stop.get("component_results", [])
+    stop_passed = (
+        STOP_GAP_MIN_MM
+        <= float(stop.get("seated_plate_to_stop_y_gap_mm", math.inf))
+        <= STOP_GAP_MAX_MM
+        and bool(stop_children)
+        and all(child.get("passed") is True for child in stop_children)
+    )
+    if stop.get("passed") is not stop_passed:
+        errors.append("stop_envelope_verdict_mismatch")
+    expected_stud_cam = _stud_cam_inequality()
+    if report.get("stud_cam_inequality") != expected_stud_cam:
+        errors.append("stud_cam_inequality_recomputation_mismatch")
+
+    expected_blockers = []
+    for result in results:
+        if not result.get("passed", False):
+            expected_blockers.append(
+                f"rack_sweep:{result.get('component')}:{result.get('component_state', '')}"
+            )
+    if report["mount_composition"].get("passed") is not True:
+        expected_blockers.append("mount_composition")
+    if not stop_passed:
+        expected_blockers.append("stop_envelope")
+    if expected_stud_cam.get("passed") is not True:
+        expected_blockers.append("stud_cam_inequality")
+    expected_blockers = sorted(expected_blockers)
+    if report.get("blockers") != expected_blockers:
+        errors.append("blocker_inventory_mismatch")
+
     recomputed_passed = (
         failed == 0
         and report["mount_composition"].get("passed") is True
-        and report["stop_envelope"].get("passed") is True
-        and report["stud_cam_inequality"].get("passed") is True
-        and not report.get("blockers")
+        and stop_passed
+        and expected_stud_cam.get("passed") is True
+        and not expected_blockers
     )
     if report.get("passed") != recomputed_passed or report.get("release_ready") != recomputed_passed:
         errors.append("top_level_verdict_not_recomputed")
@@ -1019,6 +1170,19 @@ def validate_report(report: dict[str, Any]) -> list[str]:
         errors.append("component_inventory_count_mismatch")
     if report["inventory"].get("canonical_sha256") != _canonical_sha256(inventory):
         errors.append("component_inventory_digest_mismatch")
+    if inventory != _expected_inventory_names():
+        errors.append("component_inventory_source_mismatch")
+
+    digest = report["validation"].get(
+        "machine_json_canonical_sha256_without_this_field"
+    )
+    if digest is not None:
+        digest_payload = json.loads(json.dumps(report))
+        digest_payload["validation"][
+            "machine_json_canonical_sha256_without_this_field"
+        ] = None
+        if digest != _canonical_sha256(digest_payload):
+            errors.append("machine_json_digest_mismatch")
     return errors
 
 
