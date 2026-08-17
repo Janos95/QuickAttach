@@ -259,5 +259,24 @@ class CoreDeterministicNegativeControlTests(unittest.TestCase):
         self.assertFalse(controller.lock_achieved)
 
 
+class CoreFullCycleTests(unittest.TestCase):
+    def test_complete_physical_attach_use_return_cycle_succeeds(self) -> None:
+        model = demo.build_model()
+        data = mujoco.MjData(model)
+        capture_position = demo.initialize(model, data)
+        controller = demo.QuickChangeController(model, data)
+
+        while float(data.time) < demo.DEMO_SECONDS:
+            controller.update()
+            mujoco.mj_step(model, data)
+
+        result = demo.metrics(model, data, controller, capture_position)
+        self.assertTrue(result["success"], json.dumps(result, indent=2))
+        self.assertLess(result["max_locked_coupling_error_mm"], 3.0)
+        self.assertLess(result["max_locked_coupling_error_deg"], 2.0)
+        self.assertTrue(result["released_to_dock"])
+        self.assertFalse(result["bus_connected"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
