@@ -77,6 +77,12 @@ RACK_REAR_CLEARANCE = 0.30
 RACK_PCB_LOWER_RAIL_CLEARANCE = 0.30
 RACK_BAY_PITCH = 96.0
 RACK_BAY_NAMES = ("spoon", "whisk")
+MATCHA_DOCK_STOP_X_MIN = -41.0
+MATCHA_DOCK_STOP_X_MAX = 33.0
+MATCHA_DOCK_STOP_Y_MIN = 25.0
+MATCHA_DOCK_STOP_Y_MAX = 31.0
+MATCHA_DOCK_STOP_Z_MIN = -3.0
+MATCHA_DOCK_STOP_Z_MAX = 12.5
 
 
 def _load_interface_module():
@@ -647,6 +653,33 @@ def mass_ledger(tool: str) -> dict[str, object]:
     }
 
 
+def matcha_dock_stop_spec(bay_name: str | None = None) -> dict[str, object]:
+    """Return the exact two-bay stop contract in local or rack coordinates."""
+
+    if bay_name is not None and bay_name not in RACK_BAY_NAMES:
+        raise ValueError(f"unknown matcha rack bay {bay_name!r}")
+    x_shift = 0.0 if bay_name is None else rack_bay_x(bay_name)
+    return {
+        "dock": "matcha_local" if bay_name is None else f"matcha_{bay_name}",
+        "bay_x_mm": x_shift,
+        "bounds_mm": {
+            "x": [MATCHA_DOCK_STOP_X_MIN + x_shift, MATCHA_DOCK_STOP_X_MAX + x_shift],
+            "y": [MATCHA_DOCK_STOP_Y_MIN, MATCHA_DOCK_STOP_Y_MAX],
+            "z": [MATCHA_DOCK_STOP_Z_MIN, MATCHA_DOCK_STOP_Z_MAX],
+        },
+        "center_mm": [
+            (MATCHA_DOCK_STOP_X_MIN + MATCHA_DOCK_STOP_X_MAX) / 2.0 + x_shift,
+            (MATCHA_DOCK_STOP_Y_MIN + MATCHA_DOCK_STOP_Y_MAX) / 2.0,
+            (MATCHA_DOCK_STOP_Z_MIN + MATCHA_DOCK_STOP_Z_MAX) / 2.0,
+        ],
+        "size_mm": [
+            MATCHA_DOCK_STOP_X_MAX - MATCHA_DOCK_STOP_X_MIN,
+            MATCHA_DOCK_STOP_Y_MAX - MATCHA_DOCK_STOP_Y_MIN,
+            MATCHA_DOCK_STOP_Z_MAX - MATCHA_DOCK_STOP_Z_MIN,
+        ],
+    }
+
+
 def _dock_parts() -> dict[str, cq.Workplane]:
     x_min = -36.0
     x_max = 28.0
@@ -696,10 +729,11 @@ def _dock_parts() -> dict[str, cq.Workplane]:
         .box(7.5, rail_length, 3.0, centered=True)
         .translate((x_max + 1.75, rail_y, z_top + RACK_REAR_CLEARANCE + 1.5))
     )
+    stop_spec = matcha_dock_stop_spec()
     parts["seating_stop"] = (
         cq.Workplane("XY")
-        .box(74.0, 6.0, z_top + 6.0, centered=True)
-        .translate((-4.0, 28.0, z_top / 2.0))
+        .box(*stop_spec["size_mm"], centered=True)
+        .translate(tuple(stop_spec["center_mm"]))
     )
     # Cam is below the tool face: it acts on the robot-side slider only.
     parts["positive_lock_cam"] = (
@@ -875,6 +909,10 @@ def generate_exports(output_dir: Path = EXPORT_DIR) -> dict[str, object]:
             "rear_clearance_mm": RACK_REAR_CLEARANCE,
             "pcb_lower_rail_clearance_mm": RACK_PCB_LOWER_RAIL_CLEARANCE,
             "insertion_y_mm": [RACK_INSERTION_START_Y, RACK_SEATED_Y],
+            "stop_contracts": {
+                bay_name: matcha_dock_stop_spec(bay_name)
+                for bay_name in RACK_BAY_NAMES
+            },
             "stock_gripper_scope": "separate core quick-change dock; not part of this rack",
         },
         "files": [],

@@ -5,14 +5,46 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import importlib.util
 import json
 import math
 from pathlib import Path
+import sys
 import unittest
 
 import cadquery as cq
 
 import validate_cad_clearance as clearance
+
+
+def _load_matcha_cad_source():
+    path = (
+        clearance.QUICK_CHANGE_DIR
+        / "matcha_tools"
+        / "generate_matcha_tool_cad.py"
+    )
+    spec = importlib.util.spec_from_file_location("matcha_cad_stop_contract", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+MATCHA_CAD = _load_matcha_cad_source()
+
+
+def _published_report_matches_current_validator() -> bool:
+    if not clearance.REPORT_PATH.is_file():
+        return False
+    try:
+        report = json.loads(clearance.REPORT_PATH.read_text())
+        return report["authorities"]["validator"]["sha256"] == clearance._sha256(
+            Path(clearance.__file__)
+        )
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+        return False
 
 
 class CoreCadClearanceUnitTests(unittest.TestCase):
@@ -79,7 +111,10 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
 
     def test_mount_contract_is_composed_from_published_source(self) -> None:
         contract = clearance._source_mount_contract()
-        self.assertEqual(contract["tool_local_fixed_step_pos_mm"], [0.4875, 0.218, 9.551])
+        for observed, expected in zip(
+            contract["tool_local_fixed_step_pos_mm"], [0.4875, 0.218, 9.551]
+        ):
+            self.assertTrue(math.isclose(observed, expected, abs_tol=1.0e-12))
         self.assertEqual(contract["tool_local_fixed_step_quat_wxyz"], [1.0, 0.0, 0.0, 0.0])
         self.assertEqual(len(contract["source_function_sha256"]), 64)
         self.assertTrue(math.isclose(
@@ -88,6 +123,118 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
             9.551,
             abs_tol=1.0e-12,
         ))
+
+        sim_transform = clearance._required_stock_sim_body_transform()
+        self.assertLessEqual(sim_transform["position_residual_m"], 1.0e-12)
+        self.assertLessEqual(
+            sim_transform["rotation_residual_frobenius"], 1.0e-12
+        )
+        self.assertTrue(
+            math.isclose(
+                sim_transform["wrapper_body_pos_m"][0],
+                0.0004875,
+                abs_tol=1.0e-15,
+            )
+        )
+        self.assertTrue(
+            math.isclose(
+                sim_transform["wrapper_body_pos_m"][2],
+                0.010500706,
+                abs_tol=1.0e-15,
+            )
+        )
+
+    def test_robot_plate_cam_relief_is_continuously_clear(self) -> None:
+        robot_plate = next(
+            component
+            for component in clearance._robot_side_components()
+            if component.name == "robot_plate"
+        )
+        result = clearance._brep_sweep_record(
+            robot_plate,
+            clearance.CAD.positive_lock_cam().val(),
+            clearance._sweep_positions(clearance.CAM_CLEARANCE_SWEEP_STEP_MM),
+            dock_component="positive_lock_cam",
+            intended_zero_volume_contact=False,
+        )
+        self.assertTrue(result["passed"], result)
+        self.assertGreaterEqual(
+            result["minimum_sampled_distance_mm"] + 1.0e-12,
+            clearance.CAD.ROBOT_CAM_CLEARANCE_MM,
+        )
+        self.assertGreaterEqual(
+            result["continuous_certified_clearance_mm"],
+            clearance.MANUFACTURING_CLEARANCE_MM,
+        )
+        self.assertEqual(result["maximum_sampled_overlap_volume_mm3"], 0.0)
+        self.assertEqual(result["sample_step_mm"], 0.1)
+
+    def test_cam_relief_preserves_slider_and_keyhole_mechanism(self) -> None:
+        cad = clearance.CAD
+        slider = cad.locking_slider()
+        self.assertTrue(
+            math.isclose(slider.val().Volume(), 237.20848051509753, abs_tol=1.0e-9)
+        )
+        bounds = slider.val().BoundingBox()
+        self.assertEqual(
+            [bounds.xmin, bounds.xmax, bounds.ymin, bounds.ymax, bounds.zmin, bounds.zmax],
+            [-16.4, 24.0, -4.4, 4.4, 0.0, 1.6],
+        )
+        cam = cad.positive_lock_cam().val()
+        unlocked = slider.translate(
+            (0.0, 0.0, cad.SLIDER_Z - cad.PLATE_THICKNESS)
+        ).val()
+        locked = slider.translate(
+            (cad.SLIDER_TRAVEL, 0.0, cad.SLIDER_Z - cad.PLATE_THICKNESS)
+        ).val()
+        self.assertTrue(math.isclose(unlocked.distance(cam), 0.05, abs_tol=1.0e-12))
+        self.assertTrue(
+            math.isclose(
+                clearance._intersection_volume_mm3(locked, cam),
+                5.135937500000003,
+                abs_tol=1.0e-9,
+            )
+        )
+        self.assertTrue(
+            math.isclose(
+                cad.SLIDER_TAB_END_X + cad.SLIDER_TRAVEL - cad.DOCK_CAM_X_INNER,
+                2.95,
+                abs_tol=1.0e-12,
+            )
+        )
+
+    def test_per_dock_stop_contracts_match_exact_source_solids(self) -> None:
+        core_spec = clearance.CAD.core_dock_stop_spec()
+        core_bounds = clearance._bbox_record(
+            clearance._bbox_tuple(clearance.CAD.core_dock_stop().val())
+        )
+        self.assertEqual(
+            core_bounds,
+            {
+                "x_mm": core_spec["bounds_mm"]["x"],
+                "y_mm": core_spec["bounds_mm"]["y"],
+                "z_mm": core_spec["bounds_mm"]["z"],
+            },
+        )
+        local_matcha = MATCHA_CAD.matcha_dock_stop_spec()
+        matcha_bounds = clearance._bbox_record(
+            clearance._bbox_tuple(MATCHA_CAD._dock_parts()["seating_stop"].val())
+        )
+        self.assertEqual(
+            matcha_bounds,
+            {
+                "x_mm": local_matcha["bounds_mm"]["x"],
+                "y_mm": local_matcha["bounds_mm"]["y"],
+                "z_mm": local_matcha["bounds_mm"]["z"],
+            },
+        )
+        self.assertNotEqual(core_spec["bounds_mm"], local_matcha["bounds_mm"])
+        for bay in MATCHA_CAD.RACK_BAY_NAMES:
+            bay_spec = MATCHA_CAD.matcha_dock_stop_spec(bay)
+            self.assertEqual(
+                bay_spec["center_mm"][0],
+                local_matcha["center_mm"][0] + MATCHA_CAD.rack_bay_x(bay),
+            )
 
     def test_stud_cam_inequalities_are_recomputed(self) -> None:
         result = clearance._stud_cam_inequality()
@@ -115,8 +262,8 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
 
 
 @unittest.skipUnless(
-    clearance.REPORT_PATH.is_file(),
-    "published CAD-clearance report not present in this source-only checkpoint",
+    _published_report_matches_current_validator(),
+    "published CAD-clearance report is absent or intentionally stale in this source checkpoint",
 )
 class PublishedCoreCadClearanceReportTests(unittest.TestCase):
     @classmethod

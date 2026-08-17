@@ -97,6 +97,54 @@ KEYHOLE_ENTRY_DIAMETER = 6.5
 KEYHOLE_NECK_WIDTH = 4.25
 GUIDE_SLOT_WIDTH = 2.4
 
+# Passive dock cam and the feature-specific robot-plate relief around it.  The
+# cam must retain the full 3 mm slider stroke, so its 24.05 mm inner datum does
+# not move.  Instead the fixed printed plate is locally recessed with a 0.50
+# mm three-dimensional guard band around the cam's complete swept prism.
+DOCK_CAM_X_INNER = 24.05
+DOCK_CAM_X_OUTER_MIN = 28.0
+DOCK_CAM_X_OUTER_MAX = 34.0
+DOCK_CAM_Y_MIN = -16.0
+DOCK_CAM_Y_MAX = 0.0
+DOCK_CAM_Z_MIN = -4.15
+DOCK_CAM_THICKNESS = 2.2
+ROBOT_CAM_CLEARANCE_MM = 0.50
+ROBOT_CAM_RELIEF_X_MAX = ROBOT_WIDTH / 2.0 + 1.0
+ROBOT_CAM_RELIEF_X_MIN = DOCK_CAM_X_INNER - ROBOT_CAM_CLEARANCE_MM
+ROBOT_CAM_RELIEF_Y_MIN = DOCK_CAM_Y_MIN - ROBOT_CAM_CLEARANCE_MM
+# During rack exit the cam's 24.05 mm tip traverses the plate toward +Y.
+# Carry the narrow recess through the complete plate edge, plus the same
+# radial guard band, so the clearance is continuous rather than seated-only.
+ROBOT_CAM_RELIEF_Y_MAX = ROBOT_HEIGHT / 2.0 + ROBOT_CAM_CLEARANCE_MM
+ROBOT_CAM_RELIEF_Z_MIN = (
+    PLATE_THICKNESS + DOCK_CAM_Z_MIN - ROBOT_CAM_CLEARANCE_MM
+)
+ROBOT_CAM_RELIEF_Z_MAX = (
+    PLATE_THICKNESS + DOCK_CAM_Z_MIN + DOCK_CAM_THICKNESS + ROBOT_CAM_CLEARANCE_MM
+)
+
+# Released core stock-gripper dock stop.  Spoon and whisk stops belong to the
+# separate matcha rack authority and intentionally have different X/Y bounds.
+CORE_DOCK_STOP_X_MIN = -45.0
+CORE_DOCK_STOP_X_MAX = 37.0
+CORE_DOCK_STOP_Y_MIN = 26.0
+CORE_DOCK_STOP_Y_MAX = 32.0
+CORE_DOCK_STOP_Z_MIN = -3.0
+CORE_DOCK_STOP_Z_MAX = 12.5
+CORE_DOCK_STOP_HOLE_X = (-25.0, 21.0)
+CORE_DOCK_STOP_HOLE_Y_START = 25.9
+CORE_DOCK_STOP_HOLE_DIAMETER = 4.4
+
+# The assembly datums are public source authority for downstream simulation.
+STOCK_TOOL_PLATE_ASSEMBLY_POS_MM = (0.0, 0.0, PLATE_THICKNESS)
+STOCK_FIXED_STEP_ASSEMBLY_POS_MM = (
+    0.4875,
+    0.218,
+    2.0 * PLATE_THICKNESS + 0.051,
+)
+STOCK_FIXED_STEP_TOOL_LOCAL_POS_MM = (0.4875, 0.218, PLATE_THICKNESS + 0.051)
+STOCK_FIXED_STEP_TOOL_LOCAL_QUAT_WXYZ = (1.0, 0.0, 0.0, 0.0)
+
 # MISUMI E-GUL4-10: 304 stainless, 4 mm OD, 10 mm free length,
 # 0.98 N/mm, 4 mm permitted deflection.  It returns the slider to locked.
 RETURN_SPRING_PART_NUMBER = "E-GUL4-10"
@@ -415,6 +463,108 @@ def slider_track_envelope() -> cq.Workplane:
     return envelope.union(tab).translate((0, 0, SLIDER_SLOT_BOTTOM)).clean()
 
 
+def core_dock_stop_spec() -> dict[str, object]:
+    """Return the exact released core stop contract in the dock-local frame."""
+
+    return {
+        "dock": "core_stock_gripper",
+        "bounds_mm": {
+            "x": [CORE_DOCK_STOP_X_MIN, CORE_DOCK_STOP_X_MAX],
+            "y": [CORE_DOCK_STOP_Y_MIN, CORE_DOCK_STOP_Y_MAX],
+            "z": [CORE_DOCK_STOP_Z_MIN, CORE_DOCK_STOP_Z_MAX],
+        },
+        "center_mm": [
+            (CORE_DOCK_STOP_X_MIN + CORE_DOCK_STOP_X_MAX) / 2.0,
+            (CORE_DOCK_STOP_Y_MIN + CORE_DOCK_STOP_Y_MAX) / 2.0,
+            (CORE_DOCK_STOP_Z_MIN + CORE_DOCK_STOP_Z_MAX) / 2.0,
+        ],
+        "size_mm": [
+            CORE_DOCK_STOP_X_MAX - CORE_DOCK_STOP_X_MIN,
+            CORE_DOCK_STOP_Y_MAX - CORE_DOCK_STOP_Y_MIN,
+            CORE_DOCK_STOP_Z_MAX - CORE_DOCK_STOP_Z_MIN,
+        ],
+        "through_holes": [
+            {
+                "axis": [0.0, 1.0, 0.0],
+                "x_mm": x_value,
+                "y_start_mm": CORE_DOCK_STOP_HOLE_Y_START,
+                "z_mm": (CORE_DOCK_STOP_Z_MIN + CORE_DOCK_STOP_Z_MAX) / 2.0,
+                "diameter_mm": CORE_DOCK_STOP_HOLE_DIAMETER,
+            }
+            for x_value in CORE_DOCK_STOP_HOLE_X
+        ],
+    }
+
+
+def stock_gripper_mount_contract() -> dict[str, object]:
+    """Return the exact fixed STEP placement relative to the coupling face."""
+
+    return {
+        "tool_plate_assembly_pos_mm": list(STOCK_TOOL_PLATE_ASSEMBLY_POS_MM),
+        "fixed_step_assembly_pos_mm": list(STOCK_FIXED_STEP_ASSEMBLY_POS_MM),
+        "fixed_step_tool_local_pos_mm": list(STOCK_FIXED_STEP_TOOL_LOCAL_POS_MM),
+        "fixed_step_tool_local_quat_wxyz": list(
+            STOCK_FIXED_STEP_TOOL_LOCAL_QUAT_WXYZ
+        ),
+    }
+
+
+def robot_cam_relief() -> cq.Workplane:
+    """Return the guarded local recess in the fixed robot plate."""
+
+    return box_cutter(
+        ROBOT_CAM_RELIEF_X_MAX - ROBOT_CAM_RELIEF_X_MIN,
+        ROBOT_CAM_RELIEF_Y_MAX - ROBOT_CAM_RELIEF_Y_MIN,
+        ROBOT_CAM_RELIEF_Z_MAX - ROBOT_CAM_RELIEF_Z_MIN,
+        (ROBOT_CAM_RELIEF_X_MIN + ROBOT_CAM_RELIEF_X_MAX) / 2.0,
+        (ROBOT_CAM_RELIEF_Y_MIN + ROBOT_CAM_RELIEF_Y_MAX) / 2.0,
+        ROBOT_CAM_RELIEF_Z_MIN,
+    )
+
+
+def core_dock_stop() -> cq.Workplane:
+    """Build the physical core stop from its public collision contract."""
+
+    spec = core_dock_stop_spec()
+    center = spec["center_mm"]
+    size = spec["size_mm"]
+    stop = (
+        cq.Workplane("XY")
+        .box(*size, centered=True)
+        .translate(tuple(center))
+    )
+    for hole in spec["through_holes"]:
+        stop = stop.cut(
+            axis_cylinder(
+                hole["diameter_mm"],
+                size[1] + 0.2,
+                (hole["x_mm"], hole["y_start_mm"], hole["z_mm"]),
+                tuple(hole["axis"]),
+            )
+        )
+    return stop.clean()
+
+
+def positive_lock_cam() -> cq.Workplane:
+    """Build the unchanged passive cam that supplies the full unlock stroke."""
+
+    return (
+        cq.Workplane("XY")
+        .polyline(
+            [
+                (DOCK_CAM_X_OUTER_MIN, DOCK_CAM_Y_MIN),
+                (DOCK_CAM_X_OUTER_MAX, DOCK_CAM_Y_MIN),
+                (DOCK_CAM_X_OUTER_MAX, DOCK_CAM_Y_MAX),
+                (DOCK_CAM_X_INNER, DOCK_CAM_Y_MAX),
+            ]
+        )
+        .close()
+        .extrude(DOCK_CAM_THICKNESS)
+        .translate((0.0, 0.0, DOCK_CAM_Z_MIN))
+        .clean()
+    )
+
+
 def robot_plate() -> cq.Workplane:
     plate = rounded_plate(ROBOT_WIDTH, ROBOT_HEIGHT, PLATE_THICKNESS, CORNER_RADIUS)
     wing = cq.Workplane("XY").box(
@@ -449,6 +599,11 @@ def robot_plate() -> cq.Workplane:
         plate = plate.cut(hex_cutter(5.7, 2.6, x, y))
 
     plate = plate.cut(slider_track_envelope())
+
+    # The dock cam retains its full 3 mm unlock datum.  A local fixed-plate
+    # relief supplies printable clearance without altering the slider, keyhole
+    # alignment, spring stroke or cam engagement.
+    plate = plate.cut(robot_cam_relief())
 
     # Fixed entry/head-clearance wells for the two shoulder screws.
     for x in (-LOCK_STUD_X, LOCK_STUD_X):
@@ -613,27 +768,12 @@ def tool_dock() -> cq.Workplane:
         side = lower.union(upper).union(wall)
         dock = side if dock is None else dock.union(side)
 
-    stop = cq.Workplane("XY").box(
-        82.0, 6.0, PLATE_THICKNESS + 6.0, centered=True
-    ).translate((-4.0, 29.0, PLATE_THICKNESS / 2))
-    dock = dock.union(stop)
+    dock = dock.union(core_dock_stop())
 
     # Passive wedge: while the coupled tool slides the final 12 mm into the
     # rack, this surface pushes the protruding slider tab 3 mm left to unlock.
     # On withdrawal the catalog spring returns the slider to positive lock.
-    cam = (
-        cq.Workplane("XY")
-        .polyline([(28.0, -16.0), (34.0, -16.0), (34.0, 0.0), (24.05, 0.0)])
-        .close()
-        .extrude(2.2)
-        .translate((0, 0, -4.15))
-    )
-    dock = dock.union(cam)
-
-    for x in (-25.0, 21.0):
-        dock = dock.cut(
-            axis_cylinder(4.4, 6.2, (x, 25.9, PLATE_THICKNESS / 2), (0, 1, 0))
-        )
+    dock = dock.union(positive_lock_cam())
     return dock.clean()
 
 
@@ -742,7 +882,7 @@ def save_assemblies(robot: cq.Workplane, generic: cq.Workplane, stock: cq.Workpl
     retrofit.add(
         stock,
         name="stock_gripper_tool_plate",
-        loc=cq.Location(cq.Vector(0, 0, PLATE_THICKNESS)),
+        loc=cq.Location(cq.Vector(*STOCK_TOOL_PLATE_ASSEMBLY_POS_MM)),
         color=cq.Color(0.12, 0.42, 0.90),
     )
     add_hardware(retrofit)
@@ -754,7 +894,7 @@ def save_assemblies(robot: cq.Workplane, generic: cq.Workplane, stock: cq.Workpl
         retrofit.add(
             stock_gripper,
             name="official_stock_gripper_body_reference",
-            loc=cq.Location(cq.Vector(0.4875, 0.218, 2 * PLATE_THICKNESS + 0.051)),
+            loc=cq.Location(cq.Vector(*STOCK_FIXED_STEP_ASSEMBLY_POS_MM)),
             color=cq.Color(0.90, 0.74, 0.12),
         )
     retrofit.save(str(EXPORT_DIR / "so101_stock_gripper_retrofit_assembly.step"))
@@ -958,6 +1098,28 @@ def main() -> None:
         },
         "robot_plate": [ROBOT_WIDTH, ROBOT_HEIGHT, PLATE_THICKNESS],
         "tool_plate": [TOOL_WIDTH, TOOL_HEIGHT, PLATE_THICKNESS],
+        "collision_geometry_contract": {
+            "core_dock_stop": core_dock_stop_spec(),
+            "stock_gripper_mount": stock_gripper_mount_contract(),
+            "positive_lock_cam": {
+                "polygon_xy_mm": [
+                    [DOCK_CAM_X_OUTER_MIN, DOCK_CAM_Y_MIN],
+                    [DOCK_CAM_X_OUTER_MAX, DOCK_CAM_Y_MIN],
+                    [DOCK_CAM_X_OUTER_MAX, DOCK_CAM_Y_MAX],
+                    [DOCK_CAM_X_INNER, DOCK_CAM_Y_MAX],
+                ],
+                "z_range_mm": [
+                    DOCK_CAM_Z_MIN,
+                    DOCK_CAM_Z_MIN + DOCK_CAM_THICKNESS,
+                ],
+                "robot_plate_required_clearance_mm": ROBOT_CAM_CLEARANCE_MM,
+                "robot_plate_relief_bounds_native_mm": {
+                    "x": [ROBOT_CAM_RELIEF_X_MIN, ROBOT_CAM_RELIEF_X_MAX],
+                    "y": [ROBOT_CAM_RELIEF_Y_MIN, ROBOT_CAM_RELIEF_Y_MAX],
+                    "z": [ROBOT_CAM_RELIEF_Z_MIN, ROBOT_CAM_RELIEF_Z_MAX],
+                },
+            },
+        },
         "magnet": {
             "manufacturer": "Webcraft GmbH / supermagnete",
             "part_number": MAGNET_PART_NUMBER,

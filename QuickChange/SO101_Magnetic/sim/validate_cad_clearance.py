@@ -64,11 +64,7 @@ STOP_FORWARD_ENVELOPE_MM = 1.0
 MIN_STUD_TO_CAM_X_MARGIN_MM = 1.0
 MESH_TESSELLATION_DEFLECTION_MM = 0.03
 MESH_ANGULAR_TOLERANCE_RAD = 0.10
-
-# Generator save_assemblies() places the official STEP at global Z=19.051 mm
-# while the stock tool mating face is global Z=9.5 mm.
-FIXED_STEP_TO_TOOL_POS_MM = (0.4875, 0.218, 9.551)
-FIXED_STEP_TO_TOOL_QUAT_WXYZ = (1.0, 0.0, 0.0, 0.0)
+CAM_CLEARANCE_SWEEP_STEP_MM = 0.10
 
 EXPECTED_CORE_EXPORTS = (
     "so101_robot_plate.step",
@@ -113,6 +109,10 @@ def _load_cad_generator():
 
 
 CAD = _load_cad_generator()
+FIXED_STEP_TO_TOOL_POS_MM = tuple(CAD.STOCK_FIXED_STEP_TOOL_LOCAL_POS_MM)
+FIXED_STEP_TO_TOOL_QUAT_WXYZ = tuple(
+    CAD.STOCK_FIXED_STEP_TOOL_LOCAL_QUAT_WXYZ
+)
 
 
 @dataclass(frozen=True)
@@ -336,29 +336,8 @@ def _named_dock_features() -> dict[str, cq.Workplane]:
             .box(4.0, rail_length, CAD.PLATE_THICKNESS + 6.0, centered=True)
             .translate((wall_x, rail_center_y, CAD.PLATE_THICKNESS / 2.0))
         )
-    stop = (
-        cq.Workplane("XY")
-        .box(82.0, 6.0, CAD.PLATE_THICKNESS + 6.0, centered=True)
-        .translate((-4.0, 29.0, CAD.PLATE_THICKNESS / 2.0))
-    )
-    for x_value in (-25.0, 21.0):
-        stop = stop.cut(
-            CAD.axis_cylinder(
-                4.4,
-                6.2,
-                (x_value, 25.9, CAD.PLATE_THICKNESS / 2.0),
-                (0.0, 1.0, 0.0),
-            )
-        )
-    features["seating_stop"] = stop.clean()
-    features["positive_lock_cam"] = (
-        cq.Workplane("XY")
-        .polyline([(28.0, -16.0), (34.0, -16.0), (34.0, 0.0), (24.05, 0.0)])
-        .close()
-        .extrude(2.2)
-        .translate((0.0, 0.0, -4.15))
-        .clean()
-    )
+    features["seating_stop"] = CAD.core_dock_stop()
+    features["positive_lock_cam"] = CAD.positive_lock_cam()
     return features
 
 
@@ -501,23 +480,50 @@ def _source_mount_contract() -> dict[str, Any]:
     }
     save_source = normalized_functions.get("save_assemblies", "")
     required_fragments = (
-        "cq.Vector(0, 0, PLATE_THICKNESS)",
-        "cq.Vector(0.4875, 0.218, 2 * PLATE_THICKNESS + 0.051)",
+        "cq.Vector(*STOCK_TOOL_PLATE_ASSEMBLY_POS_MM)",
+        "cq.Vector(*STOCK_FIXED_STEP_ASSEMBLY_POS_MM)",
     )
     missing = [fragment for fragment in required_fragments if fragment not in save_source]
     if missing:
         raise RuntimeError(f"stock-gripper mount composition drifted: {missing}")
+    source_contract = CAD.stock_gripper_mount_contract()
     return {
         "source_fragments": list(required_fragments),
         "source_function_sha256": hashlib.sha256(save_source.encode()).hexdigest(),
-        "robot_assembly_stock_plate_pos_mm": [0.0, 0.0, CAD.PLATE_THICKNESS],
-        "robot_assembly_fixed_step_pos_mm": [
-            0.4875,
-            0.218,
-            2 * CAD.PLATE_THICKNESS + 0.051,
+        "robot_assembly_stock_plate_pos_mm": source_contract[
+            "tool_plate_assembly_pos_mm"
+        ],
+        "robot_assembly_fixed_step_pos_mm": source_contract[
+            "fixed_step_assembly_pos_mm"
         ],
         "tool_local_fixed_step_pos_mm": list(FIXED_STEP_TO_TOOL_POS_MM),
         "tool_local_fixed_step_quat_wxyz": list(FIXED_STEP_TO_TOOL_QUAT_WXYZ),
+    }
+
+
+def _required_stock_sim_body_transform() -> dict[str, Any]:
+    """Solve the wrapper-body pose that composes the live mesh geom to CAD."""
+
+    calibration = _xml_calibration()
+    geom_quat = np.asarray(calibration["fixed_geom_quat_wxyz"], dtype=np.float64)
+    geom_quat /= np.linalg.norm(geom_quat)
+    body_quat = geom_quat * np.asarray((1.0, -1.0, -1.0, -1.0))
+    body_rotation = _quat_matrix_wxyz(body_quat)
+    geom_rotation = _quat_matrix_wxyz(geom_quat)
+    desired_pos_m = np.asarray(FIXED_STEP_TO_TOOL_POS_MM, dtype=np.float64) * 1.0e-3
+    body_pos_m = desired_pos_m - body_rotation @ calibration["fixed_geom_pos_m"]
+    composed_pos_m = body_pos_m + body_rotation @ calibration["fixed_geom_pos_m"]
+    composed_rotation = body_rotation @ geom_rotation
+    return {
+        "wrapper_body_pos_m": body_pos_m.tolist(),
+        "wrapper_body_quat_wxyz": body_quat.tolist(),
+        "composed_source_pos_m": composed_pos_m.tolist(),
+        "composed_source_quat_wxyz": list(FIXED_STEP_TO_TOOL_QUAT_WXYZ),
+        "position_residual_m": float(np.linalg.norm(composed_pos_m - desired_pos_m)),
+        "rotation_residual_frobenius": float(
+            np.linalg.norm(composed_rotation - np.eye(3))
+        ),
+        "composition": "world_wrapper * wrapper_child_geom = CAD tool-local STEP",
     }
 
 
@@ -640,6 +646,8 @@ def _brep_sweep_record(
         "semantics": semantics,
         "initial_distance_mm": observations[0][1],
         "sample_count": len(positions_mm),
+        "sample_step_mm": positions_mm[1] - positions_mm[0],
+        "sampled_positions_sha256": _canonical_sha256(positions_mm),
         "minimum_sampled_distance_mm": witness[1],
         "maximum_sampled_overlap_volume_mm3": maximum_overlap,
         "maximum_between_sample_motion_bound_mm": half_step,
@@ -682,6 +690,8 @@ def _mesh_sweep_record(
         "component_role": "calibrated_source_mesh_payload",
         "semantics": "forbidden_component_continuous_clearance",
         "sample_count": len(positions_mm),
+        "sample_step_mm": positions_mm[1] - positions_mm[0],
+        "sampled_positions_sha256": _canonical_sha256(positions_mm),
         "continuous_aabb_clearance_mm": continuous_aabb_clearance,
         "witness_withdrawal_mm": witness_position,
         "mesh_screen": screen,
@@ -769,7 +779,7 @@ def _stop_envelope(
 
 def _stud_cam_inequality() -> dict[str, Any]:
     stud_head_x_max = CAD.LOCK_STUD_X + CAD.LOCK_HEAD_DIAMETER / 2.0
-    cam_inner_x = 24.05
+    cam_inner_x = CAD.DOCK_CAM_X_INNER
     unlocked_tab_end_x = CAD.SLIDER_TAB_END_X
     locked_tab_end_x = CAD.SLIDER_TAB_END_X + CAD.SLIDER_TRAVEL
     stud_to_cam_margin = cam_inner_x - stud_head_x_max
@@ -822,6 +832,7 @@ def _mount_composition() -> dict[str, Any]:
         for endpoint in range(2)
     )
     calibration = _xml_calibration()
+    required_sim_transform = _required_stock_sim_body_transform()
     return {
         **contract,
         "stock_plate_source_vs_export_volume_delta_mm3": plate_volume_delta,
@@ -838,7 +849,13 @@ def _mount_composition() -> dict[str, Any]:
             "closed_angle_rad": float(calibration["jaw_joint_range_rad"][0]),
             "reason": "jaw motion is disabled during docking; open-jaw rack clearance is outside this authority",
         },
-        "passed": plate_volume_delta <= 1.0e-6 and bbox_error <= 0.001,
+        "required_sim_stock_wrapper_transform": required_sim_transform,
+        "passed": (
+            plate_volume_delta <= 1.0e-6
+            and bbox_error <= 0.001
+            and required_sim_transform["position_residual_m"] <= 1.0e-12
+            and required_sim_transform["rotation_residual_frobenius"] <= 1.0e-12
+        ),
     }
 
 
@@ -849,6 +866,8 @@ def _thresholds_record() -> dict[str, Any]:
         "overlap_volume_tolerance_mm3": OVERLAP_VOLUME_TOLERANCE_MM3,
         "stop_gap_range_mm": [STOP_GAP_MIN_MM, STOP_GAP_MAX_MM],
         "minimum_stud_to_cam_x_margin_mm": MIN_STUD_TO_CAM_X_MARGIN_MM,
+        "robot_plate_cam_required_clearance_mm": CAD.ROBOT_CAM_CLEARANCE_MM,
+        "robot_plate_cam_sample_step_mm": CAM_CLEARANCE_SWEEP_STEP_MM,
     }
 
 
@@ -878,6 +897,7 @@ def _expected_inventory_names() -> list[str]:
 
 def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
     positions = _sweep_positions(step_mm)
+    cam_clearance_positions = _sweep_positions(CAM_CLEARANCE_SWEEP_STEP_MM)
     dock = _dock_authority()
     mount = _mount_composition()
     calibration = _xml_calibration()
@@ -892,11 +912,16 @@ def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
             continue
         for feature_name in DOCK_FEATURE_NAMES:
             pair = (component.name, feature_name)
+            pair_positions = (
+                cam_clearance_positions
+                if pair == ("robot_plate", "positive_lock_cam")
+                else positions
+            )
             path_results.append(
                 _brep_sweep_record(
                     component,
                     dock[feature_name].val(),
-                    positions,
+                    pair_positions,
                     dock_component=feature_name,
                     intended_zero_volume_contact=(
                         pair in INTENDED_ZERO_VOLUME_CONTACT_PAIRS
@@ -983,6 +1008,7 @@ def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
         "authorities": authorities,
         "thresholds": _thresholds_record(),
         "mount_composition": mount,
+        "dock_stop_contract": CAD.core_dock_stop_spec(),
         "inventory": {
             "component_names": inventory,
             "component_count": len(inventory),
@@ -1024,6 +1050,7 @@ def validate_report(report: dict[str, Any]) -> list[str]:
         "authorities",
         "thresholds",
         "mount_composition",
+        "dock_stop_contract",
         "inventory",
         "intended_zero_volume_contact_pairs",
         "withdrawal_sweep",
@@ -1050,6 +1077,8 @@ def validate_report(report: dict[str, Any]) -> list[str]:
         errors.append("source_authority_record_mismatch")
     if report.get("mount_composition") != _mount_composition():
         errors.append("mount_composition_recomputation_mismatch")
+    if report.get("dock_stop_contract") != CAD.core_dock_stop_spec():
+        errors.append("dock_stop_contract_mismatch")
 
     positions = report["withdrawal_sweep"].get("sampled_positions_mm", [])
     if not positions or positions[0] != 0.0 or positions[-1] != 80.0:
@@ -1080,6 +1109,24 @@ def validate_report(report: dict[str, Any]) -> list[str]:
         seen_result_keys.add(key)
         semantics = result.get("semantics")
         pair = (component, dock_component)
+        try:
+            pair_step = float(result.get("sample_step_mm"))
+            pair_positions = _sweep_positions(pair_step)
+        except (TypeError, ValueError, RuntimeError):
+            pair_step = math.nan
+            pair_positions = []
+            errors.append(f"invalid_pair_sample_step:{index}")
+        if result.get("sample_count") != len(pair_positions):
+            errors.append(f"pair_sample_count_mismatch:{index}")
+        if result.get("sampled_positions_sha256") != _canonical_sha256(pair_positions):
+            errors.append(f"pair_sample_digest_mismatch:{index}")
+        required_pair_step = (
+            CAM_CLEARANCE_SWEEP_STEP_MM
+            if pair == ("robot_plate", "positive_lock_cam")
+            else float(report["withdrawal_sweep"].get("sample_step_mm"))
+        )
+        if not math.isclose(pair_step, required_pair_step, abs_tol=1.0e-12):
+            errors.append(f"pair_sample_policy_mismatch:{index}")
         if semantics == "intended_stock_plate_keeper_tangency":
             if pair not in INTENDED_ZERO_VOLUME_CONTACT_PAIRS:
                 errors.append(f"unnamed_intended_contact:{index}:{pair}")
@@ -1093,10 +1140,18 @@ def validate_report(report: dict[str, Any]) -> list[str]:
                 )
                 <= OVERLAP_VOLUME_TOLERANCE_MM3
             )
+            if not math.isclose(
+                float(result.get("maximum_between_sample_motion_bound_mm", math.nan)),
+                pair_step / 2.0,
+                abs_tol=1.0e-12,
+            ):
+                errors.append(f"pair_motion_bound_mismatch:{index}")
         elif result.get("method") == "occt_brep_distance_with_near_witness_boolean":
             minimum = float(result.get("minimum_sampled_distance_mm", math.nan))
             motion = float(result.get("maximum_between_sample_motion_bound_mm", math.nan))
             continuous = float(result.get("continuous_certified_clearance_mm", math.nan))
+            if not math.isclose(motion, pair_step / 2.0, abs_tol=1.0e-12):
+                errors.append(f"pair_motion_bound_mismatch:{index}")
             if not math.isclose(continuous, minimum - motion, abs_tol=1.0e-12):
                 errors.append(f"continuous_clearance_arithmetic_mismatch:{index}")
             recomputed_result_passed = (
