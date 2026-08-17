@@ -350,9 +350,35 @@ class MatchaIdentityAndCadContractTests(unittest.TestCase):
         runtime = config.get("runtime_collision_geometry")
         self.assertIsInstance(runtime, dict)
         self.assertIs(runtime.get("runtime_proxy_is_clearance_authority"), False)
+        self.assertEqual(
+            runtime.get("broad_plate_proxy_role"),
+            "approximate dynamics broadphase with exact named critical lock voids",
+        )
+        self.assertIs(runtime.get("broad_plate_proxy_exact_source_subset"), False)
+        self.assertIs(
+            runtime.get("broad_plate_proxy_continuous_clearance_authority"),
+            False,
+        )
+        self.assertIs(runtime.get("cad_coverage_validation_required"), True)
+        if PAYLOAD_REPORT.is_file():
+            payload_report = load_json(
+                PAYLOAD_REPORT, "payload collision authority report"
+            )
+            self.assertIs(
+                payload_report.get("release_ready"),
+                False,
+                "the development FCPW plate report cannot publish release authority",
+            )
         limitations = config.get("limitations")
         self.assertIsInstance(limitations, list)
-        self.assertTrue(limitations)
+        self.assertTrue(
+            any(
+                "runtime collision proxies" in str(item).lower()
+                and "not the release clearance authority" in str(item).lower()
+                for item in limitations
+            ),
+            limitations,
+        )
 
 
 FORBIDDEN_STATE_FIELDS = {"qpos", "qvel", "time", "eq_data"}
@@ -875,6 +901,76 @@ class SimCadPlacementContractTests(unittest.TestCase):
             if self._convex_geom_contains_owner_point(geom_id, point):
                 containing.append(name)
         return sorted(containing)
+
+    @staticmethod
+    def _source_mass_properties(
+        shapes: Iterable[Any], density_kg_m3: float
+    ) -> tuple[float, np.ndarray, np.ndarray]:
+        """Return exact composite mass, COM, and COM inertia from OCCT solids.
+
+        CadQuery reports volume in mm^3 and unit-density inertia in mm^5.
+        The parallel-axis composition is performed before the SI conversion so
+        disjoint installed hardware is not silently fused or double counted.
+        """
+
+        source_shapes = list(shapes)
+        if not source_shapes:
+            raise AssertionError("source mass-property roster is empty")
+        volumes_mm3 = np.asarray(
+            [float(shape.Volume()) for shape in source_shapes], dtype=np.float64
+        )
+        if not np.all(np.isfinite(volumes_mm3)) or np.any(volumes_mm3 <= 0.0):
+            raise AssertionError(f"invalid source volumes: {volumes_mm3}")
+        centers_mm = np.asarray(
+            [
+                type(shape).centerOfMass(shape).toTuple()
+                for shape in source_shapes
+            ],
+            dtype=np.float64,
+        )
+        total_volume_mm3 = float(math.fsum(float(value) for value in volumes_mm3))
+        composite_center_mm = np.sum(
+            volumes_mm3[:, None] * centers_mm, axis=0
+        ) / total_volume_mm3
+        inertia_mm5 = np.zeros((3, 3), dtype=np.float64)
+        for shape, volume_mm3, center_mm in zip(
+            source_shapes, volumes_mm3, centers_mm, strict=True
+        ):
+            local_inertia_mm5 = np.asarray(
+                type(shape).matrixOfInertia(shape), dtype=np.float64
+            )
+            offset_mm = center_mm - composite_center_mm
+            inertia_mm5 += local_inertia_mm5 + float(volume_mm3) * (
+                float(offset_mm @ offset_mm) * np.eye(3)
+                - np.outer(offset_mm, offset_mm)
+            )
+        mass_kg = total_volume_mm3 * float(density_kg_m3) * 1.0e-9
+        inertia_kg_m2 = inertia_mm5 * float(density_kg_m3) * 1.0e-15
+        return mass_kg, composite_center_mm * 1.0e-3, inertia_kg_m2
+
+    def _compiled_body_inertia_tensor(self, body_id: int) -> np.ndarray:
+        principal_rotation = self._quaternion_matrix(
+            self.model.body_iquat[body_id]
+        )
+        return (
+            principal_rotation
+            @ np.diag(np.asarray(self.model.body_inertia[body_id], dtype=np.float64))
+            @ principal_rotation.T
+        )
+
+    @staticmethod
+    def _full_inertia_vector(matrix: np.ndarray) -> np.ndarray:
+        return np.asarray(
+            [
+                matrix[0, 0],
+                matrix[1, 1],
+                matrix[2, 2],
+                matrix[0, 1],
+                matrix[0, 2],
+                matrix[1, 2],
+            ],
+            dtype=np.float64,
+        )
 
     def test_stock_gripper_wrapper_composes_to_published_step_mount(self) -> None:
         wrapper = self.xml_root.find(".//body[@name='stock_gripper']")
@@ -1544,7 +1640,21 @@ class SimCadPlacementContractTests(unittest.TestCase):
 
         expected_names: set[str] = set()
         for tool in ("gripper", "spoon", "whisk"):
-            owner_id = int(self.model.body(f"tool_{tool}").id)
+            tool_root_id = int(self.model.body(f"tool_{tool}").id)
+            owner_name = f"tool_{tool}_positive_lock_hardware"
+            owner_id = int(self.model.body(owner_name).id)
+            self.assertEqual(
+                int(self.model.body_parentid[owner_id]), tool_root_id, owner_name
+            )
+            np.testing.assert_allclose(
+                self.model.body_pos[owner_id], np.zeros(3), rtol=0.0, atol=1.0e-12
+            )
+            np.testing.assert_allclose(
+                np.abs(self.model.body_quat[owner_id]),
+                [1.0, 0.0, 0.0, 0.0],
+                rtol=0.0,
+                atol=1.0e-12,
+            )
             for side, x_mm in (("left", -12.0), ("right", 12.0)):
                 for feature, radius_mm, z_min_mm, z_max_mm in (
                     ("shoulder", 2.0, -5.0, 0.0),
@@ -1730,6 +1840,475 @@ class SimCadPlacementContractTests(unittest.TestCase):
                     (tool, "adjacent source material missing from collision proxy"),
                 )
 
+    def test_core_positive_lock_artifact_provenance_is_current(self) -> None:
+        """A regenerated STEP may not be paired with a stale source or report."""
+
+        manifest = load_json(CORE_CAD_MANIFEST, "core CAD manifest")
+        generator = manifest.get("generator")
+        self.assertIsInstance(generator, dict, manifest)
+        generator_path = REPOSITORY_ROOT / str(generator.get("path"))
+        self.assertTrue(generator_path.is_file(), generator_path)
+        self.assertEqual(generator_path.stat().st_size, int(generator["bytes"]))
+        self.assertEqual(
+            sha256_file(generator_path),
+            generator["sha256"],
+            "core CAD outputs must be regenerated after any source change",
+        )
+
+        report = load_json(CORE_CLEARANCE_REPORT, "core CAD clearance report")
+        report_manifest = report.get("core_cad_manifest_validation", {}).get(
+            "manifest"
+        )
+        self.assertIsInstance(report_manifest, dict, report)
+        self.assertEqual(
+            report_manifest.get("sha256"), sha256_file(CORE_CAD_MANIFEST)
+        )
+        self.assertEqual(
+            int(report_manifest.get("bytes", -1)), CORE_CAD_MANIFEST.stat().st_size
+        )
+
+    def test_positive_lock_source_has_continuous_shoulder_clearance(self) -> None:
+        """Prove the released slider STEP clears both shoulders for every q.
+
+        In the slider frame a fixed shoulder moves along a straight 3 mm
+        segment.  The exact swept solid is therefore a cylinder-ended capsule.
+        A zero Boolean intersection with that capsule proves the complete
+        continuum, rather than only a finite set of q samples.
+        """
+
+        cad = self.clearance.CAD
+        manifest = load_json(CORE_CAD_MANIFEST, "core CAD manifest")
+        slider_record = next(
+            (
+                record
+                for record in manifest.get("files", [])
+                if str(record.get("path", "")).endswith(
+                    "/so101_positive_lock_slider.step"
+                )
+            ),
+            None,
+        )
+        self.assertIsInstance(slider_record, dict, manifest)
+        slider_path = REPOSITORY_ROOT / str(slider_record["path"])
+        self.assertEqual(sha256_file(slider_path), slider_record["sha256"])
+        slider = cad.cq.importers.importStep(str(slider_path)).val()
+        self.assertTrue(slider.isValid())
+
+        keyhole_contract = cad.positive_lock_keyhole_contract()
+        required_radial_clearance_mm = float(
+            keyhole_contract["minimum_radial_shoulder_clearance_mm"]
+        )
+        self.assertGreaterEqual(required_radial_clearance_mm, 0.1)
+        self.assertEqual(
+            float(keyhole_contract["slider_travel_mm"]), float(cad.SLIDER_TRAVEL)
+        )
+        shoulder_z_min_in_slider_mm = (
+            cad.PLATE_THICKNESS - cad.LOCK_SHOULDER_LENGTH - cad.SLIDER_Z
+        )
+        sample_positions_mm = np.linspace(
+            0.0, float(cad.SLIDER_TRAVEL), 13, dtype=np.float64
+        )
+        failures: dict[str, Any] = {}
+        for side, stud_x_mm in (
+            ("left", -float(cad.LOCK_STUD_X)),
+            ("right", float(cad.LOCK_STUD_X)),
+        ):
+            start = cad.axis_cylinder(
+                cad.LOCK_SHOULDER_DIAMETER,
+                cad.LOCK_SHOULDER_LENGTH,
+                (stud_x_mm, 0.0, shoulder_z_min_in_slider_mm),
+            )
+            end = cad.axis_cylinder(
+                cad.LOCK_SHOULDER_DIAMETER,
+                cad.LOCK_SHOULDER_LENGTH,
+                (
+                    stud_x_mm - cad.SLIDER_TRAVEL,
+                    0.0,
+                    shoulder_z_min_in_slider_mm,
+                ),
+            )
+            connecting_prism = (
+                cad.cq.Workplane("XY")
+                .box(
+                    cad.SLIDER_TRAVEL,
+                    cad.LOCK_SHOULDER_DIAMETER,
+                    cad.LOCK_SHOULDER_LENGTH,
+                    centered=(True, True, False),
+                )
+                .translate(
+                    (
+                        stud_x_mm - cad.SLIDER_TRAVEL / 2.0,
+                        0.0,
+                        shoulder_z_min_in_slider_mm,
+                    )
+                )
+            )
+            shoulder_sweep = start.union(end).union(connecting_prism).clean().val()
+            self.assertTrue(shoulder_sweep.isValid(), side)
+            swept_overlap_mm3 = self.clearance._intersection_volume_mm3(
+                slider, shoulder_sweep
+            )
+            swept_clearance_mm = float(slider.distance(shoulder_sweep))
+
+            sampled_overlaps_mm3: list[float] = []
+            for q_mm in sample_positions_mm:
+                placed_slider = slider.moved(
+                    cad.cq.Location(cad.cq.Vector(float(q_mm), 0.0, cad.SLIDER_Z))
+                )
+                shoulder = cad.axis_cylinder(
+                    cad.LOCK_SHOULDER_DIAMETER,
+                    cad.LOCK_SHOULDER_LENGTH,
+                    (
+                        stud_x_mm,
+                        0.0,
+                        cad.PLATE_THICKNESS - cad.LOCK_SHOULDER_LENGTH,
+                    ),
+                ).val()
+                sampled_overlaps_mm3.append(
+                    self.clearance._intersection_volume_mm3(
+                        placed_slider, shoulder
+                    )
+                )
+            if (
+                swept_overlap_mm3
+                > self.clearance.OVERLAP_VOLUME_TOLERANCE_MM3
+                or swept_clearance_mm + 1.0e-9
+                < required_radial_clearance_mm
+                or max(sampled_overlaps_mm3)
+                > self.clearance.OVERLAP_VOLUME_TOLERANCE_MM3
+            ):
+                failures[side] = {
+                    "continuous_swept_overlap_mm3": swept_overlap_mm3,
+                    "continuous_swept_clearance_mm": swept_clearance_mm,
+                    "required_radial_clearance_mm": required_radial_clearance_mm,
+                    "sample_q_mm": sample_positions_mm.tolist(),
+                    "sample_overlap_mm3": sampled_overlaps_mm3,
+                }
+        self.assertEqual(
+            failures,
+            {},
+            "the slider keyhole must clear each shoulder throughout its full travel",
+        )
+
+    def test_positive_lock_slider_mass_properties_match_exact_step(self) -> None:
+        """Collision tessellation must not define the moving slider inertia."""
+
+        cad = self.clearance.CAD
+        qc = self.demo.qc
+        manifest = load_json(CORE_CAD_MANIFEST, "core CAD manifest")
+        slider_record = next(
+            record
+            for record in manifest["files"]
+            if str(record["path"]).endswith("/so101_positive_lock_slider.step")
+        )
+        slider_path = REPOSITORY_ROOT / str(slider_record["path"])
+        slider = cad.cq.importers.importStep(str(slider_path)).val()
+        density_kg_m3 = float(qc.POSITIVE_LOCK_SLIDER_DENSITY_KG_M3)
+        self.assertEqual(density_kg_m3, 8000.0)
+        source_mass_kg, source_com_m, source_inertia_kg_m2 = (
+            self._source_mass_properties([slider], density_kg_m3)
+        )
+        np.testing.assert_allclose(
+            source_mass_kg,
+            qc.POSITIVE_LOCK_SLIDER_SOURCE_MASS_KG,
+            rtol=0.0,
+            atol=1.0e-15,
+        )
+        np.testing.assert_allclose(
+            source_com_m,
+            qc.POSITIVE_LOCK_SLIDER_SOURCE_COM_M,
+            rtol=0.0,
+            atol=5.0e-13,
+        )
+        np.testing.assert_allclose(
+            self._full_inertia_vector(source_inertia_kg_m2),
+            qc.POSITIVE_LOCK_SLIDER_SOURCE_FULL_INERTIA_KG_M2,
+            rtol=0.0,
+            atol=5.0e-16,
+        )
+
+        body_id = int(self.model.body("qc_positive_lock_slider").id)
+        self.assertAlmostEqual(
+            float(self.model.body_mass[body_id]), source_mass_kg, delta=1.0e-15
+        )
+        np.testing.assert_allclose(
+            self.model.body_ipos[body_id], source_com_m, rtol=0.0, atol=5.0e-13
+        )
+        np.testing.assert_allclose(
+            self._compiled_body_inertia_tensor(body_id),
+            source_inertia_kg_m2,
+            rtol=0.0,
+            atol=5.0e-16,
+        )
+
+        body_xml = self.xml_root.find(".//body[@name='qc_positive_lock_slider']")
+        self.assertIsNotNone(body_xml)
+        inertial_xml = body_xml.find("./inertial")
+        self.assertIsNotNone(inertial_xml, "slider requires explicit source inertia")
+        self.assertAlmostEqual(
+            float(inertial_xml.get("mass", "nan")), source_mass_kg, delta=1.0e-15
+        )
+        np.testing.assert_allclose(
+            self._vector(inertial_xml, "pos", "nan nan nan"),
+            source_com_m,
+            rtol=0.0,
+            atol=5.0e-13,
+        )
+        np.testing.assert_allclose(
+            self._vector(
+                inertial_xml, "fullinertia", "nan nan nan nan nan nan"
+            ),
+            self._full_inertia_vector(source_inertia_kg_m2),
+            rtol=0.0,
+            atol=5.0e-16,
+        )
+        slider_geoms = body_xml.findall("./geom")
+        self.assertTrue(slider_geoms)
+        for geom in slider_geoms:
+            self.assertEqual(
+                float(geom.get("mass", "nan")),
+                0.0,
+                geom.get("name"),
+            )
+
+    def test_positive_lock_hardware_uses_exact_source_inertials(self) -> None:
+        """Stud/nut collision proxies may not inflate or double-count mass."""
+
+        cad = self.clearance.CAD
+        qc = self.demo.qc
+        density_kg_m3 = float(qc.POSITIVE_LOCK_HARDWARE_DENSITY_KG_M3)
+        self.assertEqual(density_kg_m3, 8000.0)
+        manifest = load_json(CORE_CAD_MANIFEST, "core CAD manifest")
+        records = {str(record["path"]): record for record in manifest["files"]}
+        screw_relative = (
+            "QuickChange/SO101_Magnetic/exports/"
+            "hardware_McMaster_90318A720_shoulder_screw.step"
+        )
+        nut_relative = (
+            "QuickChange/SO101_Magnetic/exports/"
+            "hardware_DIN934_M3_lock_stud_nut.step"
+        )
+        self.assertEqual(
+            records[screw_relative]["sha256"],
+            "1a302d3674952d881df75e25e47b64a60b23a72b66fde48c35a0924ca1df6990",
+        )
+        self.assertEqual(
+            records[nut_relative]["sha256"],
+            "7f19e5abdb33083e7d179df78d5dc1a130140eadb74a3b22aa2d8f3c078266c7",
+        )
+        for relative_path in (screw_relative, nut_relative):
+            artifact = REPOSITORY_ROOT / relative_path
+            self.assertEqual(
+                artifact.stat().st_size, int(records[relative_path]["bytes"])
+            )
+            self.assertEqual(
+                sha256_file(artifact), records[relative_path]["sha256"]
+            )
+        screw_workplane = cad.cq.importers.importStep(
+            str(REPOSITORY_ROOT / screw_relative)
+        )
+        nut_workplane = cad.cq.importers.importStep(
+            str(REPOSITORY_ROOT / nut_relative)
+        )
+        installed_sources: list[Any] = []
+        for x_mm in (-float(cad.LOCK_STUD_X), float(cad.LOCK_STUD_X)):
+            installed_sources.append(screw_workplane.translate((x_mm, 0.0, 0.0)).val())
+            installed_sources.append(
+                nut_workplane.translate(
+                    (x_mm, 0.0, float(cad.LOCK_NUT_POCKET_FLOOR))
+                ).val()
+            )
+        source_mass_kg, source_com_m, source_inertia_kg_m2 = (
+            self._source_mass_properties(installed_sources, density_kg_m3)
+        )
+        self.assertAlmostEqual(source_mass_kg, 0.00274294912079922, delta=1.0e-15)
+        np.testing.assert_allclose(
+            source_com_m,
+            [0.0, 0.0, -0.001111579640489],
+            rtol=0.0,
+            atol=5.0e-13,
+        )
+
+        contract = self.demo.CORE_POSITIVE_LOCK_CONTRACT
+        self.assertEqual(contract.get("lock_hardware_material"), "stainless steel")
+        self.assertEqual(
+            float(contract.get("lock_hardware_density_kg_m3")), density_kg_m3
+        )
+        body_names = [
+            f"tool_{tool}_positive_lock_hardware"
+            for tool in ("gripper", "spoon", "whisk")
+        ]
+        compiled_body_names = {
+            str(self.model.body(index).name) for index in range(self.model.nbody)
+        }
+        missing_bodies = sorted(set(body_names) - compiled_body_names)
+        self.assertEqual(
+            missing_bodies,
+            [],
+            "lock hardware needs a source-derived child inertial; parent-body "
+            "auto inertia counts filled proxy voids and overlapping thread material",
+        )
+        for tool, body_name in zip(
+            ("gripper", "spoon", "whisk"), body_names, strict=True
+        ):
+            body_id = int(self.model.body(body_name).id)
+            self.assertEqual(
+                int(self.model.body_parentid[body_id]),
+                int(self.model.body(f"tool_{tool}").id),
+            )
+            np.testing.assert_allclose(
+                self.model.body_pos[body_id], np.zeros(3), rtol=0.0, atol=1.0e-12
+            )
+            self.assertAlmostEqual(
+                float(self.model.body_mass[body_id]), source_mass_kg, delta=1.0e-15
+            )
+            np.testing.assert_allclose(
+                self.model.body_ipos[body_id],
+                source_com_m,
+                rtol=0.0,
+                atol=5.0e-13,
+            )
+            np.testing.assert_allclose(
+                self._compiled_body_inertia_tensor(body_id),
+                source_inertia_kg_m2,
+                rtol=0.0,
+                atol=5.0e-16,
+            )
+            body_xml = self.xml_root.find(f".//body[@name='{body_name}']")
+            self.assertIsNotNone(body_xml)
+            self.assertEqual(body_xml.findall("./joint"), [], body_name)
+            np.testing.assert_allclose(
+                self._vector(body_xml, "pos", "0 0 0"),
+                np.zeros(3),
+                rtol=0.0,
+                atol=1.0e-12,
+            )
+            body_quaternion = self._vector(body_xml, "quat", "1 0 0 0")
+            np.testing.assert_allclose(
+                np.abs(body_quaternion),
+                [1.0, 0.0, 0.0, 0.0],
+                rtol=0.0,
+                atol=1.0e-12,
+            )
+            inertial_xml = body_xml.find("./inertial")
+            self.assertIsNotNone(inertial_xml)
+            self.assertAlmostEqual(
+                float(inertial_xml.get("mass", "nan")),
+                source_mass_kg,
+                delta=1.0e-15,
+            )
+            np.testing.assert_allclose(
+                self._vector(inertial_xml, "pos", "nan nan nan"),
+                source_com_m,
+                rtol=0.0,
+                atol=5.0e-13,
+            )
+            np.testing.assert_allclose(
+                self._vector(
+                    inertial_xml, "fullinertia", "nan nan nan nan nan nan"
+                ),
+                self._full_inertia_vector(source_inertia_kg_m2),
+                rtol=0.0,
+                atol=5.0e-16,
+            )
+            expected_geom_names = {
+                f"{tool}_lock_stud_{side}_{feature}_collision"
+                for side in ("left", "right")
+                for feature in ("shoulder", "head")
+            } | {
+                f"{tool}_positive_lock_{feature}_{side}_collision"
+                for side in ("left", "right")
+                for feature in ("thread", "nut")
+            }
+            observed_geom_names = {
+                str(self.model.geom(index).name)
+                for index in range(self.model.ngeom)
+                if int(self.model.geom_bodyid[index]) == body_id
+            }
+            self.assertEqual(observed_geom_names, expected_geom_names)
+            for name in expected_geom_names:
+                geom_xml = body_xml.find(f"./geom[@name='{name}']")
+                self.assertIsNotNone(geom_xml, name)
+                self.assertEqual(float(geom_xml.get("mass", "nan")), 0.0, name)
+
+    def test_complete_matcha_tool_mass_and_com_match_cad_ledgers(self) -> None:
+        """Keep payload mass closure separate from lock-mechanism closure."""
+
+        self.maxDiff = None
+        manifest = load_json(CAD_MANIFEST, "matcha CAD manifest")
+        mujoco = self.demo.mujoco
+        data = mujoco.MjData(self.model)
+        self.demo.initialize(self.model, data)
+        mujoco.mj_forward(self.model, data)
+        mismatches: dict[str, Any] = {}
+        for manifest_key, runtime_tool in (
+            ("matcha_spoon", "spoon"),
+            ("matcha_whisk", "whisk"),
+        ):
+            tool_record = tool_from_manifest(manifest, manifest_key)
+            ledger = load_json(
+                CAD_ROOT / str(tool_record["mass_ledger_path"]),
+                f"{manifest_key} mass ledger",
+            )
+            expected_mass_kg = float(ledger["total_mass_kg"])
+            expected_com_m = 0.001 * np.asarray(ledger["com_mm"], dtype=np.float64)
+            root_id = int(self.model.body(f"tool_{runtime_tool}").id)
+            descendants: list[int] = []
+            for body_id in range(1, self.model.nbody):
+                ancestor = body_id
+                while ancestor not in (0, root_id):
+                    ancestor = int(self.model.body_parentid[ancestor])
+                if ancestor == root_id:
+                    descendants.append(body_id)
+            observed_mass_kg = math.fsum(
+                float(self.model.body_mass[body_id]) for body_id in descendants
+            )
+            self.assertAlmostEqual(
+                observed_mass_kg,
+                float(self.model.body_subtreemass[root_id]),
+                delta=1.0e-15,
+            )
+            root_rotation = np.asarray(
+                data.xmat[root_id], dtype=np.float64
+            ).reshape(3, 3)
+            root_position = np.asarray(data.xpos[root_id], dtype=np.float64)
+            observed_com_m = sum(
+                (
+                    float(self.model.body_mass[body_id])
+                    * (
+                        root_rotation.T
+                        @ (
+                            np.asarray(data.xipos[body_id], dtype=np.float64)
+                            - root_position
+                        )
+                    )
+                    for body_id in descendants
+                ),
+                start=np.zeros(3, dtype=np.float64),
+            ) / observed_mass_kg
+            mass_error_kg = observed_mass_kg - expected_mass_kg
+            com_error_mm = 1000.0 * (observed_com_m - expected_com_m)
+            if abs(mass_error_kg) > 1.0e-9 or float(
+                np.linalg.norm(com_error_mm)
+            ) > 0.001:
+                mismatches[runtime_tool] = {
+                    "expected_mass_kg": expected_mass_kg,
+                    "observed_mass_kg": observed_mass_kg,
+                    "mass_error_kg": mass_error_kg,
+                    "expected_com_mm": (1000.0 * expected_com_m).tolist(),
+                    "observed_com_mm": (1000.0 * observed_com_m).tolist(),
+                    "com_error_mm": com_error_mm.tolist(),
+                    "descendant_bodies": [
+                        str(self.model.body(body_id).name)
+                        for body_id in descendants
+                    ],
+                }
+        self.assertEqual(
+            mismatches,
+            {},
+            "runtime payload inertials must close the complete CAD mass ledger",
+        )
+
     def test_positive_lock_slider_is_source_bound_physical_mechanism(self) -> None:
         """Bind the moving lock sheet, spring joint, and functional voids to CAD."""
 
@@ -1747,8 +2326,8 @@ class SimCadPlacementContractTests(unittest.TestCase):
         }
         expected_sources = {
             "QuickChange/SO101_Magnetic/exports/so101_positive_lock_slider.step": (
-                99_584,
-                "0d0f77a772172963fdc3a63470ff936cfd52c4e4b96db78a1cdf6cc4f14eb7f1",
+                94_504,
+                "37771b10b4fe82614f0f7b460d44cdc81ea8505b4e6c7ac7b20a1f413b7ca848",
             ),
             "QuickChange/SO101_Magnetic/exports/hardware_McMaster_90318A720_shoulder_screw.step": (
                 13_596,
@@ -1772,13 +2351,21 @@ class SimCadPlacementContractTests(unittest.TestCase):
         self.assertIsInstance(mechanism, dict, report)
         self.assertIs(mechanism.get("passed"), True, mechanism)
         self.assertTrue(all(mechanism.get("checks", {}).values()), mechanism)
-        self.assertEqual(
-            mechanism.get("slider_bbox_native_mm"),
-            {"x_mm": [-16.4, 24.0], "y_mm": [-4.4, 4.4], "z_mm": [0.0, 1.6]},
+        mechanism_bbox = mechanism.get("slider_bbox_native_mm")
+        self.assertIsInstance(mechanism_bbox, dict)
+        np.testing.assert_allclose(
+            [
+                *mechanism_bbox["x_mm"],
+                *mechanism_bbox["y_mm"],
+                *mechanism_bbox["z_mm"],
+            ],
+            [-15.9740625, 24.0, -4.4, 4.4, 0.0, 1.6],
+            rtol=0.0,
+            atol=1.0e-12,
         )
         self.assertAlmostEqual(
             float(mechanism.get("slider_volume_mm3")),
-            237.20848051509753,
+            220.12468083955645,
             places=9,
         )
         self.assertEqual(mechanism.get("stud_centres_xy_mm"), [[-12.0, 0.0], [12.0, 0.0]])
@@ -1912,7 +2499,7 @@ class SimCadPlacementContractTests(unittest.TestCase):
         np.testing.assert_array_equal(self.model.geom_quat, quaternion_snapshot)
         all_vertices = np.concatenate(list(piece_vertices.values()), axis=0)
         np.testing.assert_allclose(
-            np.min(all_vertices, axis=0), [-0.0164, -0.0044, 0.0],
+            np.min(all_vertices, axis=0), [-0.0159740625, -0.0044, 0.0],
             rtol=0.0,
             atol=1.0e-3 * qc.POSITIVE_LOCK_SLIDER_ABSOLUTE_DEFLECTION_MM,
         )
@@ -1921,8 +2508,8 @@ class SimCadPlacementContractTests(unittest.TestCase):
             rtol=0.0,
             atol=1.0e-3 * qc.POSITIVE_LOCK_SLIDER_ABSOLUTE_DEFLECTION_MM,
         )
-        self.assertLessEqual(proxy_volume_mm3, 237.20848051509753 + 1.0e-6)
-        self.assertGreaterEqual(proxy_volume_mm3, 0.995 * 237.20848051509753)
+        self.assertLessEqual(proxy_volume_mm3, 220.12468083955645 + 1.0e-6)
+        self.assertGreaterEqual(proxy_volume_mm3, 0.995 * 220.12468083955645)
 
         # Functional void negatives: adding even a small hidden component in
         # an entry hole, keyhole neck, or guide slot must make this test red.

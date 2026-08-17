@@ -108,6 +108,26 @@ DEVELOPMENT_TESTS = (
     ),
     qualified(
         "SimCadPlacementContractTests",
+        "test_core_positive_lock_artifact_provenance_is_current",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
+        "test_positive_lock_source_has_continuous_shoulder_clearance",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
+        "test_positive_lock_slider_mass_properties_match_exact_step",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
+        "test_positive_lock_hardware_uses_exact_source_inertials",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
+        "test_complete_matcha_tool_mass_and_com_match_cad_ledgers",
+    ),
+    qualified(
+        "SimCadPlacementContractTests",
         "test_positive_lock_slider_is_source_bound_physical_mechanism",
     ),
     qualified(
@@ -172,10 +192,27 @@ PRODUCTION_INPUTS = (
     HERE / "matcha_workflow_demo.py",
     HERE / "matcha_workflow_scene.xml",
     HERE / "matcha_tool_geometry.json",
+    HERE / "qc_collision_geometry.py",
+    HERE / "cad_clearance_report.json",
     HERE / "generate_matcha_payload_proxy_report.py",
     HERE / "validate_matcha_payload_proxy_report.py",
     HERE / "matcha_payload_proxy_report.json",
+    HERE.parent / "generate_cad.py",
+    HERE.parent / "exports" / "core_cad_manifest.json",
+    HERE.parent / "exports" / "so101_positive_lock_slider.step",
+    HERE.parent
+    / "exports"
+    / "hardware_McMaster_90318A720_shoulder_screw.step",
+    HERE.parent / "exports" / "hardware_DIN934_M3_lock_stud_nut.step",
     HERE.parent / "matcha_tools" / "exports" / "matcha_tool_manifest.json",
+    HERE.parent
+    / "matcha_tools"
+    / "exports"
+    / "so101_matcha_spoon_mass_ledger.json",
+    HERE.parent
+    / "matcha_tools"
+    / "exports"
+    / "so101_matcha_whisk_mass_ledger.json",
 )
 
 FINGERPRINT_INPUTS = (
