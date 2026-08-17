@@ -200,12 +200,16 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
         cad = clearance.CAD
         slider = cad.locking_slider()
         self.assertTrue(
-            math.isclose(slider.val().Volume(), 237.20848051509753, abs_tol=1.0e-9)
+            math.isclose(
+                slider.val().Volume(),
+                clearance.POSITIVE_LOCK_RELEASE_SLIDER_VOLUME_MM3,
+                abs_tol=1.0e-9,
+            )
         )
         bounds = slider.val().BoundingBox()
         self.assertEqual(
             [bounds.xmin, bounds.xmax, bounds.ymin, bounds.ymax, bounds.zmin, bounds.zmax],
-            [-16.4, 24.0, -4.4, 4.4, 0.0, 1.6],
+            [-15.974062500000002, 24.0, -4.4, 4.4, 0.0, 1.6],
         )
         cam = cad.positive_lock_cam().val()
         unlocked = slider.translate(
@@ -262,6 +266,64 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
             )
         )
 
+    def test_positive_lock_capsule_clears_shoulders_and_retains_heads(self) -> None:
+        cad = clearance.CAD
+        contract = cad.positive_lock_keyhole_contract()
+        self.assertEqual(contract["shoulder_path_kind"], "capsule")
+        self.assertEqual(
+            contract["shoulder_path_centerline_x_offsets_mm"], [-3.0, 0.0]
+        )
+        self.assertEqual(
+            contract["shoulder_path_overall_x_offsets_mm"], [-5.125, 2.125]
+        )
+        self.assertTrue(
+            math.isclose(
+                contract["minimum_radial_shoulder_clearance_mm"],
+                0.125,
+                abs_tol=1.0e-12,
+            )
+        )
+        self.assertTrue(
+            math.isclose(
+                contract["minimum_radial_head_retention_overlap_mm"],
+                0.875,
+                abs_tol=1.0e-12,
+            )
+        )
+        result = clearance._positive_lock_travel_record()
+        self.assertTrue(result["passed"], result)
+        self.assertTrue(all(result["checks"].values()), result)
+        self.assertEqual(result["sample_count"], 61)
+        self.assertEqual(result["sample_step_mm"], 0.05)
+        self.assertLessEqual(
+            result["maximum_sampled_shoulder_overlap_volume_mm3"],
+            clearance.OVERLAP_VOLUME_TOLERANCE_MM3,
+        )
+        self.assertTrue(
+            math.isclose(
+                result["minimum_sampled_shoulder_clearance_mm"],
+                0.125,
+                abs_tol=1.0e-12,
+            )
+        )
+        self.assertEqual(
+            result["unlocked_projected_head_overlap_volume_mm3"],
+            {"left": 0.0, "right": 0.0},
+        )
+        self.assertTrue(
+            math.isclose(
+                result["locked_projected_head_retention_volume_mm3"]["left"],
+                4.149293812932416,
+                abs_tol=1.0e-9,
+            )
+        )
+        self.assertTrue(
+            math.isclose(
+                result["locked_projected_head_retention_volume_mm3"]["right"],
+                12.190289700424891,
+                abs_tol=1.0e-9,
+            )
+        )
     def test_per_dock_stop_contracts_match_exact_source_solids(self) -> None:
         core_spec = clearance.CAD.core_dock_stop_spec()
         core_bounds = clearance._bbox_record(

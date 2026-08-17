@@ -30,8 +30,11 @@ are recorded in the repository-root `THIRD_PARTY_NOTICES.md`.
   relieved to avoid an over-constrained fit.
 - **Positive lock:** two 4 mm pull-stud shoulders enter 6.5 mm keyholes. On
   leaving the rack, the E-GUL4-10 return spring shifts a 1.6 mm stainless slider
-  by 3 mm so 4.25 mm necks sit under the 6 mm stud heads. The printed roof, not
-  the M2 guide screw, reacts separation load. Loss of power leaves it locked.
+  by 3 mm so 4.25 mm necks sit under the 6 mm stud heads. Each neck is a 7.25 mm
+  capsule covering the complete 3 mm shoulder-centre path, not a short
+  centre-to-centre rectangle. It provides 0.125 mm radial shoulder clearance
+  and 0.875 mm radial head-retention overlap. The printed roof, not the M2 guide
+  screw, reacts separation load. Loss of power leaves it locked.
 - **Cam corridor:** the passive cam retains its full `x = 24.05 mm` unlock
   datum. A narrow local recess in the fixed robot plate provides 0.50 mm exact
   radial clearance. The same X/Y footprint passes through the complete 9.5 mm
@@ -69,7 +72,8 @@ arcing, printed-part strength, fatigue, or wear.
 ## CAD/simulation geometry contract
 
 `generate_cad.py` publishes the exact core dock-stop bounds, stock-gripper STEP
-mount, and full-depth robot-plate cam-relief bounds in both
+mount, full-depth robot-plate cam-relief bounds, and swept keyhole-capsule
+contract in both
 `design_parameters.json` and `exports/core_cad_manifest.json`. The relief
 contract also records the 0.20 mm guided approach offset and retained 8.225 mm
 stud-well / 7.150 mm slider-lobe ligaments. The stock dock stop is not interchangeable
@@ -83,9 +87,13 @@ transform and the released CAD datum. `sim/validate_cad_clearance.py` records
 that composed transform and rejects a nonzero composition residual. It also
 checks the complete 0–80 mm rack path, using a focused 0.10 mm grid for the cam
 corridor; the 0.50 mm sampled clearance yields a conservative 0.45 mm
-continuous certificate. A separate 15→0 mm axial-capture sweep uses the
-published 0.20 mm open-side offset and certifies 0.25 mm continuous clearance
-against the 0.20 mm manufacturing floor.
+continuous bound. A separate exact OCCT sweep checks both 4 mm shoulders every
+0.05 mm from unlocked through the full 3.0 mm stroke, verifies the analytic
+0.125 mm continuous capsule clearance, confirms that both 6.5 mm entries pass
+the heads when unlocked, and confirms projected head retention when locked.
+The 15→0 mm axial-capture sweep separately uses the published 0.20 mm
+open-side offset and certifies 0.25 mm continuous clearance against the
+0.20 mm manufacturing floor.
 
 Core exports are timestamp-canonicalized and hash-closed. To verify byte
 reproducibility in two temporary directories, run `generate_cad.py` twice with

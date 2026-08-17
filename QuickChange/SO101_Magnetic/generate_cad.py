@@ -130,6 +130,14 @@ KEYHOLE_ENTRY_DIAMETER = 6.5
 KEYHOLE_NECK_WIDTH = 4.25
 GUIDE_SLOT_WIDTH = 2.4
 
+# The narrow keyhole is a true swept shoulder path, not merely a rectangle
+# between the unlocked and locked centre coordinates.  Its two semicircular
+# ends are centred at the same stud datum before and after the complete 3 mm
+# slider translation.  This leaves 0.125 mm radial shoulder clearance while
+# retaining 0.875 mm radial overlap against the 6 mm head.
+KEYHOLE_NECK_OVERALL_LENGTH = SLIDER_TRAVEL + KEYHOLE_NECK_WIDTH
+KEYHOLE_NECK_CENTER_OFFSET_X = -SLIDER_TRAVEL / 2.0
+
 # Passive dock cam and the feature-specific robot-plate relief around it.  The
 # cam must retain the full 3 mm slider stroke, so its 24.05 mm inner datum does
 # not move.  Instead the fixed printed plate is locally recessed with a 0.50
@@ -375,23 +383,22 @@ def locking_slider() -> cq.Workplane:
 
     # Unlocked: entry holes align with the two shoulder-screw heads.  The
     # return spring shifts the slider +X by 3 mm, placing each 4 mm shoulder in
-    # a 4.25 mm neck while the 6 mm head remains below the slider.
+    # a 4.25 mm swept neck while the 6 mm head remains below the slider.  The
+    # capsule spans the complete shoulder-centre path and includes one neck
+    # radius beyond each endpoint; a centre-to-centre rectangle alone would
+    # intersect the shoulder over the latter half of the declared travel.
     for x in (-LOCK_STUD_X, LOCK_STUD_X):
         slider = slider.cut(
             cylinder_cutter(KEYHOLE_ENTRY_DIAMETER, SLIDER_THICKNESS + 0.2, x, 0)
         )
-        neck_min = x - SLIDER_TRAVEL - 0.15
-        neck_max = x + 0.15
-        slider = slider.cut(
-            box_cutter(
-                neck_max - neck_min,
-                KEYHOLE_NECK_WIDTH,
-                SLIDER_THICKNESS + 0.2,
-                (neck_min + neck_max) / 2,
-                0,
-                -0.1,
-            )
+        shoulder_path = (
+            cq.Workplane("XY")
+            .center(x + KEYHOLE_NECK_CENTER_OFFSET_X, 0)
+            .slot2D(KEYHOLE_NECK_OVERALL_LENGTH, KEYHOLE_NECK_WIDTH, 0)
+            .extrude(SLIDER_THICKNESS + 0.2)
+            .translate((0, 0, -0.1))
         )
+        slider = slider.cut(shoulder_path)
 
     # A single flush M2 guide screw prevents loss during servicing.  The
     # printed roof, not this screw, reacts tool separation load.
@@ -579,6 +586,38 @@ def robot_cam_relief_contract() -> dict[str, object]:
         ),
         "minimum_relief_to_slider_lobe_ligament_mm": (
             ROBOT_CAM_RELIEF_TO_SLIDER_LOBE_LIGAMENT_MM
+        ),
+    }
+
+
+def positive_lock_keyhole_contract() -> dict[str, object]:
+    """Return the released shoulder-clearance and head-retention geometry."""
+
+    neck_radius = KEYHOLE_NECK_WIDTH / 2.0
+    return {
+        "slider_travel_mm": SLIDER_TRAVEL,
+        "slider_locked_translation_mm": [SLIDER_TRAVEL, 0.0, 0.0],
+        "stud_centres_x_mm": [-LOCK_STUD_X, LOCK_STUD_X],
+        "keyhole_entry_diameter_mm": KEYHOLE_ENTRY_DIAMETER,
+        "shoulder_path_kind": "capsule",
+        "shoulder_path_centerline_x_offsets_mm": [-SLIDER_TRAVEL, 0.0],
+        "shoulder_path_overall_x_offsets_mm": [
+            -SLIDER_TRAVEL - neck_radius,
+            neck_radius,
+        ],
+        "shoulder_path_overall_length_mm": KEYHOLE_NECK_OVERALL_LENGTH,
+        "neck_width_mm": KEYHOLE_NECK_WIDTH,
+        "neck_radius_mm": neck_radius,
+        "stud_shoulder_diameter_mm": LOCK_SHOULDER_DIAMETER,
+        "minimum_radial_shoulder_clearance_mm": (
+            neck_radius - LOCK_SHOULDER_DIAMETER / 2.0
+        ),
+        "stud_head_diameter_mm": LOCK_HEAD_DIAMETER,
+        "minimum_radial_head_retention_overlap_mm": (
+            LOCK_HEAD_DIAMETER / 2.0 - neck_radius
+        ),
+        "head_to_slider_axial_gap_mm": (
+            SLIDER_Z - (PLATE_THICKNESS - LOCK_SHOULDER_LENGTH)
         ),
     }
 
@@ -974,6 +1013,7 @@ def write_core_manifest(output_dir: Path = EXPORT_DIR) -> dict[str, object]:
             "robot_plate_cam_relief": robot_cam_relief_contract(),
             "core_dock_stop": core_dock_stop_spec(),
             "stock_gripper_mount": stock_gripper_mount_contract(),
+            "positive_lock_keyhole": positive_lock_keyhole_contract(),
         },
         "files": files,
         "file_count": len(files),
@@ -1355,6 +1395,7 @@ def main(argv: list[str] | None = None) -> None:
         "collision_geometry_contract": {
             "core_dock_stop": core_dock_stop_spec(),
             "stock_gripper_mount": stock_gripper_mount_contract(),
+            "positive_lock_keyhole": positive_lock_keyhole_contract(),
             "positive_lock_cam": {
                 "polygon_xy_mm": [
                     [DOCK_CAM_X_OUTER_MIN, DOCK_CAM_Y_MIN],
@@ -1395,6 +1436,7 @@ def main(argv: list[str] | None = None) -> None:
         "positive_lock": {
             "type": "internal keyhole slider, spring locked, passively cammed open by dock",
             "travel": SLIDER_TRAVEL,
+            "keyhole_contract": positive_lock_keyhole_contract(),
             "studs": "2 x McMaster 90318A720, M3, 4 mm shoulder dia, 5 mm shoulder length",
             "stud_retention": "2 x rear-loaded DIN 934 M3 nuts, 5.5 mm AF x 2.4 mm",
             "slider_material": "1.5-1.6 mm 304 stainless steel; printed copy for fit checks only",

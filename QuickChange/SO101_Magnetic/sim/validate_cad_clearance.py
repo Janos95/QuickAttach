@@ -71,6 +71,13 @@ AXIAL_CAPTURE_SWEEP_STEP_MM = 0.10
 ROBOT_PLATE_PRE_FULL_DEPTH_RELIEF_VOLUME_MM3 = 21130.316397677383
 ROBOT_PLATE_MINIMUM_RETAINED_VOLUME_FRACTION = 0.99
 ROBOT_PLATE_MINIMUM_FUNCTIONAL_LIGAMENT_MM = 5.0
+POSITIVE_LOCK_TRAVEL_SWEEP_STEP_MM = 0.05
+POSITIVE_LOCK_RELEASE_SLIDER_VOLUME_MM3 = 220.12468083955645
+POSITIVE_LOCK_RELEASE_SLIDER_BOUNDS_MM = (
+    (-15.974062500000002, 24.0),
+    (-4.4, 4.4),
+    (0.0, 1.6),
+)
 
 EXPECTED_CORE_EXPORTS = (
     "so101_robot_plate.step",
@@ -725,7 +732,7 @@ def _axial_capture_cam_record(
 
 
 def _mechanism_preservation_record() -> dict[str, Any]:
-    """Recompute plate structure and unchanged slider/keyhole/stud datums."""
+    """Recompute plate structure and released slider/keyhole/stud datums."""
 
     plate = CAD.robot_plate().val()
     plate_volume = _shape_volume_mm3(plate)
@@ -744,6 +751,7 @@ def _mechanism_preservation_record() -> dict[str, Any]:
     unlocked_cam_gap = float(unlocked.distance(cam))
     locked_cam_overlap = _intersection_volume_mm3(locked, cam)
     plate_bounds = _bbox_tuple(plate)
+    positive_lock_travel = _positive_lock_travel_record()
     checks = {
         "robot_plate_is_single_valid_solid": bool(
             plate.isValid() and len(plate.Solids()) == 1
@@ -764,12 +772,19 @@ def _mechanism_preservation_record() -> dict[str, Any]:
             CAD.ROBOT_CAM_RELIEF_TO_SLIDER_LOBE_LIGAMENT_MM
             >= ROBOT_PLATE_MINIMUM_FUNCTIONAL_LIGAMENT_MM
         ),
-        "slider_source_volume_preserved": math.isclose(
-            _shape_volume_mm3(slider), 237.20848051509753, abs_tol=1.0e-9
+        "slider_source_volume_matches_swept_neck_release": math.isclose(
+            _shape_volume_mm3(slider),
+            POSITIVE_LOCK_RELEASE_SLIDER_VOLUME_MM3,
+            abs_tol=1.0e-9,
         ),
-        "slider_source_bounds_preserved": slider_bounds
-        == ((-16.4, 24.0), (-4.4, 4.4), (0.0, 1.6)),
-        "stud_keyhole_centres_aligned": True,
+        "slider_source_bounds_match_swept_neck_release": all(
+            math.isclose(slider_bounds[axis][limit], expected, abs_tol=1.0e-12)
+            for axis, bounds in enumerate(POSITIVE_LOCK_RELEASE_SLIDER_BOUNDS_MM)
+            for limit, expected in enumerate(bounds)
+        ),
+        "stud_keyhole_full_travel_is_clear_and_retained": bool(
+            positive_lock_travel["passed"]
+        ),
         "keyhole_neck_clears_shoulder": bool(
             CAD.KEYHOLE_NECK_WIDTH > CAD.LOCK_SHOULDER_DIAMETER
         ),
@@ -805,12 +820,130 @@ def _mechanism_preservation_record() -> dict[str, Any]:
         "slider_bbox_native_mm": _bbox_record(slider_bounds),
         "slider_volume_mm3": _shape_volume_mm3(slider),
         "slider_travel_mm": CAD.SLIDER_TRAVEL,
+        "positive_lock_keyhole_contract": CAD.positive_lock_keyhole_contract(),
+        "positive_lock_travel": positive_lock_travel,
         "keyhole_entry_diameter_mm": CAD.KEYHOLE_ENTRY_DIAMETER,
         "keyhole_neck_width_mm": CAD.KEYHOLE_NECK_WIDTH,
         "stud_shoulder_diameter_mm": CAD.LOCK_SHOULDER_DIAMETER,
         "stud_head_diameter_mm": CAD.LOCK_HEAD_DIAMETER,
         "unlocked_slider_to_cam_gap_mm": unlocked_cam_gap,
         "locked_slider_cam_overlap_volume_mm3": locked_cam_overlap,
+        "checks": checks,
+        "passed": all(checks.values()),
+    }
+
+
+def _positive_lock_travel_record() -> dict[str, Any]:
+    """Prove shoulder clearance and head retention across the full lock stroke."""
+
+    sample_count = int(
+        round(CAD.SLIDER_TRAVEL / POSITIVE_LOCK_TRAVEL_SWEEP_STEP_MM)
+    ) + 1
+    offsets = [
+        index * CAD.SLIDER_TRAVEL / (sample_count - 1)
+        for index in range(sample_count)
+    ]
+    shoulder_solids = {
+        side: CAD.axis_cylinder(
+            CAD.LOCK_SHOULDER_DIAMETER,
+            CAD.LOCK_SHOULDER_LENGTH,
+            (
+                x_value,
+                0.0,
+                CAD.PLATE_THICKNESS - CAD.LOCK_SHOULDER_LENGTH,
+            ),
+        ).val()
+        for side, x_value in (("left", -CAD.LOCK_STUD_X), ("right", CAD.LOCK_STUD_X))
+    }
+    head_projection_solids = {
+        side: CAD.axis_cylinder(
+            CAD.LOCK_HEAD_DIAMETER,
+            CAD.SLIDER_THICKNESS,
+            (x_value, 0.0, CAD.SLIDER_Z),
+        ).val()
+        for side, x_value in (("left", -CAD.LOCK_STUD_X), ("right", CAD.LOCK_STUD_X))
+    }
+    observations: list[dict[str, Any]] = []
+    for offset in offsets:
+        slider = CAD.locking_slider().translate((offset, 0.0, CAD.SLIDER_Z)).val()
+        sides: dict[str, Any] = {}
+        for side, shoulder in shoulder_solids.items():
+            sides[side] = {
+                "shoulder_overlap_volume_mm3": _intersection_volume_mm3(
+                    slider, shoulder
+                ),
+                "shoulder_clearance_mm": float(slider.distance(shoulder)),
+            }
+        observations.append({"slider_offset_mm": offset, "sides": sides})
+
+    shoulder_overlaps = [
+        record["sides"][side]["shoulder_overlap_volume_mm3"]
+        for record in observations
+        for side in ("left", "right")
+    ]
+    shoulder_clearances = [
+        record["sides"][side]["shoulder_clearance_mm"]
+        for record in observations
+        for side in ("left", "right")
+    ]
+    unlocked_slider = CAD.locking_slider().translate((0.0, 0.0, CAD.SLIDER_Z)).val()
+    locked_slider = CAD.locking_slider().translate(
+        (CAD.SLIDER_TRAVEL, 0.0, CAD.SLIDER_Z)
+    ).val()
+    unlocked_head_overlap = {
+        side: _intersection_volume_mm3(unlocked_slider, head)
+        for side, head in head_projection_solids.items()
+    }
+    locked_head_retention = {
+        side: _intersection_volume_mm3(locked_slider, head)
+        for side, head in head_projection_solids.items()
+    }
+    contract = CAD.positive_lock_keyhole_contract()
+    checks = {
+        "all_sampled_shoulder_intersections_are_zero": bool(
+            max(shoulder_overlaps) <= OVERLAP_VOLUME_TOLERANCE_MM3
+        ),
+        "continuous_capsule_radial_clearance_is_positive": bool(
+            contract["minimum_radial_shoulder_clearance_mm"]
+            > NUMERIC_DISTANCE_TOLERANCE_MM
+        ),
+        "sampled_clearance_matches_continuous_capsule_bound": bool(
+            min(shoulder_clearances) + NUMERIC_DISTANCE_TOLERANCE_MM
+            >= contract["minimum_radial_shoulder_clearance_mm"]
+        ),
+        "unlocked_entry_passes_each_head": bool(
+            max(unlocked_head_overlap.values()) <= OVERLAP_VOLUME_TOLERANCE_MM3
+        ),
+        "locked_neck_retains_each_head": bool(
+            contract["minimum_radial_head_retention_overlap_mm"] > 0.0
+            and min(locked_head_retention.values()) > OVERLAP_VOLUME_TOLERANCE_MM3
+        ),
+    }
+    return {
+        "source_frame": "robot_plate_native_mm",
+        "slider_translation_axis": [1.0, 0.0, 0.0],
+        "slider_z_bounds_mm": [
+            CAD.SLIDER_Z,
+            CAD.SLIDER_Z + CAD.SLIDER_THICKNESS,
+        ],
+        "shoulder_z_bounds_mm": [
+            CAD.PLATE_THICKNESS - CAD.LOCK_SHOULDER_LENGTH,
+            CAD.PLATE_THICKNESS,
+        ],
+        "sample_start_mm": 0.0,
+        "sample_end_mm": CAD.SLIDER_TRAVEL,
+        "sample_step_mm": POSITIVE_LOCK_TRAVEL_SWEEP_STEP_MM,
+        "sample_count": sample_count,
+        "sampled_offsets_sha256": _canonical_sha256(offsets),
+        "maximum_sampled_shoulder_overlap_volume_mm3": max(shoulder_overlaps),
+        "minimum_sampled_shoulder_clearance_mm": min(shoulder_clearances),
+        "continuous_minimum_shoulder_clearance_mm": contract[
+            "minimum_radial_shoulder_clearance_mm"
+        ],
+        "unlocked_projected_head_overlap_volume_mm3": unlocked_head_overlap,
+        "locked_projected_head_retention_volume_mm3": locked_head_retention,
+        "observations": observations,
+        "method": "occt_brep_boolean_distance_plus_exact_capsule_containment",
         "checks": checks,
         "passed": all(checks.values()),
     }
@@ -1035,6 +1168,19 @@ def _thresholds_record() -> dict[str, Any]:
         "robot_plate_minimum_functional_ligament_mm": (
             ROBOT_PLATE_MINIMUM_FUNCTIONAL_LIGAMENT_MM
         ),
+        "positive_lock_travel_sample_step_mm": (
+            POSITIVE_LOCK_TRAVEL_SWEEP_STEP_MM
+        ),
+        "positive_lock_minimum_radial_shoulder_clearance_mm": (
+            CAD.positive_lock_keyhole_contract()[
+                "minimum_radial_shoulder_clearance_mm"
+            ]
+        ),
+        "positive_lock_minimum_radial_head_retention_overlap_mm": (
+            CAD.positive_lock_keyhole_contract()[
+                "minimum_radial_head_retention_overlap_mm"
+            ]
+        ),
     }
 
 
@@ -1043,6 +1189,7 @@ def _expected_core_manifest_contracts() -> dict[str, Any]:
         "robot_plate_cam_relief": CAD.robot_cam_relief_contract(),
         "core_dock_stop": CAD.core_dock_stop_spec(),
         "stock_gripper_mount": CAD.stock_gripper_mount_contract(),
+        "positive_lock_keyhole": CAD.positive_lock_keyhole_contract(),
     }
 
 
