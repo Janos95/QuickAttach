@@ -267,7 +267,7 @@ def _add_whisk_payload(tool: ET.Element, actuator: ET.Element) -> None:
         name="whisk_housing_collision",
         geom_type="cylinder",
         pos=(0.0, 0.0, 0.031),
-        size=(0.025, 0.0215),
+        size=(0.024, 0.0215),
         rgba="0.12 0.40 0.76 0.55",
     )
     _add_payload_geom(
@@ -295,7 +295,9 @@ def _add_whisk_payload(tool: ET.Element, actuator: ET.Element) -> None:
         name="whisk_eccentric_collision",
         geom_type="cylinder",
         pos=(0.004, 0.0, 0.0),
-        size=(0.006, 0.003),
+        # Tangent to, rather than embedded in, the compliance carriage at its
+        # zero state.  The eccentric remains a direct active collider.
+        size=(0.006, 0.002),
         rgba="0.8 0.5 0.1 0.8",
     )
     carriage = ET.SubElement(tool, "body", {"name": "whisk_compliance_carriage", "pos": "0 0 0.060"})
@@ -803,10 +805,77 @@ def initialized_summary(model: mujoco.MjModel, data: mujoco.MjData) -> dict[str,
     }
 
 
+def collision_coverage(model: mujoco.MjModel) -> dict[str, Any]:
+    """Report direct, body-owned collision coverage for rendered rigid parts."""
+
+    rendered: dict[int, list[str]] = {}
+    active: dict[int, list[str]] = {}
+    for geom_id in range(model.ngeom):
+        body_id = int(model.geom_bodyid[geom_id])
+        name = str(model.geom(geom_id).name or f"geom_{geom_id}")
+        contype = int(model.geom_contype[geom_id])
+        conaffinity = int(model.geom_conaffinity[geom_id])
+        if int(model.geom_group[geom_id]) == 2 or (contype == 0 and conaffinity == 0):
+            rendered.setdefault(body_id, []).append(name)
+        if contype != 0 or conaffinity != 0:
+            active.setdefault(body_id, []).append(name)
+    missing: list[str] = []
+    for body_id, visual_names in sorted(rendered.items()):
+        if body_id == 0 or body_id in active:
+            continue
+        physical = [
+            name
+            for name in visual_names
+            if not name.endswith("_target")
+            and "camera_target" not in name
+            and "fault_obstacle" not in name
+        ]
+        if physical:
+            missing.append(str(model.body(body_id).name))
+    return {
+        "complete": not missing,
+        "collision_coverage_complete": not missing,
+        "missing_collision_bodies": sorted(missing),
+        "rendered_body_count": len(rendered),
+        "direct_collision_body_count": len(active),
+        "active_collision_geom_count": sum(len(values) for values in active.values()),
+    }
+
+
+def initial_contact_report(model: mujoco.MjModel, data: mujoco.MjData) -> dict[str, Any]:
+    """Return every true startup penetration without classifying it away."""
+
+    penetrations: list[dict[str, Any]] = []
+    for contact_index in range(data.ncon):
+        contact = data.contact[contact_index]
+        if float(contact.dist) >= -CONTACT_NUMERICAL_EPSILON_M:
+            continue
+        penetrations.append(
+            {
+                "geom_a": str(model.geom(int(contact.geom[0])).name),
+                "geom_b": str(model.geom(int(contact.geom[1])).name),
+                "penetration_m": -float(contact.dist),
+            }
+        )
+    penetrations.sort(
+        key=lambda item: (-float(item["penetration_m"]), item["geom_a"], item["geom_b"])
+    )
+    return {
+        "contact_count": int(data.ncon),
+        "penetration_count": len(penetrations),
+        "max_penetration_m": max(
+            (float(item["penetration_m"]) for item in penetrations), default=0.0
+        ),
+        "penetrations": penetrations,
+        "passed": not penetrations,
+    }
+
+
 def run_headless_scenario(max_steps: int = 100) -> dict[str, Any]:
     model = build_model()
     data = mujoco.MjData(model)
     initialize(model, data)
+    startup_contacts = initial_contact_report(model, data)
     arm_actuators = np.asarray([model.actuator(name).id for name in ARM_ACTUATORS])
     for _ in range(max_steps):
         data.ctrl[arm_actuators] = DOCK_PRE_CAPTURE_Q["gripper"]
@@ -814,6 +883,8 @@ def run_headless_scenario(max_steps: int = 100) -> dict[str, Any]:
         if not np.all(np.isfinite(data.qpos)):
             raise RuntimeError("Non-finite state during initialized smoke")
     result = initialized_summary(model, data)
+    result["collision_coverage"] = collision_coverage(model)
+    result["startup_contact_audit"] = startup_contacts
     result["sim_time"] = float(data.time)
     result["completed"] = True
     return result

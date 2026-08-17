@@ -66,9 +66,9 @@
   },
   "final_serving_vessel": "bowl_station",
   "fixture_support_chains": {
-    "dock_gripper": ["dock_gripper_qc_col_dock_stop", "dock_gripper_support_collision", "matcha_floor_collision"],
-    "dock_spoon": ["dock_spoon_qc_col_dock_stop", "dock_spoon_support_collision", "matcha_floor_collision"],
-    "dock_whisk": ["dock_whisk_qc_col_dock_stop", "dock_whisk_support_collision", "matcha_floor_collision"],
+    "dock_gripper": ["dock_gripper_support_anchor_collision", "dock_gripper_support_collision", "matcha_floor_collision"],
+    "dock_spoon": ["dock_spoon_support_anchor_collision", "dock_spoon_support_collision", "matcha_floor_collision"],
+    "dock_whisk": ["dock_whisk_support_anchor_collision", "dock_whisk_support_collision", "matcha_floor_collision"],
     "bowl_station": ["bowl_base_collision", "bowl_support_collision", "matcha_floor_collision"],
     "powder_station": ["powder_canister_collision", "powder_support_collision", "matcha_floor_collision"],
     "rinse_station": ["rinse_basin_collision", "rinse_support_collision", "matcha_floor_collision"],
