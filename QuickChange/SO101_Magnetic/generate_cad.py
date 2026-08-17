@@ -917,11 +917,13 @@ def _canonicalize_step_header(path: Path) -> None:
 
 
 def _canonicalize_dxf_metadata(path: Path) -> None:
-    """Remove ezdxf's random GUIDs and wall-clock metadata.
+    """Remove ezdxf's random metadata and unordered class emission.
 
     The drawing entities are deterministic, but ezdxf intentionally assigns
-    fresh document GUIDs and timestamps on every write.  Those values are not
-    fabrication geometry and would otherwise prevent hash-closed regeneration.
+    fresh document GUIDs and timestamps on every write.  Its required-class
+    registry can also emit otherwise identical CLASS records in hash-order.
+    None of those values affect fabrication geometry, but each would otherwise
+    prevent hash-closed regeneration.
     """
 
     text = path.read_text()
@@ -955,6 +957,35 @@ def _canonicalize_dxf_metadata(path: Path) -> None:
                 f"could not canonicalize DXF metadata ({replacements} != {expected}): "
                 f"{path}"
             )
+
+    classes_match = re.search(
+        r"(  0\nSECTION\n  2\nCLASSES\n)(.*?)(?=  0\nENDSEC)",
+        text,
+        flags=re.DOTALL,
+    )
+    if classes_match is None:
+        raise RuntimeError(f"DXF CLASSES section is absent: {path}")
+    classes_body = classes_match.group(2)
+    class_blocks = re.findall(
+        r"  0\nCLASS\n.*?(?=  0\nCLASS\n|\Z)",
+        classes_body,
+        flags=re.DOTALL,
+    )
+    if len(class_blocks) < 2 or "".join(class_blocks) != classes_body:
+        raise RuntimeError(f"DXF CLASS records could not be partitioned: {path}")
+
+    def class_name(block: str) -> str:
+        match = re.search(r"\n  1\n([^\n]+)", block)
+        if match is None:
+            raise RuntimeError(f"DXF CLASS name is absent: {path}")
+        return match.group(1)
+
+    canonical_classes = "".join(sorted(class_blocks, key=class_name))
+    text = (
+        text[: classes_match.start(2)]
+        + canonical_classes
+        + text[classes_match.end(2) :]
+    )
     path.write_text(text)
 
 
