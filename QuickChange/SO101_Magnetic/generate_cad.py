@@ -37,6 +37,8 @@ CORE_OUTPUT_NAMES = (
     "hardware_Mill-Max_7983-1-15-20-75-14-11-0_reference.step",
     "so101_passive_tool_dock.step",
     "so101_passive_tool_dock.stl",
+    "so101_core_dock_support_bracket.step",
+    "so101_core_dock_support_bracket.stl",
     "so101_positive_lock_slider.step",
     "so101_positive_lock_slider.stl",
     "so101_positive_lock_slider_profile.dxf",
@@ -237,6 +239,86 @@ CORE_DOCK_STOP_Z_MAX = 12.5
 CORE_DOCK_STOP_HOLE_X = (-25.0, 21.0)
 CORE_DOCK_STOP_HOLE_Y_START = 25.9
 CORE_DOCK_STOP_HOLE_DIAMETER = 4.4
+CORE_DOCK_STOP_COUNTERSINK_DIAMETER = 8.2
+CORE_DOCK_STOP_COUNTERSINK_DEPTH = 1.9
+
+# Floor-closing support for the rolled core dock.  This is deliberately a
+# separate printed BRep: the two M4 joints into the stop and four M6 floor
+# anchors are explicit load-path fasteners, never a coincident-face union.
+CORE_DOCK_SUPPORT_FLOOR_Y_MM = 193.9154579377553
+CORE_DOCK_SUPPORT_TOP_HOLE_X_MM = CORE_DOCK_STOP_HOLE_X
+CORE_DOCK_SUPPORT_TOP_HOLE_Z_MM = 4.75
+CORE_DOCK_SUPPORT_BASE_HOLE_X_MM = (-40.0, 36.0)
+CORE_DOCK_SUPPORT_BASE_HOLE_Z_MM = (-23.25, 32.75)
+CORE_DOCK_SUPPORT_M4_CLEARANCE_DIAMETER_MM = 4.4
+CORE_DOCK_SUPPORT_M4_NUT_POCKET_RADIUS_MM = 4.75
+CORE_DOCK_SUPPORT_M4_TAIL_RADIUS_MM = 2.3
+CORE_DOCK_SUPPORT_M6_CLEARANCE_DIAMETER_MM = 6.6
+CORE_DOCK_SUPPORT_M6_COUNTERSINK_DIAMETER_MM = 12.0
+CORE_DOCK_SUPPORT_M6_COUNTERSINK_DEPTH_MM = 2.7
+CORE_DOCK_SUPPORT_EXPECTED_VOLUME_MM3 = 162415.4180526403
+CORE_DOCK_SUPPORT_SUPERSEDED_ESTIMATE_VOLUME_MM3 = 162308.50715898623
+CORE_DOCK_WITH_SUPPORT_EXPECTED_VOLUME_MM3 = 184159.32283760287
+
+# Five-DOF tool-view roll.  The world placement is R_old * Rz(+87.210869...)
+# in matrix-column convention; equivalently it is a -87.210869... tool-view
+# roll about the mating normal.  The resulting source -Y axis is world +Z.
+CORE_DOCK_TOOL_VIEW_ROLL_DEG = -87.21086925015224
+CORE_DOCK_WORLD_POS_M = (
+    0.19082795371216685,
+    0.1330713713445051,
+    0.1939154579377553,
+)
+CORE_DOCK_WORLD_QUAT_WXYZ = (
+    0.6440855284765126,
+    -0.6440855284765125,
+    0.2918112952014223,
+    -0.2918112952014225,
+)
+CORE_DOCK_WORLD_AXES = (
+    (0.6593846719714732, -0.7518057291408950, 0.0),
+    (0.0, 0.0, -1.0),
+    (0.7518057291408950, 0.6593846719714733, 0.0),
+)
+
+# Canonical <=0.5 mm continuation from the exact seated state.  These rows
+# are source authority rather than a regenerated runtime artifact.
+CORE_DOCK_RELEASE_ROSTER = (
+    (0.0, (-0.72, -0.5, 0.8, -0.3, -1.522116811941435)),
+    (0.5, (-0.7200000000000001, -0.5012713525907627, 0.7971523199971643, -0.29588096740640185, -1.5221168119414348)),
+    (1.0, (-0.7199999999999999, -0.5025209619924711, 0.7942909079367223, -0.29176994594425143, -1.522116811941435)),
+    (1.5, (-0.72, -0.5037489159236884, 0.7914158067505378, -0.2876668908268499, -1.5221168119414346)),
+    (2.0, (-0.7199999999999999, -0.5049553020734726, 0.7885270586980251, -0.28357175662455236, -1.5221168119414348)),
+    (2.5, (-0.7199999999999998, -0.5061402080808916, 0.785624705362152, -0.27948449728126057, -1.5221168119414346)),
+    (3.0, (-0.7199999999999999, -0.5073037215149596, 0.7827087876455384, -0.2754050661305792, -1.5221168119414348)),
+    (3.5, (-0.72, -0.5084459298549687, 0.7797793457666375, -0.271333415911669, -1.5221168119414348)),
+    (4.0, (-0.7200000000000001, -0.5095669204712283, 0.7768364192560011, -0.26726949878477324, -1.522116811941435)),
+    (4.5, (-0.7199999999999999, -0.5106667806061898, 0.7738800469526174, -0.2632132663464279, -1.5221168119414348)),
+    (5.0, (-0.72, -0.5117455973559675, 0.7709102670003262, -0.2591646696443586, -1.5221168119414346)),
+    (5.5, (-0.7200000000000001, -0.5128034576522418, 0.7679271168443034, -0.25512365919206204, -1.5221168119414348)),
+    (6.0, (-0.7200000000000001, -0.5138404482445372, 0.7649306332276101, -0.2510901849830732, -1.5221168119414348)),
+    (6.5, (-0.7199999999999999, -0.5148566556828839, 0.7619208521878057, -0.24706419650492184, -1.5221168119414343)),
+    (7.0, (-0.7199999999999998, -0.5158521663008359, 0.7588978090536203, -0.24304564275278437, -1.5221168119414348)),
+    (7.5, (-0.72, -0.5168270661988639, 0.7558615384416828, -0.2390344722428192, -1.5221168119414348)),
+    (8.0, (-0.72, -0.5177814412280972, 0.7528120742532991, -0.23503063302520222, -1.5221168119414348)),
+    (8.5, (-0.7200000000000005, -0.5187153769744209, 0.7497494496712797, -0.23103407269685902, -1.5221168119414346)),
+    (9.0, (-0.7199999999999999, -0.519628958742918, 0.7466736971568104, -0.22704473841389222, -1.5221168119414343)),
+    (9.5, (-0.7199999999999999, -0.5205222715426575, 0.7435848484463662, -0.22306257690370881, -1.5221168119414343)),
+    (10.0, (-0.7199999999999999, -0.5213954000718088, 0.7404829345486624, -0.2190875344768539, -1.5221168119414348)),
+    (10.5, (-0.7200000000000001, -0.5222484287030923, 0.7373679857416372, -0.21511955703854524, -1.5221168119414343)),
+    (11.0, (-0.72, -0.5230814414695496, 0.7342400315694654, -0.21115859009991603, -1.5221168119414346)),
+    (11.5, (-0.7200000000000001, -0.5238945220506328, 0.7310991008396011, -0.20720457878896845, -1.5221168119414348)),
+    (12.0, (-0.7200000000000001, -0.5246877537586018, 0.7279452216198397, -0.20325746786123822, -1.5221168119414348)),
+    (12.5, (-0.7199999999999999, -0.5254612195252387, 0.7247784212354064, -0.19931720171016784, -1.522116811941435)),
+    (13.0, (-0.7199999999999998, -0.5262150018888452, 0.7215987262660535, -0.19538372437720883, -1.5221168119414346)),
+    (13.5, (-0.7200000000000001, -0.526949182981541, 0.7184061625431684, -0.19145697956162747, -1.522116811941435)),
+    (14.0, (-0.7200000000000001, -0.5276638445168658, 0.7152007551469122, -0.18753691063004685, -1.5221168119414343)),
+    (14.5, (-0.7199999999999998, -0.5283590677776248, 0.7119825284033249, -0.18362346062570054, -1.522116811941435)),
+    (15.0, (-0.7200000000000001, -0.5290349336040562, 0.708751505881477, -0.17971657227742088, -1.5221168119414346)),
+)
+CORE_DOCK_RELEASE_ROSTER_SHA256 = (
+    "f30b0c178917945fcd45358710e5127302bc5240ca6cb4cdaa7f49d16c4f0293"
+)
 
 # The assembly datums are public source authority for downstream simulation.
 STOCK_TOOL_PLATE_ASSEMBLY_POS_MM = (0.0, 0.0, PLATE_THICKNESS)
@@ -988,6 +1070,25 @@ def axis_cylinder(
     return cq.Workplane(obj=solid)
 
 
+def axis_cone(
+    start_diameter: float,
+    end_diameter: float,
+    length: float,
+    start: tuple[float, float, float],
+    direction: tuple[float, float, float] = (0.0, 0.0, 1.0),
+) -> cq.Workplane:
+    """Return an axis-directed conical-frustum cutter."""
+
+    solid = cq.Solid.makeCone(
+        start_diameter / 2.0,
+        end_diameter / 2.0,
+        length,
+        cq.Vector(*start),
+        cq.Vector(*direction),
+    )
+    return cq.Workplane(obj=solid)
+
+
 def cylinder_cutter(
     diameter: float,
     height: float,
@@ -1331,6 +1432,349 @@ def core_dock_stop_spec() -> dict[str, object]:
             }
             for x_value in CORE_DOCK_STOP_HOLE_X
         ],
+        "front_countersinks": [
+            {
+                "axis": [0.0, 1.0, 0.0],
+                "x_mm": x_value,
+                "y_bounds_mm": [
+                    CORE_DOCK_STOP_Y_MIN,
+                    CORE_DOCK_STOP_Y_MIN + CORE_DOCK_STOP_COUNTERSINK_DEPTH,
+                ],
+                "z_mm": (CORE_DOCK_STOP_Z_MIN + CORE_DOCK_STOP_Z_MAX) / 2.0,
+                "major_diameter_mm": CORE_DOCK_STOP_COUNTERSINK_DIAMETER,
+                "minor_diameter_mm": CORE_DOCK_STOP_HOLE_DIAMETER,
+                "included_angle_deg": 90.0,
+                "target_head_recess_mm": [0.05, 0.15],
+            }
+            for x_value in CORE_DOCK_STOP_HOLE_X
+        ],
+        "expected_volume_mm3": 7379.269784962569,
+        "countersink_removed_volume_mm3": 64.26651371693515,
+        "remaining_ligaments_mm": {
+            "rear_y_wall": 4.1,
+            "minimum_z": 3.65,
+            "minimum_x": 11.9,
+        },
+    }
+
+
+def core_dock_release_roster() -> list[dict[str, object]]:
+    """Return the canonical 31-row rolled-frame IK continuation."""
+
+    return [
+        {"withdrawal_mm": withdrawal, "q_rad": list(q_rad)}
+        for withdrawal, q_rad in CORE_DOCK_RELEASE_ROSTER
+    ]
+
+
+def core_dock_support_contract() -> dict[str, object]:
+    """Return the fail-closed rolled-dock installation source contract.
+
+    The geometric fields are executable dimensions.  Audit-only FK and
+    collision results are pinned separately and never turn the release green:
+    runtime adoption, material allowables, substrate authority, and physical
+    contact dynamics remain explicit blockers.
+    """
+
+    roster = core_dock_release_roster()
+    roster_digest = hashlib.sha256(
+        json.dumps(
+            roster,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+    ).hexdigest()
+    maximum_joint_step_deg = max(
+        math.degrees(
+            max(
+                abs(current - previous)
+                for current, previous in zip(
+                    roster[index]["q_rad"], roster[index - 1]["q_rad"]
+                )
+            )
+        )
+        for index in range(1, len(roster))
+    )
+    post_length = 187.9154579377553 - 40.0
+    section_area = 43.0**2 - 35.0**2
+    section_second_moment = (43.0**4 - 35.0**4) / 12.0
+    section_modulus = section_second_moment / (43.0 / 2.0)
+    reverse_cam_force = 4.989345448 + 3.528
+    load_moment = (
+        2.942
+        + 9.80665 * 0.100
+        + reverse_cam_force * 0.03875
+    )
+    elastic_modulus_mpa = 1500.0
+    bending_stress = load_moment * 1000.0 / section_modulus
+    tip_deflection = (
+        load_moment
+        * 1000.0
+        * post_length**2
+        / (2.0 * elastic_modulus_mpa * section_second_moment)
+    )
+    tip_rotation_deg = math.degrees(
+        load_moment
+        * 1000.0
+        * post_length
+        / (elastic_modulus_mpa * section_second_moment)
+    )
+    compression_force = 140.923995
+    euler_load = (
+        math.pi**2
+        * elastic_modulus_mpa
+        * section_second_moment
+        / (4.0 * post_length**2)
+    )
+    blockers = [
+        "generated_core_exports_and_runtime_placements_are_stale",
+        "vendor_or_normative_source_missing_for_selected_M4_and_M6_fasteners",
+        "floor_fixture_substrate_and_M6_thread_authority_missing",
+        "PA12_modulus_strength_creep_and_process_allowables_unqualified",
+        "printed_dimensional_tolerance_and_anchor_strength_unqualified",
+        "cam_contact_friction_reverse_insertion_and_capture_dynamics_unvalidated",
+        "full_compiled_arm_collision_screen_not_yet_regenerated_from_this_source",
+    ]
+    return {
+        "schema_version": "1.0-source-checkpoint",
+        "frame": {
+            "position_m": list(CORE_DOCK_WORLD_POS_M),
+            "quat_wxyz": list(CORE_DOCK_WORLD_QUAT_WXYZ),
+            "tool_view_roll_deg": CORE_DOCK_TOOL_VIEW_ROLL_DEG,
+            "matrix_composition": "R_world_new=R_world_old*Rz(+87.21086925015224deg)",
+            "dock_local_axes_world_columns": [
+                list(axis) for axis in CORE_DOCK_WORLD_AXES
+            ],
+            "source_negative_y_world": [0.0, 0.0, 1.0],
+            "source_negative_y_is_world_up": True,
+            "rotation_scope": "core_interface_and_dock_datum_only",
+        },
+        "release_roster": {
+            "rows": roster,
+            "row_count": len(roster),
+            "step_mm": 0.5,
+            "withdrawal_bounds_mm": [0.0, 15.0],
+            "canonical_sha256": roster_digest,
+            "expected_canonical_sha256": CORE_DOCK_RELEASE_ROSTER_SHA256,
+            "maximum_joint_step_deg": maximum_joint_step_deg,
+            "endpoint_q_deg": [math.degrees(q) for q in roster[-1]["q_rad"]],
+            "solver_audit": {
+                "method": "deterministic_continuation_from_exact_seated_state",
+                "maximum_fk_position_error_mm": 1.4152622167509189e-13,
+                "maximum_fk_orientation_error_deg": 3.6184477995385756e-14,
+                "runtime_recomputation_pending": True,
+            },
+        },
+        "passive_release": {
+            "axis": "dock_local_negative_y",
+            "slider_q_mm": {
+                "0_to_2_mm": 0.05,
+                "2_to_15_mm_formula": "min(3,0.05+0.246875*(withdrawal_mm-2))",
+                "slope": 0.246875,
+                "q3_withdrawal_mm": 13.949367088607595,
+            },
+            "full_cam_clearance_at_15_mm": 0.251814779,
+        },
+        "printed_brep": {
+            "component_inventory": [
+                {
+                    "name": "core_passive_tool_dock",
+                    "solid_count": 1,
+                    "expected_volume_mm3": 21743.904784962568,
+                    "connection": "two_explicit_M4_stop_fasteners",
+                },
+                {
+                    "name": "core_dock_floor_support_bracket",
+                    "solid_count": 1,
+                    "expected_volume_mm3": CORE_DOCK_SUPPORT_EXPECTED_VOLUME_MM3,
+                    "bounds_mm": {
+                        "x": [-52.0, 48.0],
+                        "y": [32.0, CORE_DOCK_SUPPORT_FLOOR_Y_MM],
+                        "z": [-35.25, 44.75],
+                    },
+                    "connection": "four_explicit_M6_floor_fasteners",
+                },
+            ],
+            "installed_printed_volume_mm3": (
+                CORE_DOCK_WITH_SUPPORT_EXPECTED_VOLUME_MM3
+            ),
+            "superseded_non_brep_estimate_mm3": (
+                CORE_DOCK_SUPPORT_SUPERSEDED_ESTIMATE_VOLUME_MM3
+            ),
+            "mass_claim": None,
+            "mass_blocker": "printed_material_density_and_condition_not_selected",
+            "boolean_primitives": {
+                "head_main_box_bounds_mm": {
+                    "x": [-32.0, 24.0], "y": [32.0, 40.0], "z": [0.5, 9.0]
+                },
+                "right_reinforcement_box_bounds_mm": {
+                    "x": [23.0, 27.0], "y": [32.0, 40.0], "z": [1.0, 8.5]
+                },
+                "right_reinforcement_overlap_mm3": 60.0,
+                "post_outer_box_bounds_mm": {
+                    "x": [-23.5, 19.5],
+                    "y": [38.0, 187.9154579377553],
+                    "z": [-16.75, 26.25],
+                },
+                "post_inner_passage_box_bounds_mm": {
+                    "x": [-19.5, 15.5],
+                    "y": [50.0, CORE_DOCK_SUPPORT_FLOOR_Y_MM],
+                    "z": [-12.75, 22.25],
+                },
+                "base_box_bounds_mm": {
+                    "x": [-52.0, 48.0],
+                    "y": [185.9154579377553, CORE_DOCK_SUPPORT_FLOOR_Y_MM],
+                    "z": [-35.25, 44.75],
+                },
+                "base_passage_box_bounds_mm": {
+                    "x": [-19.5, 15.5],
+                    "y": [185.9154579377553, CORE_DOCK_SUPPORT_FLOOR_Y_MM],
+                    "z": [-12.75, 22.25],
+                },
+                "head_post_positive_overlap_mm3_before_pockets": 731.0,
+                "head_post_positive_overlap_mm3_after_pockets": 716.8886804667261,
+                "post_base_positive_overlap_mm3": 1248.0,
+                "m4_clearance_holes": {
+                    "axis": [0.0, 1.0, 0.0],
+                    "centres_xz_mm": [[-25.0, 4.75], [21.0, 4.75]],
+                    "diameter_mm": CORE_DOCK_SUPPORT_M4_CLEARANCE_DIAMETER_MM,
+                    "y_bounds_mm": [31.9, 40.1],
+                },
+                "m4_nut_pockets": {
+                    "radius_mm": CORE_DOCK_SUPPORT_M4_NUT_POCKET_RADIUS_MM,
+                    "y_bounds_mm": [39.8, 46.5],
+                },
+                "m4_thread_tail_pockets": {
+                    "radius_mm": CORE_DOCK_SUPPORT_M4_TAIL_RADIUS_MM,
+                    "y_bounds_mm": [46.5, 51.2],
+                },
+                "m6_floor_holes": {
+                    "axis": [0.0, 1.0, 0.0],
+                    "centres_xz_mm": [
+                        [x_value, z_value]
+                        for x_value in CORE_DOCK_SUPPORT_BASE_HOLE_X_MM
+                        for z_value in CORE_DOCK_SUPPORT_BASE_HOLE_Z_MM
+                    ],
+                    "diameter_mm": CORE_DOCK_SUPPORT_M6_CLEARANCE_DIAMETER_MM,
+                    "through_y_bounds_mm": [185.8154579377553, 194.0154579377553],
+                    "countersink_major_diameter_mm": (
+                        CORE_DOCK_SUPPORT_M6_COUNTERSINK_DIAMETER_MM
+                    ),
+                    "countersink_depth_mm": CORE_DOCK_SUPPORT_M6_COUNTERSINK_DEPTH_MM,
+                    "countersink_included_angle_deg": 90.0,
+                },
+            },
+        },
+        "fasteners": {
+            "upper": {
+                "quantity": 2,
+                "nominal_selection": "ISO_10642_M4x25_A2",
+                "washer": "DIN_125_M4_OD9x0.8",
+                "nut": "DIN_985_M4_AF7x5",
+                "joint_grip_mm": 14.0,
+                "washer_plus_nut_mm": 5.8,
+                "nominal_thread_protrusion_mm": 5.2,
+                "analytic_envelope_volume_mm3": 1071.4870,
+                "source_authority": False,
+            },
+            "lower": {
+                "quantity": 4,
+                "nominal_selection": "ISO_10642_M6x20",
+                "required_tapped_engagement_below_base_mm": 12.0,
+                "pitch_mm": 1.0,
+                "analytic_envelope_volume_mm3": 2714.3361,
+                "substrate_authority": False,
+            },
+            "total_analytic_envelope_volume_mm3": 3785.823076873815,
+        },
+        "geometry_audit": {
+            "minimum_fixed_dock_distances_mm": {
+                "left_lower_rail": 4.031128874,
+                "right_lower_rail": 1.414213562,
+                "left_upper_rail": 1.118033989,
+                "right_upper_rail": 1.0,
+                "left_wall": 9.0,
+                "right_wall": 6.0,
+                "seating_stop": 0.0,
+                "positive_lock_cam": 30.35827729,
+            },
+            "seating_stop_zero_distance_semantic": "explicit_two_M4_bolted_joint",
+            "positive_overlap_with_forbidden_dock_features_mm3": 0.0,
+            "moving_source_minimum_distances_mm": {
+                "stock_tool_plate": 7.0,
+                "official_fixed_gripper_body": 7.632880447,
+                "robot_plate": 8.015609771,
+                "moving_jaw_continuous_aabb": 7.9002132,
+            },
+            "runtime_physical_brep_count_per_state": 21,
+            "runtime_brep_breakdown": {
+                "tool_side": 17,
+                "robot_plate": 1,
+                "magnets": 2,
+                "selected_slider_state": 1,
+            },
+            "moving_jaw_mesh_count": 1,
+            "legacy_report_count_with_both_mutually_exclusive_sliders_and_jaw": 23,
+            "full_arm_screen": {
+                "compiled_arm_geometry_count": 14,
+                "continuation_substeps_per_interval": 10,
+                "evaluated_transform_states": 3062,
+                "minimum_sampled_outer_aabb_lower_bound_mm": 14.717707794,
+                "compiled_chain_radius_bound_m": 0.547662487,
+                "maximum_subsample_sum_abs_dq_rad": 0.000823806519,
+                "between_sample_motion_bound_mm": 0.451445972,
+                "continuous_clearance_lower_bound_mm": 14.266261822,
+                "nearest_static_fixture_distance_mm": 27.832,
+                "runtime_recomputation_pending": True,
+            },
+        },
+        "tolerance_budget": {
+            "terms_mm": {
+                "dock_print": 0.20,
+                "support_print": 0.20,
+                "bolt_float": 0.15,
+                "seating_and_roll": 0.10,
+                "numeric": 0.05,
+            },
+            "total_mm": 0.70,
+            "minimum_nominal_fixed_clearance_mm": 1.0,
+            "residual_mm": 0.30,
+            "required_residual_mm": 0.20,
+            "dimensionally_qualified": False,
+        },
+        "ligaments_mm": {
+            "support_wall": 4.0,
+            "top_hole_left_x": 4.8,
+            "top_hole_right_x": 3.8,
+            "top_hole_minimum_z": 2.05,
+            "base_countersink_minimum_edge": 6.0,
+        },
+        "load_proxy": {
+            "scope": "screening_only_not_material_or_joint_certification",
+            "section_area_mm2": section_area,
+            "second_moment_mm4": section_second_moment,
+            "section_modulus_mm3": section_modulus,
+            "cantilever_length_mm": post_length,
+            "assumed_elastic_modulus_mpa": elastic_modulus_mpa,
+            "combined_moment_Nm": load_moment,
+            "bending_stress_mpa": bending_stress,
+            "tip_deflection_mm": tip_deflection,
+            "tip_rotation_deg": tip_rotation_deg,
+            "compression_force_N": compression_force,
+            "compression_stress_mpa": compression_force / section_area,
+            "cantilever_euler_load_kN": euler_load / 1000.0,
+            "euler_load_ratio": euler_load / compression_force,
+            "joint_force_proxies_N": {
+                "top_over_46mm": 92.450,
+                "top_over_15.5mm": 274.369,
+                "floor_over_56mm": 75.941,
+                "floor_over_76mm": 55.957,
+            },
+            "proof_target": "4.253_Nm_plus_reverse_insertion_load",
+        },
+        "blockers": blockers,
+        "release_ready": False,
     }
 
 
@@ -1681,6 +2125,112 @@ def robot_cam_relief() -> cq.Workplane:
     )
 
 
+def core_dock_support_primitives() -> dict[str, cq.Workplane]:
+    """Build every positive/cutting primitive in the floor-support BRep."""
+
+    floor_y = CORE_DOCK_SUPPORT_FLOOR_Y_MM
+    head_main = (
+        cq.Workplane("XY")
+        .box(56.0, 8.0, 8.5, centered=True)
+        .translate((-4.0, 36.0, 4.75))
+    )
+    right_reinforcement = (
+        cq.Workplane("XY")
+        .box(4.0, 8.0, 7.5, centered=True)
+        .translate((25.0, 36.0, 4.75))
+    )
+    post_outer = (
+        cq.Workplane("XY")
+        .box(43.0, 149.9154579377553, 43.0, centered=True)
+        .translate((-2.0, 112.95772896887765, 4.75))
+    )
+    post_inner_passage = (
+        cq.Workplane("XY")
+        .box(35.0, floor_y - 50.0, 35.0, centered=True)
+        .translate((-2.0, (50.0 + floor_y) / 2.0, 4.75))
+    )
+    hollow_post = post_outer.cut(post_inner_passage).clean()
+    base_outer = (
+        cq.Workplane("XY")
+        .box(100.0, 8.0, 80.0, centered=True)
+        .translate((-2.0, floor_y - 4.0, 4.75))
+    )
+    base_passage = (
+        cq.Workplane("XY")
+        .box(35.0, 8.2, 35.0, centered=True)
+        .translate((-2.0, floor_y - 4.0, 4.75))
+    )
+    hollow_base = base_outer.cut(base_passage).clean()
+    return {
+        "head_main": head_main,
+        "right_reinforcement": right_reinforcement,
+        "post_outer": post_outer,
+        "post_inner_passage": post_inner_passage,
+        "hollow_post": hollow_post,
+        "base_outer": base_outer,
+        "base_passage": base_passage,
+        "hollow_base": hollow_base,
+    }
+
+
+def core_dock_support_bracket() -> cq.Workplane:
+    """Build the separate, positively fastened floor-support pedestal."""
+
+    primitives = core_dock_support_primitives()
+    support = (
+        primitives["head_main"]
+        .union(primitives["right_reinforcement"])
+        .union(primitives["hollow_post"])
+        .union(primitives["hollow_base"])
+        .clean()
+    )
+    for x_value in CORE_DOCK_SUPPORT_TOP_HOLE_X_MM:
+        support = support.cut(
+            axis_cylinder(
+                CORE_DOCK_SUPPORT_M4_CLEARANCE_DIAMETER_MM,
+                8.2,
+                (x_value, 31.9, CORE_DOCK_SUPPORT_TOP_HOLE_Z_MM),
+                (0.0, 1.0, 0.0),
+            )
+        )
+        support = support.cut(
+            axis_cylinder(
+                2.0 * CORE_DOCK_SUPPORT_M4_NUT_POCKET_RADIUS_MM,
+                6.7,
+                (x_value, 39.8, CORE_DOCK_SUPPORT_TOP_HOLE_Z_MM),
+                (0.0, 1.0, 0.0),
+            )
+        )
+        support = support.cut(
+            axis_cylinder(
+                2.0 * CORE_DOCK_SUPPORT_M4_TAIL_RADIUS_MM,
+                4.7,
+                (x_value, 46.5, CORE_DOCK_SUPPORT_TOP_HOLE_Z_MM),
+                (0.0, 1.0, 0.0),
+            )
+        )
+    for x_value in CORE_DOCK_SUPPORT_BASE_HOLE_X_MM:
+        for z_value in CORE_DOCK_SUPPORT_BASE_HOLE_Z_MM:
+            support = support.cut(
+                axis_cylinder(
+                    CORE_DOCK_SUPPORT_M6_CLEARANCE_DIAMETER_MM,
+                    8.2,
+                    (x_value, CORE_DOCK_SUPPORT_FLOOR_Y_MM - 8.1, z_value),
+                    (0.0, 1.0, 0.0),
+                )
+            )
+            support = support.cut(
+                axis_cone(
+                    CORE_DOCK_SUPPORT_M6_COUNTERSINK_DIAMETER_MM,
+                    CORE_DOCK_SUPPORT_M6_CLEARANCE_DIAMETER_MM,
+                    CORE_DOCK_SUPPORT_M6_COUNTERSINK_DEPTH_MM,
+                    (x_value, CORE_DOCK_SUPPORT_FLOOR_Y_MM - 8.0, z_value),
+                    (0.0, 1.0, 0.0),
+                )
+            )
+    return support.clean()
+
+
 def core_dock_stop() -> cq.Workplane:
     """Build the physical core stop from its public collision contract."""
 
@@ -1699,6 +2249,20 @@ def core_dock_stop() -> cq.Workplane:
                 size[1] + 0.2,
                 (hole["x_mm"], hole["y_start_mm"], hole["z_mm"]),
                 tuple(hole["axis"]),
+            )
+        )
+    for countersink in spec["front_countersinks"]:
+        stop = stop.cut(
+            axis_cone(
+                countersink["major_diameter_mm"],
+                countersink["minor_diameter_mm"],
+                countersink["y_bounds_mm"][1] - countersink["y_bounds_mm"][0],
+                (
+                    countersink["x_mm"],
+                    countersink["y_bounds_mm"][0],
+                    countersink["z_mm"],
+                ),
+                tuple(countersink["axis"]),
             )
         )
     return stop.clean()
@@ -2222,6 +2786,7 @@ def write_core_manifest(output_dir: Path = EXPORT_DIR) -> dict[str, object]:
             "robot_plate_cam_relief": robot_cam_relief_contract(),
             "interface_hardware_fit": interface_hardware_fit_contract(),
             "core_dock_stop": core_dock_stop_spec(),
+            "core_dock_floor_support": core_dock_support_contract(),
             "stock_gripper_mount": stock_gripper_mount_contract(),
             "positive_lock_keyhole": positive_lock_keyhole_contract(),
             "positive_lock_cam": positive_lock_cam_contract(),
@@ -2530,6 +3095,10 @@ def write_bom() -> None:
         ("gripper retrofit", 4, "M3x6", "stock gripper to detachable tool plate", "standard fastener", "reuse original"),
         ("gripper retrofit", 1, "3-wire adapter harness", "GND/+12V/TTL; mating stock connectors", "electrical_pinout.csv", "new; do not cut stock arm harness"),
         ("dock", 1, "so101_passive_tool_dock", "printed PA12/PA-CF part", "exports/so101_passive_tool_dock.step", "new"),
+        ("dock", 1, "so101_core_dock_support_bracket", "printed PA12/PA-CF floor pedestal", "exports/so101_core_dock_support_bracket.step", "source checkpoint; do not fabricate before blockers close"),
+        ("dock", 2, "ISO 10642 M4x25 A2", "stop-to-support countersunk screw", "standard/vendor authority pending", "blocked"),
+        ("dock", 2, "DIN 125 M4 + DIN 985 M4", "washer and locknut for support head", "standard/vendor authority pending", "blocked"),
+        ("dock", 4, "ISO 10642 M6x20", "support-to-tapped-fixture countersunk screw", "standard/vendor and fixture-substrate authority pending", "blocked"),
     ]
     with (EXPORT_DIR / "bill_of_materials.csv").open("w", newline="") as handle:
         writer = csv.writer(handle)
@@ -2581,6 +3150,7 @@ def main(argv: list[str] | None = None) -> None:
     generic = tool_plate(stock_gripper=False)
     stock = tool_plate(stock_gripper=True)
     dock = tool_dock()
+    support = core_dock_support_bracket()
     slider = locking_slider()
     magnet = screw_on_magnet()
     target = steel_target()
@@ -2594,6 +3164,7 @@ def main(argv: list[str] | None = None) -> None:
     export_part(generic, "so101_tool_plate")
     export_part(stock, "so101_stock_gripper_tool_plate")
     export_part(dock, "so101_passive_tool_dock")
+    export_part(support, "so101_core_dock_support_bracket")
     export_part(slider, "so101_positive_lock_slider")
     slider_profile_path = EXPORT_DIR / "so101_positive_lock_slider_profile.dxf"
     cq.exporters.export(slider.faces(">Z"), str(slider_profile_path))
@@ -2624,6 +3195,7 @@ def main(argv: list[str] | None = None) -> None:
         "tool_plate": [TOOL_WIDTH, TOOL_HEIGHT, PLATE_THICKNESS],
         "collision_geometry_contract": {
             "core_dock_stop": core_dock_stop_spec(),
+            "core_dock_floor_support": core_dock_support_contract(),
             "stock_gripper_mount": stock_gripper_mount_contract(),
             "interface_hardware_fit": interface_hardware_fit_contract(),
             "positive_lock_keyhole": positive_lock_keyhole_contract(),
@@ -2704,6 +3276,7 @@ def main(argv: list[str] | None = None) -> None:
             "generic_tool_plate": round(generic.val().Volume() / 1000, 2),
             "stock_gripper_tool_plate": round(stock.val().Volume() / 1000, 2),
             "passive_dock": round(dock.val().Volume() / 1000, 2),
+            "core_dock_support_bracket": round(support.val().Volume() / 1000, 2),
             "lock_slider": round(slider.val().Volume() / 1000, 2),
         },
     }

@@ -330,6 +330,47 @@ Official references: [SO-101 assembly and motor IDs](https://huggingface.co/docs
   endpoints the spring is 9.4 mm locked and 6.4 mm unlocked: 3.6 mm maximum
   compression, leaving 0.4 mm margin to the catalog deflection limit.
 
+## Rolled core-dock floor-support source checkpoint
+
+The core interface now has a source-only installation contract for a
+`-87.21086925015224 deg` tool-view roll about the mating normal. Its published
+world pose is `(0.19082795371216685, 0.1330713713445051,
+0.1939154579377553) m`, quaternion `wxyz=(0.6440855284765126,
+-0.6440855284765125, 0.2918112952014223, -0.2918112952014225)`. In that frame,
+dock-local `-Y` is world-up. The exact 0–15 mm release continuation has 31
+rows at 0.5 mm, SHA-256
+`f30b0c178917945fcd45358710e5127302bc5240ca6cb4cdaa7f49d16c4f0293`,
+and a 0.2360031833 deg maximum joint step.
+
+The dock remains a separate one-solid BRep and bolts to a hollow floor
+pedestal. The pedestal is a one-solid 43 mm square / 35 mm square hollow post
+with 4 mm walls, a 100 x 80 x 8 mm floor plate, a 56 x 8 x 8.5 mm head, and a
+right bolt reinforcement. Its exact post/head and post/base positive overlaps
+are 716.8886804667 and 1248 mm3 after the hardware cuts. Two countersunk M4
+fasteners join the stop to the head; four countersunk M6 fasteners join the
+base to a future tapped fixture. The source BReps close at:
+
+- stop: 7379.269784962569 mm3;
+- complete dock: 21743.904784962568 mm3;
+- support: 162415.4180526403 mm3;
+- installed printed total: 184159.32283760287 mm3.
+
+The earlier 162308.50715898623 mm3 support estimate was not the volume of the
+specified Boolean construction and is superseded. No material mass is claimed
+until material condition and density are selected. The minimum fixed-feature
+clearance is 1.0 mm; the explicit 0.70 mm nominal tolerance allocation leaves
+0.30 mm arithmetic residue, but the print process is not qualified. The
+screening-only 1.5 GPa load proxy gives 4.25271213611 N.m combined moment,
+0.5720 MPa bending stress, and 0.1940 mm tip deflection; these are not material
+or joint allowables.
+
+This checkpoint intentionally does not regenerate STEP/STL, manifests,
+reports, or runtime placements. `release_ready` remains false pending sourced
+M4/M6 hardware, an authoritative tapped floor substrate, PA12
+modulus/strength/creep and tolerance evidence, anchor-strength tests, runtime
+full-arm regeneration, and physical cam/contact/friction and reverse-insertion
+validation.
+
 ## Generate, inspect, and simulate
 
 From the repository root:

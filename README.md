@@ -268,6 +268,29 @@ Official references: [SO-101 assembly and motor IDs](https://huggingface.co/docs
   endpoints the spring is 9.4 mm locked and 6.4 mm unlocked: 3.6 mm maximum
   compression, leaving 0.4 mm margin to the catalog deflection limit.
 
+## Rolled core-dock floor-support source checkpoint
+
+The magnetic core-dock source now publishes a `-87.21086925015224 deg`
+tool-view roll that makes dock-local `-Y` world-up, plus a deterministic
+31-row, 0.5 mm release continuation. Its canonical roster SHA-256 is
+`f30b0c178917945fcd45358710e5127302bc5240ca6cb4cdaa7f49d16c4f0293`.
+
+A separate one-solid hollow pedestal closes the dock to the floor through two
+M4 stop fasteners and four M6 floor fasteners. The exact source BRep volumes
+are 7379.269784962569 mm3 for the countersunk stop, 21743.904784962568 mm3 for
+the dock, and 162415.4180526403 mm3 for the support, for an installed printed
+total of 184159.32283760287 mm3. Positive material overlaps join the support
+head/post (716.8886804667 mm3) and post/base (1248 mm3); the zero-distance
+dock/support interface is explicitly bolted and is not a collision allowlist.
+The earlier 162308.50715898623 mm3 support estimate is superseded by the exact
+Boolean result.
+
+This is deliberately a source-only, fail-closed checkpoint. Generated CAD,
+manifests, reports, and runtime placements are stale. `release_ready` remains
+false until fastener and fixture-substrate authority, PA12 process/material
+allowables, anchor tests, runtime full-arm regeneration, and physical
+cam/contact/friction and reverse-insertion validation are complete.
+
 ## Generate, inspect, and simulate
 
 From the repository root:

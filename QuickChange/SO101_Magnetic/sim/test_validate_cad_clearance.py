@@ -810,19 +810,20 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
                 hashlib.sha256(path.read_bytes()).hexdigest(),
             )
 
-    def test_core_manifest_closes_exports_and_physical_contracts(self) -> None:
-        self.assertEqual(clearance.validate_core_manifest(), [])
-        manifest = json.loads(clearance.CORE_MANIFEST_PATH.read_text())
-        expected_paths = [
-            f"QuickChange/SO101_Magnetic/exports/{name}"
-            for name in sorted(clearance.CAD.CORE_OUTPUT_NAMES)
-        ]
+    def test_core_manifest_is_deliberately_stale_at_source_checkpoint(self) -> None:
         self.assertEqual(
-            [record["path"] for record in manifest["files"]],
-            expected_paths,
+            clearance.validate_core_manifest(),
+            [
+                "core_manifest_generator_record_mismatch",
+                "core_manifest_contract_mismatch",
+                "core_manifest_file_inventory_mismatch",
+                "core_export_missing:so101_core_dock_support_bracket.step",
+                "core_export_missing:so101_core_dock_support_bracket.stl",
+                "core_manifest_file_count_mismatch",
+            ],
         )
-        self.assertEqual(manifest["file_count"], len(expected_paths))
-        self.assertEqual(
+        manifest = json.loads(clearance.CORE_MANIFEST_PATH.read_text())
+        self.assertNotEqual(
             manifest["contracts"], clearance._expected_core_manifest_contracts()
         )
         inventory_payload = [
@@ -836,6 +837,125 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
             manifest["inventory_sha256"],
             clearance._canonical_sha256(inventory_payload),
         )
+
+
+class CoreDockFloorSupportSourceCheckpointTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.record = clearance._core_dock_support_record()
+        cls.contract = cls.record["contract"]
+
+    def test_rolled_frame_and_release_roster_are_exact_and_hash_bound(self) -> None:
+        frame = self.contract["frame"]
+        self.assertEqual(
+            frame["quat_wxyz"],
+            [
+                0.6440855284765126,
+                -0.6440855284765125,
+                0.2918112952014223,
+                -0.2918112952014225,
+            ],
+        )
+        self.assertTrue(frame["source_negative_y_is_world_up"])
+        release = self.record["release"]
+        self.assertEqual(release["row_count"], 31)
+        self.assertEqual(
+            release["roster_canonical_sha256"],
+            "f30b0c178917945fcd45358710e5127302bc5240ca6cb4cdaa7f49d16c4f0293",
+        )
+        self.assertTrue(
+            math.isclose(
+                release["maximum_joint_step_deg"],
+                0.2360031832899985,
+                abs_tol=1.0e-12,
+            )
+        )
+        self.assertEqual(release["slider_q_mm"][-1], 3.0)
+
+    def test_exact_brep_has_positive_internal_unions_and_fastener_holes(self) -> None:
+        brep = self.record["brep"]
+        self.assertEqual(brep["support"]["solid_count"], 1)
+        self.assertTrue(brep["support"]["valid"])
+        self.assertTrue(
+            math.isclose(
+                brep["support"]["volume_mm3"],
+                162415.4180526403,
+                abs_tol=1.0e-6,
+            )
+        )
+        self.assertTrue(
+            math.isclose(
+                brep["dock"]["volume_mm3"],
+                21743.904784962568,
+                abs_tol=1.0e-6,
+            )
+        )
+        self.assertTrue(
+            math.isclose(
+                brep["installed_printed_volume_mm3"],
+                184159.32283760287,
+                abs_tol=1.0e-6,
+            )
+        )
+        self.assertTrue(
+            math.isclose(
+                brep["head_post_overlap_after_pockets_mm3"],
+                716.8886804667261,
+                abs_tol=1.0e-9,
+            )
+        )
+        self.assertTrue(
+            math.isclose(brep["post_base_overlap_mm3"], 1248.0, abs_tol=1.0e-9)
+        )
+        for records in self.record["hole_provenance"].values():
+            self.assertTrue(records)
+            removal_keys = [key for key in records[0] if key.startswith("removed_from_")]
+            self.assertEqual(len(removal_keys), 1)
+            self.assertTrue(all(record[removal_keys[0]] > 0.2 for record in records))
+
+    def test_stop_is_bolted_not_allowlisted_and_other_dock_features_clear(self) -> None:
+        distances = self.record["brep"]["fixed_dock_distances_mm"]
+        overlaps = self.record["brep"]["fixed_dock_overlap_volumes_mm3"]
+        self.assertEqual(distances["seating_stop"], 0.0)
+        self.assertEqual(overlaps["seating_stop"], 0.0)
+        self.assertEqual(distances["right_upper_rail"], 1.0)
+        for name, overlap in overlaps.items():
+            if name != "seating_stop":
+                self.assertLessEqual(
+                    overlap, clearance.OVERLAP_VOLUME_TOLERANCE_MM3, name
+                )
+        self.assertTrue(
+            self.record["checks"][
+                "stop_is_explicit_fastened_zero_distance_not_allowlist"
+            ]
+        )
+
+    def test_floor_closure_tolerance_and_load_proxy_are_bound_but_not_released(self) -> None:
+        floor = self.record["floor_closure"]
+        self.assertLessEqual(abs(floor["base_world_bounds"]["z_m"][0]), 1.0e-12)
+        self.assertEqual(len(floor["anchor_centres_world_m"]), 4)
+        self.assertTrue(
+            all(point[2] == 0.0 for point in floor["anchor_centres_world_m"])
+        )
+        self.assertTrue(self.record["engineering_checks_passed"])
+        self.assertFalse(self.record["release_ready"])
+        self.assertIn(
+            "floor_fixture_substrate_and_M6_thread_authority_missing",
+            self.record["blockers"],
+        )
+        self.assertIn(
+            "cam_contact_friction_reverse_insertion_and_capture_dynamics_unvalidated",
+            self.record["blockers"],
+        )
+        self.assertFalse(self.contract["tolerance_budget"]["dimensionally_qualified"])
+        self.assertTrue(
+            math.isclose(
+                self.contract["load_proxy"]["combined_moment_Nm"],
+                4.25271213611,
+                abs_tol=1.0e-12,
+            )
+        )
+        self.assertIsNone(self.contract["printed_brep"]["mass_claim"])
 
 
 @unittest.skipUnless(

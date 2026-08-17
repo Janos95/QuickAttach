@@ -2271,11 +2271,555 @@ def _thresholds_record() -> dict[str, Any]:
     }
 
 
+def _core_dock_support_record() -> dict[str, Any]:
+    """Independently rebuild and audit the rolled dock floor support."""
+
+    contract = CAD.core_dock_support_contract()
+    support = CAD.core_dock_support_bracket().val()
+    dock = CAD.tool_dock().val()
+    stop = CAD.core_dock_stop().val()
+    primitives = CAD.core_dock_support_primitives()
+    head = (
+        primitives["head_main"]
+        .union(primitives["right_reinforcement"])
+        .clean()
+        .val()
+    )
+    post = primitives["hollow_post"].val()
+    base = primitives["hollow_base"].val()
+    fixed_features = _named_dock_features()
+    fixed_distances = {
+        name: float(support.distance(feature.val()))
+        for name, feature in sorted(fixed_features.items())
+    }
+    fixed_overlaps = {
+        name: _intersection_volume_mm3(support, feature.val())
+        for name, feature in sorted(fixed_features.items())
+    }
+
+    gross_support = (
+        primitives["head_main"]
+        .union(primitives["right_reinforcement"])
+        .union(primitives["hollow_post"])
+        .union(primitives["hollow_base"])
+        .clean()
+        .val()
+    )
+    m4_cut_records = []
+    for x_value in CAD.CORE_DOCK_SUPPORT_TOP_HOLE_X_MM:
+        cutter = (
+            CAD.axis_cylinder(
+                CAD.CORE_DOCK_SUPPORT_M4_CLEARANCE_DIAMETER_MM,
+                8.2,
+                (x_value, 31.9, CAD.CORE_DOCK_SUPPORT_TOP_HOLE_Z_MM),
+                (0.0, 1.0, 0.0),
+            )
+            .union(
+                CAD.axis_cylinder(
+                    2.0 * CAD.CORE_DOCK_SUPPORT_M4_NUT_POCKET_RADIUS_MM,
+                    6.7,
+                    (x_value, 39.8, CAD.CORE_DOCK_SUPPORT_TOP_HOLE_Z_MM),
+                    (0.0, 1.0, 0.0),
+                )
+            )
+            .union(
+                CAD.axis_cylinder(
+                    2.0 * CAD.CORE_DOCK_SUPPORT_M4_TAIL_RADIUS_MM,
+                    4.7,
+                    (x_value, 46.5, CAD.CORE_DOCK_SUPPORT_TOP_HOLE_Z_MM),
+                    (0.0, 1.0, 0.0),
+                )
+            )
+            .clean()
+            .val()
+        )
+        m4_cut_records.append(
+            {
+                "x_mm": x_value,
+                "removed_from_support_load_brep_mm3": (
+                    _intersection_volume_mm3(gross_support, cutter)
+                ),
+                "stop_and_support_axes_coincident": x_value in CAD.CORE_DOCK_STOP_HOLE_X,
+                "shank_radial_clearance_mm": (
+                    CAD.CORE_DOCK_SUPPORT_M4_CLEARANCE_DIAMETER_MM - 4.0
+                ) / 2.0,
+                "nominal_M4_head_radial_clearance_in_stop_mm": (
+                    CAD.CORE_DOCK_STOP_COUNTERSINK_DIAMETER - 8.0
+                ) / 2.0,
+                "nominal_washer_radial_clearance_in_nut_pocket_mm": (
+                    CAD.CORE_DOCK_SUPPORT_M4_NUT_POCKET_RADIUS_MM - 4.5
+                ),
+            }
+        )
+
+    m6_cut_records = []
+    for x_value in CAD.CORE_DOCK_SUPPORT_BASE_HOLE_X_MM:
+        for z_value in CAD.CORE_DOCK_SUPPORT_BASE_HOLE_Z_MM:
+            cutter = (
+                CAD.axis_cylinder(
+                    CAD.CORE_DOCK_SUPPORT_M6_CLEARANCE_DIAMETER_MM,
+                    8.2,
+                    (
+                        x_value,
+                        CAD.CORE_DOCK_SUPPORT_FLOOR_Y_MM - 8.1,
+                        z_value,
+                    ),
+                    (0.0, 1.0, 0.0),
+                )
+                .union(
+                    CAD.axis_cone(
+                        CAD.CORE_DOCK_SUPPORT_M6_COUNTERSINK_DIAMETER_MM,
+                        CAD.CORE_DOCK_SUPPORT_M6_CLEARANCE_DIAMETER_MM,
+                        CAD.CORE_DOCK_SUPPORT_M6_COUNTERSINK_DEPTH_MM,
+                        (
+                            x_value,
+                            CAD.CORE_DOCK_SUPPORT_FLOOR_Y_MM - 8.0,
+                            z_value,
+                        ),
+                        (0.0, 1.0, 0.0),
+                    )
+                )
+                .clean()
+                .val()
+            )
+            m6_cut_records.append(
+                {
+                    "x_mm": x_value,
+                    "z_mm": z_value,
+                    "removed_from_base_load_brep_mm3": (
+                        _intersection_volume_mm3(gross_support, cutter)
+                    ),
+                    "shank_radial_clearance_mm": (
+                        CAD.CORE_DOCK_SUPPORT_M6_CLEARANCE_DIAMETER_MM - 6.0
+                    ) / 2.0,
+                    "nominal_head_radial_clearance_mm": (
+                        CAD.CORE_DOCK_SUPPORT_M6_COUNTERSINK_DIAMETER_MM - 12.0
+                    ) / 2.0,
+                }
+            )
+
+    stop_spec = CAD.core_dock_stop_spec()
+    gross_stop = (
+        cq.Workplane("XY")
+        .box(*stop_spec["size_mm"], centered=True)
+        .translate(tuple(stop_spec["center_mm"]))
+        .val()
+    )
+    stop_cut_records = []
+    for x_value in CAD.CORE_DOCK_STOP_HOLE_X:
+        cutter = (
+            CAD.axis_cylinder(
+                CAD.CORE_DOCK_STOP_HOLE_DIAMETER,
+                6.2,
+                (x_value, CAD.CORE_DOCK_STOP_HOLE_Y_START, 4.75),
+                (0.0, 1.0, 0.0),
+            )
+            .union(
+                CAD.axis_cone(
+                    CAD.CORE_DOCK_STOP_COUNTERSINK_DIAMETER,
+                    CAD.CORE_DOCK_STOP_HOLE_DIAMETER,
+                    CAD.CORE_DOCK_STOP_COUNTERSINK_DEPTH,
+                    (x_value, CAD.CORE_DOCK_STOP_Y_MIN, 4.75),
+                    (0.0, 1.0, 0.0),
+                )
+            )
+            .clean()
+            .val()
+        )
+        stop_cut_records.append(
+            {
+                "x_mm": x_value,
+                "removed_from_stop_load_brep_mm3": (
+                    _intersection_volume_mm3(gross_stop, cutter)
+                ),
+            }
+        )
+
+    roster = CAD.core_dock_release_roster()
+    roster_digest = _canonical_sha256(roster)
+    steps_deg = [
+        math.degrees(
+            max(
+                abs(current - previous)
+                for current, previous in zip(
+                    roster[index]["q_rad"], roster[index - 1]["q_rad"]
+                )
+            )
+        )
+        for index in range(1, len(roster))
+    ]
+    slider_q_mm = [
+        max(
+            CAD.DOCK_CAM_PASSIVE_OPEN_Q_MAX_MM,
+            min(
+                CAD.SLIDER_TRAVEL,
+                CAD.DOCK_CAM_PASSIVE_OPEN_Q_MAX_MM
+                + 0.246875 * (row["withdrawal_mm"] - 2.0),
+            ),
+        )
+        for row in roster
+    ]
+
+    selected_moving_breps = _tool_side_components() + [
+        component
+        for component in _robot_side_components()
+        if component.state != "locked"
+    ]
+    seated_distances = {
+        component.name: float(component.shape.val().distance(support))
+        for component in selected_moving_breps
+    }
+    slider_path = []
+    for row, q_mm in zip(roster, slider_q_mm):
+        slider = CAD.locking_slider().translate(
+            (
+                q_mm,
+                -float(row["withdrawal_mm"]),
+                CAD.SLIDER_Z - CAD.PLATE_THICKNESS,
+            )
+        ).val()
+        slider_distance = float(slider.distance(support))
+        slider_path.append(
+            {
+                "withdrawal_mm": row["withdrawal_mm"],
+                "q_mm": q_mm,
+                "distance_mm": slider_distance,
+                "overlap_volume_mm3": (
+                    _intersection_volume_mm3(slider, support)
+                    if slider_distance <= NUMERIC_DISTANCE_TOLERANCE_MM
+                    else 0.0
+                ),
+            }
+        )
+    slider_maximum_segment_motion_mm = max(
+        math.hypot(
+            slider_path[index]["withdrawal_mm"]
+            - slider_path[index - 1]["withdrawal_mm"],
+            slider_path[index]["q_mm"] - slider_path[index - 1]["q_mm"],
+        )
+        for index in range(1, len(slider_path))
+    )
+    slider_continuous_clearance_mm = (
+        min(record["distance_mm"] for record in slider_path)
+        - slider_maximum_segment_motion_mm / 2.0
+    )
+    moving_max_y = max(
+        component.shape.val().BoundingBox().ymax
+        for component in selected_moving_breps
+    )
+    jaw = _moving_jaw_tool_mesh(float(_xml_calibration()["jaw_joint_range_rad"][0]))
+    jaw_bounds = tuple(
+        (float(jaw.vertices_mm[:, axis].min()), float(jaw.vertices_mm[:, axis].max()))
+        for axis in range(3)
+    )
+    jaw_aabb_distance = _bbox_distance(jaw_bounds, _bbox_tuple(support))
+
+    rotation = _quat_matrix_wxyz(CAD.CORE_DOCK_WORLD_QUAT_WXYZ)
+    origin = np.asarray(CAD.CORE_DOCK_WORLD_POS_M, dtype=np.float64)
+    base_corners_world = []
+    for x_value in (-52.0, 48.0):
+        for y_value in (185.9154579377553, CAD.CORE_DOCK_SUPPORT_FLOOR_Y_MM):
+            for z_value in (-35.25, 44.75):
+                base_corners_world.append(
+                    origin
+                    + rotation
+                    @ (np.asarray((x_value, y_value, z_value)) * 0.001)
+                )
+    base_corners_world_array = np.asarray(base_corners_world)
+    world_bounds = {
+        axis: [
+            float(base_corners_world_array[:, index].min()),
+            float(base_corners_world_array[:, index].max()),
+        ]
+        for index, axis in enumerate(("x_m", "y_m", "z_m"))
+    }
+    anchors_world = []
+    for x_value in CAD.CORE_DOCK_SUPPORT_BASE_HOLE_X_MM:
+        for z_value in CAD.CORE_DOCK_SUPPORT_BASE_HOLE_Z_MM:
+            point = origin + rotation @ (
+                np.asarray(
+                    (x_value, CAD.CORE_DOCK_SUPPORT_FLOOR_Y_MM, z_value)
+                )
+                * 0.001
+            )
+            anchors_world.append(
+                [0.0 if abs(float(value)) < 1.0e-12 else float(value) for value in point]
+            )
+
+    support_volume = _shape_volume_mm3(support)
+    dock_volume = _shape_volume_mm3(dock)
+    stop_volume = _shape_volume_mm3(stop)
+    support_solids = list(support.Solids())
+    dock_solids = list(dock.Solids())
+    expected_distances = contract["geometry_audit"][
+        "minimum_fixed_dock_distances_mm"
+    ]
+    distance_checks = {
+        name: math.isclose(
+            distance,
+            float(expected_distances[name]),
+            abs_tol=1.0e-9,
+        )
+        for name, distance in fixed_distances.items()
+    }
+    moving_expected = contract["geometry_audit"][
+        "moving_source_minimum_distances_mm"
+    ]
+    tolerance = contract["tolerance_budget"]
+    load = contract["load_proxy"]
+    checks = {
+        "support_one_valid_solid": len(support_solids) == 1 and support.isValid(),
+        "dock_one_valid_solid": len(dock_solids) == 1 and dock.isValid(),
+        "support_volume_exact": math.isclose(
+            support_volume,
+            CAD.CORE_DOCK_SUPPORT_EXPECTED_VOLUME_MM3,
+            abs_tol=1.0e-6,
+        ),
+        "dock_volume_exact": math.isclose(
+            dock_volume, 21743.904784962568, abs_tol=1.0e-6
+        ),
+        "installed_volume_exact": math.isclose(
+            support_volume + dock_volume,
+            CAD.CORE_DOCK_WITH_SUPPORT_EXPECTED_VOLUME_MM3,
+            abs_tol=1.0e-6,
+        ),
+        "stop_volume_exact": math.isclose(
+            stop_volume, float(stop_spec["expected_volume_mm3"]), abs_tol=1.0e-9
+        ),
+        "right_reinforcement_positive_overlap": math.isclose(
+            _intersection_volume_mm3(
+                primitives["head_main"].val(),
+                primitives["right_reinforcement"].val(),
+            ),
+            60.0,
+            abs_tol=1.0e-9,
+        ),
+        "head_post_positive_overlap": math.isclose(
+            _intersection_volume_mm3(support.intersect(head), post),
+            716.8886804667261,
+            abs_tol=1.0e-9,
+        ),
+        "post_base_positive_overlap": math.isclose(
+            _intersection_volume_mm3(support.intersect(post), base),
+            1248.0,
+            abs_tol=1.0e-9,
+        ),
+        "all_top_holes_remove_load_brep": all(
+            record["removed_from_support_load_brep_mm3"] > 0.2
+            and record["stop_and_support_axes_coincident"]
+            for record in m4_cut_records
+        ),
+        "all_stop_holes_remove_load_brep": all(
+            record["removed_from_stop_load_brep_mm3"] > 0.2
+            for record in stop_cut_records
+        ),
+        "all_floor_holes_remove_load_brep": all(
+            record["removed_from_base_load_brep_mm3"] > 0.2
+            for record in m6_cut_records
+        ),
+        "nominal_M4_stack_seats_with_thread_protrusion": (
+            all(
+                record["shank_radial_clearance_mm"] >= 0.2 - 1.0e-12
+                and record["nominal_M4_head_radial_clearance_in_stop_mm"]
+                >= 0.1 - 1.0e-12
+                and record[
+                    "nominal_washer_radial_clearance_in_nut_pocket_mm"
+                ]
+                >= 0.25 - 1.0e-12
+                for record in m4_cut_records
+            )
+            and math.isclose(
+                contract["fasteners"]["upper"]["joint_grip_mm"]
+                + contract["fasteners"]["upper"]["washer_plus_nut_mm"]
+                + contract["fasteners"]["upper"][
+                    "nominal_thread_protrusion_mm"
+                ],
+                25.0,
+                abs_tol=1.0e-12,
+            )
+        ),
+        "M6_through_and_90deg_countersink_geometry_closes": (
+            all(
+                record["shank_radial_clearance_mm"] >= 0.3 - 1.0e-12
+                for record in m6_cut_records
+            )
+            and math.isclose(
+                (
+                    CAD.CORE_DOCK_SUPPORT_M6_COUNTERSINK_DIAMETER_MM
+                    - CAD.CORE_DOCK_SUPPORT_M6_CLEARANCE_DIAMETER_MM
+                )
+                / 2.0,
+                CAD.CORE_DOCK_SUPPORT_M6_COUNTERSINK_DEPTH_MM,
+                abs_tol=1.0e-12,
+            )
+        ),
+        "remaining_stop_ligaments_are_positive": all(
+            float(value) >= 3.65
+            for value in stop_spec["remaining_ligaments_mm"].values()
+        ),
+        "both_support_ends_have_explicit_fasteners": (
+            contract["fasteners"]["upper"]["quantity"] == 2
+            and contract["fasteners"]["lower"]["quantity"] == 4
+        ),
+        "missing_anchor_provenance_is_fail_closed": (
+            contract["fasteners"]["lower"]["substrate_authority"] is False
+            and "floor_fixture_substrate_and_M6_thread_authority_missing"
+            in contract["blockers"]
+        ),
+        "forbidden_fixed_dock_overlap_zero": all(
+            overlap <= OVERLAP_VOLUME_TOLERANCE_MM3
+            for name, overlap in fixed_overlaps.items()
+            if name != "seating_stop"
+        ),
+        "fixed_clearances_match_exact_brep": all(distance_checks.values()),
+        "stop_is_explicit_fastened_zero_distance_not_allowlist": (
+            fixed_distances["seating_stop"] <= NUMERIC_DISTANCE_TOLERANCE_MM
+            and fixed_overlaps["seating_stop"] <= OVERLAP_VOLUME_TOLERANCE_MM3
+        ),
+        "release_roster_hash_exact": (
+            roster_digest == CAD.CORE_DOCK_RELEASE_ROSTER_SHA256
+        ),
+        "release_grid_exact": (
+            len(roster) == 31
+            and [row["withdrawal_mm"] for row in roster]
+            == [0.5 * index for index in range(31)]
+        ),
+        "release_joint_step_within_half_degree": max(steps_deg) <= 0.5,
+        "slider_law_exact": (
+            math.isclose(slider_q_mm[0], 0.05, abs_tol=1.0e-12)
+            and math.isclose(slider_q_mm[4], 0.05, abs_tol=1.0e-12)
+            and math.isclose(slider_q_mm[-1], 3.0, abs_tol=1.0e-12)
+        ),
+        "negative_y_is_world_up": np.allclose(
+            -rotation[:, 1], (0.0, 0.0, 1.0), atol=3.0e-12
+        ),
+        "moving_brep_count_exact": len(selected_moving_breps) == 21,
+        "moving_breps_are_ahead_of_support": (
+            moving_max_y < support.BoundingBox().ymin
+        ),
+        "all_21_moving_breps_clear_at_worst_case_seat": (
+            min(seated_distances.values()) >= MANUFACTURING_CLEARANCE_MM
+        ),
+        "moving_source_clearances_match": (
+            math.isclose(
+                seated_distances["stock_tool_plate"],
+                float(moving_expected["stock_tool_plate"]),
+                abs_tol=1.0e-9,
+            )
+            and math.isclose(
+                seated_distances["official_fixed_gripper_body"],
+                float(moving_expected["official_fixed_gripper_body"]),
+                abs_tol=1.0e-9,
+            )
+            and math.isclose(
+                seated_distances["robot_plate"],
+                float(moving_expected["robot_plate"]),
+                abs_tol=1.0e-9,
+            )
+            and math.isclose(
+                jaw_aabb_distance,
+                float(moving_expected["moving_jaw_continuous_aabb"]),
+                abs_tol=1.0e-6,
+            )
+        ),
+        "slider_capture_and_release_are_continuously_clear": (
+            slider_continuous_clearance_mm >= MANUFACTURING_CLEARANCE_MM
+            and all(
+                record["overlap_volume_mm3"] <= OVERLAP_VOLUME_TOLERANCE_MM3
+                for record in slider_path
+            )
+        ),
+        "tolerance_arithmetic_closes": (
+            math.isclose(
+                sum(tolerance["terms_mm"].values()),
+                tolerance["total_mm"],
+                abs_tol=1.0e-12,
+            )
+            and math.isclose(
+                tolerance["minimum_nominal_fixed_clearance_mm"]
+                - tolerance["total_mm"],
+                tolerance["residual_mm"],
+                abs_tol=1.0e-12,
+            )
+        ),
+        "load_proxy_is_finite": all(
+            math.isfinite(float(load[key]))
+            for key in (
+                "combined_moment_Nm",
+                "bending_stress_mpa",
+                "tip_deflection_mm",
+                "cantilever_euler_load_kN",
+            )
+        ),
+        "floor_plane_closes_at_world_z_zero": abs(world_bounds["z_m"][0]) <= 1.0e-12,
+        "all_anchor_axes_land_on_floor": all(point[2] == 0.0 for point in anchors_world),
+    }
+    return {
+        "contract": contract,
+        "brep": {
+            "support": {
+                "solid_count": len(support_solids),
+                "valid": support.isValid(),
+                "volume_mm3": support_volume,
+                "bounds": _bbox_record(_bbox_tuple(support)),
+            },
+            "dock": {
+                "solid_count": len(dock_solids),
+                "valid": dock.isValid(),
+                "volume_mm3": dock_volume,
+            },
+            "stop_volume_mm3": stop_volume,
+            "installed_printed_volume_mm3": support_volume + dock_volume,
+            "head_post_overlap_after_pockets_mm3": (
+                _intersection_volume_mm3(support.intersect(head), post)
+            ),
+            "post_base_overlap_mm3": (
+                _intersection_volume_mm3(support.intersect(post), base)
+            ),
+            "fixed_dock_distances_mm": fixed_distances,
+            "fixed_dock_overlap_volumes_mm3": fixed_overlaps,
+        },
+        "hole_provenance": {
+            "stop_m4": stop_cut_records,
+            "support_m4": m4_cut_records,
+            "base_m6": m6_cut_records,
+        },
+        "release": {
+            "roster_canonical_sha256": roster_digest,
+            "row_count": len(roster),
+            "maximum_joint_step_deg": max(steps_deg),
+            "slider_q_mm": slider_q_mm,
+        },
+        "moving_source_screen": {
+            "brep_count_per_selected_state": len(selected_moving_breps),
+            "seated_distances_mm": seated_distances,
+            "maximum_moving_y_mm": moving_max_y,
+            "jaw_aabb_distance_mm": jaw_aabb_distance,
+            "slider_path": slider_path,
+            "slider_maximum_segment_motion_mm": slider_maximum_segment_motion_mm,
+            "slider_continuous_clearance_mm": slider_continuous_clearance_mm,
+            "monotonic_release_argument": (
+                "all moving BReps have ymax<support ymin=32 mm; "
+                "dock-local -Y withdrawal can only increase separation"
+            ),
+        },
+        "floor_closure": {
+            "base_world_bounds": world_bounds,
+            "anchor_centres_world_m": anchors_world,
+        },
+        "checks": checks,
+        "engineering_checks_passed": all(checks.values()),
+        "blockers": list(contract["blockers"]),
+        "release_ready": False,
+    }
+
+
 def _expected_core_manifest_contracts() -> dict[str, Any]:
     return {
         "robot_plate_cam_relief": CAD.robot_cam_relief_contract(),
         "interface_hardware_fit": CAD.interface_hardware_fit_contract(),
         "core_dock_stop": CAD.core_dock_stop_spec(),
+        "core_dock_floor_support": CAD.core_dock_support_contract(),
         "stock_gripper_mount": CAD.stock_gripper_mount_contract(),
         "positive_lock_keyhole": CAD.positive_lock_keyhole_contract(),
         "positive_lock_cam": CAD.positive_lock_cam_contract(),
@@ -2304,13 +2848,18 @@ def validate_core_manifest() -> list[str]:
     observed_paths = [record.get("path") for record in records]
     if observed_paths != expected_paths:
         errors.append("core_manifest_file_inventory_mismatch")
-    expected_records = [
-        {
-            **_file_record(CORE_EXPORT_DIR / name),
-            "role": CAD._artifact_role(name),
-        }
-        for name in sorted(CAD.CORE_OUTPUT_NAMES)
-    ]
+    expected_records = []
+    for name in sorted(CAD.CORE_OUTPUT_NAMES):
+        path = CORE_EXPORT_DIR / name
+        if not path.is_file():
+            errors.append(f"core_export_missing:{name}")
+            continue
+        expected_records.append(
+            {
+                **_file_record(path),
+                "role": CAD._artifact_role(name),
+            }
+        )
     # _file_record emits path/bytes/hash; normalize key order only for clarity.
     expected_records = [
         {
@@ -2323,7 +2872,7 @@ def validate_core_manifest() -> list[str]:
     ]
     if records != expected_records:
         errors.append("core_manifest_file_record_mismatch")
-    if manifest.get("file_count") != len(expected_records):
+    if manifest.get("file_count") != len(CAD.CORE_OUTPUT_NAMES):
         errors.append("core_manifest_file_count_mismatch")
     inventory_payload = [
         {key: record[key] for key in ("path", "role", "bytes", "sha256")}
@@ -2449,6 +2998,7 @@ def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
     passive_cam = _passive_positive_lock_cam_record()
     mechanism_preservation = _mechanism_preservation_record()
     interface_hardware_fit = _interface_hardware_fit_record()
+    core_dock_floor_support = _core_dock_support_record()
     stop = _stop_envelope(
         tool_components,
         jaw_closed,
@@ -2478,6 +3028,12 @@ def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
         blockers.append("mechanism_preservation")
     if not interface_hardware_fit["passed"]:
         blockers.append("interface_hardware_fit_authority")
+    if not core_dock_floor_support["engineering_checks_passed"]:
+        blockers.append("core_dock_floor_support:engineering_checks")
+    blockers.extend(
+        f"core_dock_floor_support:{blocker}"
+        for blocker in core_dock_floor_support["blockers"]
+    )
     if core_manifest_errors:
         blockers.append("core_cad_manifest")
 
@@ -2522,6 +3078,7 @@ def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
         "passive_positive_lock_cam": passive_cam,
         "mechanism_preservation": mechanism_preservation,
         "interface_hardware_fit": interface_hardware_fit,
+        "core_dock_floor_support": core_dock_floor_support,
         "cam_actuation_diagnostics": cam_contact_results,
         "validation": {
             "pair_result_count": len(path_results),
@@ -2554,6 +3111,7 @@ def validate_report(report: dict[str, Any]) -> list[str]:
         "passive_positive_lock_cam",
         "mechanism_preservation",
         "interface_hardware_fit",
+        "core_dock_floor_support",
         "cam_actuation_diagnostics",
         "validation",
     }
@@ -2719,6 +3277,9 @@ def validate_report(report: dict[str, Any]) -> list[str]:
     expected_interface_fit = _interface_hardware_fit_record()
     if report.get("interface_hardware_fit") != expected_interface_fit:
         errors.append("interface_hardware_fit_recomputation_mismatch")
+    expected_floor_support = _core_dock_support_record()
+    if report.get("core_dock_floor_support") != expected_floor_support:
+        errors.append("core_dock_floor_support_recomputation_mismatch")
 
     expected_blockers = []
     for result in results:
@@ -2740,6 +3301,12 @@ def validate_report(report: dict[str, Any]) -> list[str]:
         expected_blockers.append("mechanism_preservation")
     if expected_interface_fit.get("passed") is not True:
         expected_blockers.append("interface_hardware_fit_authority")
+    if expected_floor_support.get("engineering_checks_passed") is not True:
+        expected_blockers.append("core_dock_floor_support:engineering_checks")
+    expected_blockers.extend(
+        f"core_dock_floor_support:{blocker}"
+        for blocker in expected_floor_support.get("blockers", [])
+    )
     if current_manifest_errors:
         expected_blockers.append("core_cad_manifest")
     expected_blockers = sorted(expected_blockers)
@@ -2755,6 +3322,7 @@ def validate_report(report: dict[str, Any]) -> list[str]:
         and expected_passive_cam.get("passed") is True
         and expected_mechanism.get("passed") is True
         and expected_interface_fit.get("passed") is True
+        and expected_floor_support.get("engineering_checks_passed") is True
         and not current_manifest_errors
         and not expected_blockers
     )
