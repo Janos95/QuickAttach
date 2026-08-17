@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0",
+  "part_number": "7983-1-15-20-75-14-11-0",
+  "provenance": {
+    "dimension_drawing": {
+      "url": "https://www.mill-max.com/sites/default/files/external/products/fullsize/2020-09/7983.svg",
+      "media_type": "image/svg+xml",
+      "bytes": 175611,
+      "sha256": "c97327d953663a0aa04ea389ee2d2be19372ffa21503f46e5cbbfb0fd2e890e8"
+    },
+    "press_fit_application_note": {
+      "url": "https://www.mill-max.com/sites/default/files/external/assets/2020-10/spring-loaded_solder-cup_pin_2.pdf",
+      "media_type": "application/pdf",
+      "bytes": 509252,
+      "sha256": "bbf4c414a11bd3355cde2bb25624c6736b61942964b2cbb3fc42c67c09e87adf"
+    },
+    "retrieval_timestamp_available": false,
+    "redistribution": {
+      "manufacturer_file_license_confirmed": false,
+      "manufacturer_files_vendored": false,
+      "semantics": "URLs, byte counts, SHA-256 digests, and dimension facts are retained; cached manufacturer artwork is not redistributed because redistribution terms were not established."
+    }
+  },
+  "drawing_units": "inch",
+  "standard_tolerances": {
+    "length_in": 0.006,
+    "diameter_in": 0.002,
+    "angle_deg": 2.0
+  },
+  "axial_dimensions_in": {
+    "maximum_exposed_plunger": 0.062,
+    "shell_top_to_shoulder_bottom": 0.132,
+    "shoulder_bottom_from_base": 0.180,
+    "shoulder_thickness": 0.028,
+    "knurl_length": 0.030,
+    "cup_reference_length": 0.145,
+    "cup_bore_length": 0.100,
+    "barb_axial_reference": 0.025,
+    "mid_stroke": 0.0275,
+    "full_stroke": 0.055,
+    "full_stroke_tolerance": 0.005
+  },
+  "reference_dimensions_in": {
+    "overall_parenthesized": 0.374
+  },
+  "diameters_in": {
+    "moving_plunger": 0.042,
+    "upper_guide": 0.068,
+    "upper_shell": 0.073,
+    "barb": 0.0765,
+    "shoulder": 0.083,
+    "knurl": 0.065,
+    "solder_cup_outer": 0.060,
+    "solder_cup_bore": 0.038
+  },
+  "press_fit_note_dimensions_in": {
+    "barb_recommended_hole": 0.0755,
+    "knurl_recommended_hole": 0.062,
+    "body_counterbore_minimum": 0.087
+  }
+}

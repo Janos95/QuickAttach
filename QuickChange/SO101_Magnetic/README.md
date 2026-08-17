@@ -239,7 +239,7 @@ adhesive and verify that the board remains flush.
 | 2/tool | tool | [McMaster 90318A720](https://www.mcmaster.com/90318A720/) | 316 SS ultra-low-profile shoulder screw; M3 thread, 4 mm shoulder diameter, 5 mm shoulder length, 6 x 1.3 mm head, 4 mm thread length |
 | 2/tool | tool | [DIN 934 M3 nut](https://accu-components.com/us/hexagon-nuts/7888-HPN-M3-A2) | 5.5 mm across flats x 2.4 mm; captive pull-stud retention |
 | 1 | robot | [MISUMI E-GUL4-10](https://us.misumi-ec.com/vona2/detail/110310903689/?HissuCode=E-GUL4-10) | 304 SS compression spring, OD 4 x 10 mm free, 0.98 N/mm, 4 mm permitted deflection |
-| 4 | robot | [Mill-Max 7983-1-15-20-75-14-11-0](https://www.mill-max.com/products/discrete-spring-loaded-pins/spring-loaded-pin-with-solder-cup-termination/7983/7983-1-15-20-75-14-11-0) | Solder-cup spring pin, 1.07 mm plunger, 1.40 ± 0.13 mm full stroke, 0.7 mm midstroke; official mounting options are a 1.92 mm barb hole or 1.58 mm knurl hole with at least a 2.21 mm body counterbore; 8 A max / 6.2 A derated catalog values |
+| 4 | robot | [Mill-Max 7983-1-15-20-75-14-11-0](https://www.mill-max.com/products/discrete-spring-loaded-pins/spring-loaded-pin-with-solder-cup-termination/7983/7983-1-15-20-75-14-11-0) | Solder-cup spring pin, drawing Ø1.0668 mm plunger and 1.397 ± 0.127 mm full stroke. This design selects solder-cup-first knurl retention: Ø1.58 mm land, separate Ø2.31 mm body counterbore, and shoulder hard-stop. Process fit/pull-out and installed reliability remain unqualified. |
 | 4 | gripper tool | [Ruthex RX-M3x5.7](https://www.ruthex.de/en/products/ruthex-gewindeeinsatz-m3-100-stuck-rx-m3x5-7-messing-gewindebuchsen) | M3 heat-set inserts for the original gripper-hole pattern |
 
 Standard fasteners per robot: four M3x10 socket-head wrist screws, two ISO
@@ -298,23 +298,34 @@ Official references: [SO-101 assembly and motor IDs](https://huggingface.co/docs
 - Laser- or waterjet-cut the working slider from 1.5-1.6 mm 304 stainless using
   `so101_positive_lock_slider_profile.dxf`. The slider STL is a fit-check model,
   not the working load-bearing part. Deburr and polish both faces and keyholes.
-- Do not fabricate the current straight pogo pilot as a released mounting
-  bore. The [Mill-Max press-fit application note](https://www.mill-max.com/sites/default/files/external/assets/2020-10/spring-loaded_solder-cup_pin_2.pdf)
-  defines distinct barb- and knurl-side holes, a body counterbore, and a
-  shoulder hard-stop. Choose one installation direction, rebuild the sectional
-  bore from that drawing, and qualify it with a fit coupon. A separate shoulder
-  datum is also required to make the GND pin first-mate by 0.20 mm.
+- The CAD now implements one specific Mill-Max mounting mode rather than a
+  straight pilot: insert the solder-cup side first through a Ø1.58 mm knurl
+  land into a separate Ø2.31 mm body counterbore, stopping the shoulder on
+  the signal-specific internal ledge. This is dimensionally reconstructed from
+  the official drawing and [press-fit application note](https://www.mill-max.com/sites/default/files/external/assets/2020-10/spring-loaded_solder-cup_pin_2.pdf),
+  but it is **not released for fabrication** until a process-specific coupon
+  establishes bore tolerance, insertion force, and pull-out retention. The
+  nominal GND shoulder datum is 0.20 mm ahead; four independent ±0.1524 mm
+  drawing-length terms yield a conservative worst-case lead of -0.4096 mm, so
+  first-mate is not qualified.
+- Manufacturer artwork is not redistributed because its redistribution terms
+  were not established. The derived ledger at
+  `source_authority/millmax_7983/authority_ledger.json` records the official
+  URLs, byte counts, SHA-256 digests, exact inch callouts, and this provenance
+  limitation. The reconstructed solids are official-drawing-derived nominal
+  collision envelopes, not official Mill-Max 3D CAD; deterministic generation
+  uses the checked-in ledger and never silently refetches mutable web content.
 - Keep magnets and steel targets flush to 0.05 mm below their mating faces so
   impact lands on printed face lands, not brittle nickel plating.
 - The current exact CAD leaves 0.0499 mm after its route interval and 0.20 mm
   clearance deductions using an unqualified local motion allowance. That
   number is arithmetic residue, not a sampled route or an SLS/FDM or
   catalog-part tolerance. Release remains blocked until a process/fit coupon
-  qualifies the combined error budget. The fixed pogo shell is merely an
-  illustrative envelope until the purchased-part drawing is reconstructed,
-  and the magnetic fastener seating/preload still needs an exact installation
-  record. Do not fabricate the electrical mounting interface from this
-  checkpoint.
+  qualifies the combined error budget. The pogo exterior is a conservative
+  nominal drawing-derived envelope with unqualified part/process tolerances;
+  knurl pull-out, installed electrical cycling, and magnetic fastener
+  seating/preload still need physical evidence. Do not fabricate the
+  electrical mounting interface from this checkpoint.
 - Check that the slider moves the full 3.0 mm without binding. At the current
   endpoints the spring is 9.4 mm locked and 6.4 mm unlocked: 3.6 mm maximum
   compression, leaving 0.4 mm margin to the catalog deflection limit.

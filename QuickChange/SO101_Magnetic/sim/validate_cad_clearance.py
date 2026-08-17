@@ -69,7 +69,7 @@ CAM_CLEARANCE_SWEEP_STEP_MM = 0.10
 AXIAL_CAPTURE_PRESEAT_MM = 15.0
 AXIAL_CAPTURE_SWEEP_STEP_MM = 0.10
 ROBOT_PLATE_REFERENCE_VOLUME_MM3 = 21130.316397677383
-ROBOT_PLATE_EXPECTED_SOURCE_VOLUME_MM3 = 20872.829782079527
+ROBOT_PLATE_EXPECTED_SOURCE_VOLUME_MM3 = 20838.321291343345
 ROBOT_PLATE_MINIMUM_FUNCTIONAL_LIGAMENT_MM = 5.0
 POSITIVE_LOCK_TRAVEL_SWEEP_STEP_MM = 0.05
 POSITIVE_LOCK_RELEASE_SLIDER_VOLUME_MM3 = 220.12468083955645
@@ -1214,6 +1214,363 @@ def _mechanism_preservation_record() -> dict[str, Any]:
     }
 
 
+def _pogo_first_mate_stack_is_consistent(
+    first_mate: dict[str, Any],
+) -> bool:
+    """Validate the conservative four-term shoulder-to-tip stack."""
+
+    expected_error = 4.0 * CAD.POGO_STANDARD_LENGTH_TOLERANCE
+    expected_lead = (
+        float(first_mate.get("nominal_ground_lead_mm", math.nan))
+        - expected_error
+    )
+    declared_lead = float(
+        first_mate.get("guaranteed_worst_case_ground_lead_mm", math.nan)
+    )
+    return bool(
+        first_mate.get("independent_standard_length_tolerance_term_count")
+        == 4
+        and math.isclose(
+            float(
+                first_mate.get(
+                    "independent_pin_pair_error_bound_mm",
+                    math.nan,
+                )
+            ),
+            expected_error,
+            abs_tol=1.0e-12,
+        )
+        and math.isclose(declared_lead, expected_lead, abs_tol=1.0e-12)
+        and first_mate.get("passed") is (declared_lead > 0.0)
+    )
+
+
+def _pogo_sectional_mount_record() -> dict[str, Any]:
+    """Independently recompute the drawing-derived 7983 sectional mount."""
+
+    contract = CAD.pogo_interface_authority_contract()
+    plate = CAD.robot_plate().val()
+    fixed_features = CAD.pogo_official_fixed_feature_solids()
+    fixed_shell = CAD.pogo_official_fixed_shell().val()
+    full_extension_plunger = CAD.pogo_official_plunger().val()
+    source_segments = contract["dimensioned_profile"][
+        "fixed_shell_collision_envelope_segments"
+    ]
+    segment_records: list[dict[str, Any]] = []
+    for source_segment in source_segments:
+        name = source_segment["name"]
+        feature = fixed_features[name].val()
+        box = feature.BoundingBox()
+        segment_records.append(
+            {
+                "name": name,
+                "source_z_bounds_mm": source_segment["z_bounds_mm"],
+                "recomputed_z_bounds_mm": [float(box.zmin), float(box.zmax)],
+                "source_outer_diameter_mm": source_segment[
+                    "outer_diameter_mm"
+                ],
+                "recomputed_outer_diameter_mm": float(
+                    max(box.xlen, box.ylen)
+                ),
+            }
+        )
+
+    pin_records: list[dict[str, Any]] = []
+    feature_semantics = {
+        "solder_cup": "clearance_through_retention_land",
+        "cup_to_knurl_transition_bound": (
+            "conservative_transition_overcoverage_inside_press_fit_region; "
+            "not retention-force evidence"
+        ),
+        "knurl": "intentional_radial_press_fit",
+        "shoulder": "zero-volume_axial_hard_stop",
+        "plunger_side_fixed_features": "clearance_inside_body_counterbore",
+    }
+    for index, ((x_value, y_value), signal) in enumerate(
+        zip(CAD.pogo_points(), CAD.CONTACT_SIGNALS), start=1
+    ):
+        datum = CAD.pogo_installed_datum(signal)
+        base_z = float(datum["base_z_mm"])
+        protrusion = (
+            CAD.POGO_GROUND_PROTRUSION
+            if signal == "GND"
+            else CAD.POGO_STANDARD_PROTRUSION
+        )
+        expected_shoulder_stop_z = (
+            CAD.PLATE_THICKNESS
+            + protrusion
+            - CAD.POGO_SHELL_TOP_TO_SHOULDER_BOTTOM
+            - CAD.POGO_MAX_EXPOSED_PLUNGER
+        )
+        installed_features = {
+            name: feature.translate((x_value, y_value, base_z)).val()
+            for name, feature in fixed_features.items()
+        }
+        feature_records = {
+            name: {
+                "semantics": feature_semantics[name],
+                "distance_to_printed_plate_mm": float(plate.distance(feature)),
+                "overlap_with_printed_plate_mm3": (
+                    _intersection_volume_mm3(plate, feature)
+                ),
+            }
+            for name, feature in installed_features.items()
+        }
+        mated_compression = float(datum["mated_compression_mm"])
+        mated_plunger = CAD.pogo_official_plunger(mated_compression).translate(
+            (x_value, y_value, base_z)
+        ).val()
+        target_pad = CAD.contact_pad().translate(
+            (
+                x_value,
+                y_value,
+                CAD.PLATE_THICKNESS - CAD.CONTACT_PAD_THICKNESS,
+            )
+        ).val()
+        shoulder = installed_features["shoulder"]
+        pin_records.append(
+            {
+                "index": index,
+                "signal": signal,
+                "centre_xy_mm": [x_value, y_value],
+                "base_z_mm": base_z,
+                "expected_shoulder_stop_plane_z_mm": expected_shoulder_stop_z,
+                "declared_shoulder_stop_plane_z_mm": datum[
+                    "shoulder_stop_plane_z_mm"
+                ],
+                "full_extension_tip_z_mm": datum[
+                    "full_extension_tip_z_mm"
+                ],
+                "target_pad_exposed_contact_plane_z_mm": datum[
+                    "target_pad_exposed_contact_plane_z_mm"
+                ],
+                "mated_compression_mm": mated_compression,
+                "nominal_remaining_against_catalog_minimum_stroke_mm": datum[
+                    "nominal_design_remaining_against_catalog_minimum_stroke_mm"
+                ],
+                "fixed_feature_records": feature_records,
+                "shoulder_to_hard_stop_distance_mm": float(
+                    shoulder.distance(plate)
+                ),
+                "shoulder_to_hard_stop_overlap_mm3": (
+                    _intersection_volume_mm3(shoulder, plate)
+                ),
+                "mated_plunger_tip_z_mm": float(
+                    mated_plunger.BoundingBox().zmax
+                ),
+                "mated_plunger_to_target_pad_distance_mm": float(
+                    mated_plunger.distance(target_pad)
+                ),
+                "mated_plunger_to_target_pad_overlap_mm3": (
+                    _intersection_volume_mm3(mated_plunger, target_pad)
+                ),
+                "mated_plunger_to_printed_plate_overlap_mm3": (
+                    _intersection_volume_mm3(mated_plunger, plate)
+                ),
+            }
+        )
+
+    first_mate = contract["first_mate_tolerance_stack"]
+    broad_fit_contract = CAD.interface_hardware_fit_contract()[
+        "pogo_target_pad_relief"
+    ]["selected_sectional_mount"]
+    part_only_fit = contract["selected_mounting_design"][
+        "nominal_and_part_tolerance_only_fit"
+    ]
+    ledger_record = _file_record(CAD.POGO_AUTHORITY_LEDGER_PATH)
+    envelope_box = fixed_shell.BoundingBox()
+    plunger_box = full_extension_plunger.BoundingBox()
+    checks = {
+        "derived_ledger_file_record_matches": bool(
+            contract["official_sources"]["derived_authority_ledger"]
+            == ledger_record
+        ),
+        "manufacturer_files_are_not_silently_vendored": bool(
+            contract["official_sources"]["redistribution"]
+            ["manufacturer_file_license_confirmed"]
+            is False
+            and contract["official_sources"]["redistribution"]
+            ["manufacturer_files_vendored"]
+            is False
+            and contract["official_sources"]
+            ["offline_manufacturer_byte_revalidation_available"]
+            is False
+        ),
+        "reference_overall_chain_closes": bool(
+            math.isclose(
+                CAD.POGO_OVERALL_REFERENCE_LENGTH,
+                CAD.POGO_SHOULDER_BOTTOM_FROM_BASE
+                + CAD.POGO_SHELL_TOP_TO_SHOULDER_BOTTOM
+                + CAD.POGO_MAX_EXPOSED_PLUNGER,
+                abs_tol=1.0e-12,
+            )
+        ),
+        "five_segment_contract_matches_constructed_envelope": bool(
+            len(segment_records) == 5
+            and all(
+                all(
+                    math.isclose(source, recomputed, abs_tol=1.0e-12)
+                    for source, recomputed in zip(
+                        record["source_z_bounds_mm"],
+                        record["recomputed_z_bounds_mm"],
+                    )
+                )
+                and math.isclose(
+                    record["source_outer_diameter_mm"],
+                    record["recomputed_outer_diameter_mm"],
+                    abs_tol=1.0e-12,
+                )
+                for record in segment_records
+            )
+        ),
+        "fixed_shell_is_one_valid_conservative_envelope": bool(
+            fixed_shell.isValid()
+            and len(fixed_shell.Solids()) == 1
+            and math.isclose(envelope_box.zmin, 0.0, abs_tol=1.0e-12)
+            and math.isclose(
+                envelope_box.zmax,
+                CAD.POGO_FIXED_SHELL_LENGTH,
+                abs_tol=1.0e-12,
+            )
+        ),
+        "moving_plunger_is_separate_prismatic_envelope": bool(
+            contract["dimensioned_profile"]["moving_plunger"][
+                "motion_kind"
+            ]
+            == "prismatic"
+            and full_extension_plunger.isValid()
+            and math.isclose(
+                plunger_box.zmin,
+                CAD.POGO_FIXED_SHELL_LENGTH,
+                abs_tol=1.0e-12,
+            )
+            and math.isclose(
+                plunger_box.zmax,
+                CAD.POGO_OVERALL_LENGTH,
+                abs_tol=1.0e-12,
+            )
+        ),
+        "installed_centres_and_shoulder_datums_match_geometry": bool(
+            pin_records
+            and all(
+                record["centre_xy_mm"]
+                == list(CAD.pogo_points()[record["index"] - 1])
+                and math.isclose(
+                    record["declared_shoulder_stop_plane_z_mm"],
+                    record["expected_shoulder_stop_plane_z_mm"],
+                    abs_tol=1.0e-12,
+                )
+                for record in pin_records
+            )
+        ),
+        "solder_cup_and_upper_body_clear_sectional_bore": bool(
+            pin_records
+            and all(
+                record["fixed_feature_records"]["solder_cup"]
+                ["overlap_with_printed_plate_mm3"]
+                <= OVERLAP_VOLUME_TOLERANCE_MM3
+                and record["fixed_feature_records"]
+                ["plunger_side_fixed_features"]
+                ["overlap_with_printed_plate_mm3"]
+                <= OVERLAP_VOLUME_TOLERANCE_MM3
+                for record in pin_records
+            )
+        ),
+        "knurl_has_intentional_radial_press_fit": bool(
+            pin_records
+            and all(
+                record["fixed_feature_records"]["knurl"]
+                ["overlap_with_printed_plate_mm3"]
+                > OVERLAP_VOLUME_TOLERANCE_MM3
+                for record in pin_records
+            )
+        ),
+        "shoulder_is_zero_volume_hard_stop": bool(
+            pin_records
+            and all(
+                record["shoulder_to_hard_stop_distance_mm"]
+                <= NUMERIC_DISTANCE_TOLERANCE_MM
+                and record["shoulder_to_hard_stop_overlap_mm3"]
+                <= OVERLAP_VOLUME_TOLERANCE_MM3
+                for record in pin_records
+            )
+        ),
+        "mated_plunger_touches_exposed_pad_without_overlap": bool(
+            pin_records
+            and all(
+                math.isclose(
+                    record["mated_plunger_tip_z_mm"],
+                    record["target_pad_exposed_contact_plane_z_mm"],
+                    abs_tol=1.0e-12,
+                )
+                and record["mated_plunger_to_target_pad_distance_mm"]
+                <= NUMERIC_DISTANCE_TOLERANCE_MM
+                and record["mated_plunger_to_target_pad_overlap_mm3"]
+                <= OVERLAP_VOLUME_TOLERANCE_MM3
+                and record["mated_plunger_to_printed_plate_overlap_mm3"]
+                <= OVERLAP_VOLUME_TOLERANCE_MM3
+                for record in pin_records
+            )
+        ),
+        "nominal_mated_compressions_fit_catalog_minimum_stroke": bool(
+            pin_records
+            and all(
+                record[
+                    "nominal_remaining_against_catalog_minimum_stroke_mm"
+                ]
+                > 0.0
+                for record in pin_records
+            )
+        ),
+        "sectional_bore_web_arithmetic_closes_and_is_positive": bool(
+            math.isclose(
+                broad_fit_contract["minimum_adjacent_counterbore_web_mm"],
+                CAD.CONTACT_PITCH - CAD.POGO_BODY_COUNTERBORE_DIAMETER,
+                abs_tol=1.0e-12,
+            )
+            and math.isclose(
+                broad_fit_contract["minimum_outer_y_counterbore_web_mm"],
+                CAD.ELECTRICAL_WING_HEIGHT / 2.0
+                - max(abs(value) for value in CAD.CONTACT_Y)
+                - CAD.POGO_BODY_COUNTERBORE_DIAMETER / 2.0,
+                abs_tol=1.0e-12,
+            )
+            and broad_fit_contract["minimum_adjacent_counterbore_web_mm"]
+            > 0.0
+            and broad_fit_contract["minimum_outer_y_counterbore_web_mm"]
+            > 0.0
+        ),
+        "part_only_fit_is_explicitly_not_process_or_pullout_authority": bool(
+            math.isclose(
+                part_only_fit["solder_cup_minimum_diametral_passage_mm"],
+                0.0052,
+                abs_tol=1.0e-12,
+            )
+            and part_only_fit["fabrication_hole_tolerance_included"]
+            is False
+            and part_only_fit["pullout_force_bound_included"] is False
+        ),
+        "first_mate_four_term_tolerance_arithmetic_is_fail_closed": bool(
+            _pogo_first_mate_stack_is_consistent(first_mate)
+            and first_mate["passed"] is False
+        ),
+    }
+    return {
+        "source_contract": contract,
+        "ledger_file_record": ledger_record,
+        "fixed_shell_bounds_mm": _bbox_tuple(fixed_shell),
+        "full_extension_plunger_bounds_mm": _bbox_tuple(
+            full_extension_plunger
+        ),
+        "segment_records": segment_records,
+        "pin_records": pin_records,
+        "checks": checks,
+        "geometry_passed": all(checks.values()),
+        "release_ready": False,
+        "blockers": list(contract["release_authority"]["blockers"]),
+    }
+
+
 INTERFACE_AUTHORITY_REQUIREMENTS = (
     (
         "fabrication_process_tolerance_qualified",
@@ -1221,7 +1578,7 @@ INTERFACE_AUTHORITY_REQUIREMENTS = (
     ),
     (
         "fixed_pogo_shell_exact_drawing_bound",
-        "fixed_pogo_shell_is_illustrative_reference_only",
+        "fixed_pogo_shell_drawing_bound_unresolved",
     ),
     (
         "pogo_mounting_sectional_bore_resolved",
@@ -1234,6 +1591,14 @@ INTERFACE_AUTHORITY_REQUIREMENTS = (
     (
         "ground_first_mate_tolerance_stack_qualified",
         "ground_first_mate_tolerance_stack_unqualified",
+    ),
+    (
+        "knurl_press_fit_process_and_pullout_qualified",
+        "knurl_press_fit_process_and_pullout_unqualified",
+    ),
+    (
+        "installed_electrical_cycle_reliability_qualified",
+        "installed_electrical_cycle_reliability_unqualified",
     ),
     (
         "magnetic_fastener_seating_and_preload_bound",
@@ -1252,25 +1617,77 @@ INTERFACE_AUTHORITY_REQUIREMENTS = (
 
 def _interface_authority_verdict(
     authority: dict[str, Any],
+    pogo_record: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Recompute authority blockers instead of trusting a declared verdict."""
+    """Recompute evidence flags and blockers; declarations cannot self-attest."""
+
+    if pogo_record is None:
+        pogo_record = _pogo_sectional_mount_record()
+    pogo_contract = pogo_record["source_contract"]
+    pogo_checks = pogo_record["checks"]
+    evidence_flags = {
+        "fabrication_process_tolerance_qualified": False,
+        "fixed_pogo_shell_exact_drawing_bound": bool(
+            pogo_checks[
+                "five_segment_contract_matches_constructed_envelope"
+            ]
+            and pogo_checks[
+                "fixed_shell_is_one_valid_conservative_envelope"
+            ]
+        ),
+        "pogo_mounting_sectional_bore_resolved": bool(
+            pogo_checks[
+                "solder_cup_and_upper_body_clear_sectional_bore"
+            ]
+            and pogo_checks["knurl_has_intentional_radial_press_fit"]
+            and pogo_checks["shoulder_is_zero_volume_hard_stop"]
+        ),
+        "ground_first_mate_shoulder_datum_resolved": bool(
+            pogo_checks[
+                "installed_centres_and_shoulder_datums_match_geometry"
+            ]
+            and pogo_checks[
+                "mated_plunger_touches_exposed_pad_without_overlap"
+            ]
+        ),
+        "ground_first_mate_tolerance_stack_qualified": bool(
+            pogo_contract["first_mate_tolerance_stack"]["passed"]
+        ),
+        # No coupon/pull-out record or installed cycle/contact-resistance
+        # artifact exists in this source checkpoint.  The source declaration
+        # cannot turn either absence into evidence.
+        "knurl_press_fit_process_and_pullout_qualified": False,
+        "installed_electrical_cycle_reliability_qualified": False,
+        "magnetic_fastener_seating_and_preload_bound": False,
+        "moving_interface_pair_route_recomputed": False,
+        "printed_interface_feature_strength_qualified": False,
+    }
 
     expected_blockers = [
         blocker
         for flag, blocker in INTERFACE_AUTHORITY_REQUIREMENTS
-        if authority.get(flag) is not True
+        if evidence_flags[flag] is not True
     ]
     if (
         authority.get("fabrication_process_tolerance_qualified") is True
         and authority.get("qualified_combined_error_limit_mm") is None
     ):
         expected_blockers.append("qualified_combined_error_limit_missing")
-    computed_release_ready = not expected_blockers
+    declared_flags_match_evidence = all(
+        authority.get(flag) is value
+        for flag, value in evidence_flags.items()
+    )
+    computed_release_ready = bool(
+        not expected_blockers and declared_flags_match_evidence
+    )
     return {
+        "evidence_flags": evidence_flags,
         "expected_blockers": expected_blockers,
         "computed_release_ready": computed_release_ready,
+        "declared_flags_match_evidence": declared_flags_match_evidence,
         "declaration_consistent": bool(
-            authority.get("blockers") == expected_blockers
+            declared_flags_match_evidence
+            and authority.get("blockers") == expected_blockers
             and authority.get("release_ready") is computed_release_ready
         ),
     }
@@ -1288,10 +1705,13 @@ def _interface_hardware_fit_record() -> dict[str, Any]:
         (0.0, 0.0, -CAD.PLATE_THICKNESS)
     ).val()
     tool = tool_native
+    pogo_sectional_mount = _pogo_sectional_mount_record()
 
     pad_records: list[dict[str, Any]] = []
     for index, (x_value, y_value) in enumerate(CAD.pogo_points(), start=1):
-        pad = CAD.contact_pad().translate((x_value, y_value, -0.05)).val()
+        pad = CAD.contact_pad().translate(
+            (x_value, y_value, -CAD.CONTACT_PAD_THICKNESS)
+        ).val()
         distance = float(robot.distance(pad))
         pad_records.append(
             {
@@ -1301,33 +1721,6 @@ def _interface_hardware_fit_record() -> dict[str, Any]:
                 "overlap_volume_mm3": _intersection_volume_mm3(robot, pad),
                 "static_residual_after_unqualified_motion_allowance_mm": (
                     distance - motion_allowance
-                ),
-            }
-        )
-
-    fixed_shell_reference_records: list[dict[str, Any]] = []
-    for index, ((x_value, y_value), signal) in enumerate(
-        zip(CAD.pogo_points(), CAD.CONTACT_SIGNALS), start=1
-    ):
-        protrusion = (
-            CAD.POGO_GROUND_PROTRUSION
-            if signal == "GND"
-            else CAD.POGO_STANDARD_PROTRUSION
-        )
-        installed_z = CAD.PLATE_THICKNESS + protrusion - CAD.POGO_OVERALL_LENGTH
-        shell = CAD.pogo_reference_fixed_shell().translate(
-            (x_value, y_value, installed_z)
-        ).val()
-        fixed_shell_reference_records.append(
-            {
-                "index": index,
-                "signal": signal,
-                "installed_z_mm": installed_z,
-                "reference_overlap_with_printed_plate_mm3": (
-                    _intersection_volume_mm3(shell, robot_native)
-                ),
-                "semantics": (
-                    "illustrative_reference_overlap_not_exact_or_conservative_part_authority"
                 ),
             }
         )
@@ -1486,14 +1879,16 @@ def _interface_hardware_fit_record() -> dict[str, Any]:
             + NUMERIC_DISTANCE_TOLERANCE_MM
             >= required
         ),
-        "official_plunger_diameter_is_smaller_than_legacy_reference_pilot": bool(
-            CAD.POGO_PLUNGER_DIAMETER
-            < CAD.POGO_LEGACY_REFERENCE_PILOT_DIAMETER
+        "pogo_sectional_mount_geometry_passes": bool(
+            pogo_sectional_mount["geometry_passed"]
         ),
     }
     geometry_passed = all(geometry_checks.values())
     release_authority = contract["release_authority"]
-    authority_verdict = _interface_authority_verdict(release_authority)
+    authority_verdict = _interface_authority_verdict(
+        release_authority,
+        pogo_sectional_mount,
+    )
     authority_blockers = list(authority_verdict["expected_blockers"])
     authority_passed = bool(
         authority_verdict["computed_release_ready"]
@@ -1503,7 +1898,7 @@ def _interface_hardware_fit_record() -> dict[str, Any]:
     return {
         "source_contract": contract,
         "pogo_target_pad_records": pad_records,
-        "fixed_pogo_shell_reference_records": fixed_shell_reference_records,
+        "pogo_sectional_mount": pogo_sectional_mount,
         "magnetic_hardware_records": magnetic_records,
         "fixed_stud_head_records": stud_records,
         "geometry_checks": geometry_checks,
