@@ -786,6 +786,37 @@ def _add_equalities(root: ET.Element) -> None:
     )
 
 
+def _add_pogo_contact_pairs(root: ET.Element) -> None:
+    """Install exact thin-contact pairs without adding an air-gap contact.
+
+    Pair identity remains exact per tool and signal; wrong-signal contacts are
+    neither generated nor accepted by the controller's bus audit.  A pogo
+    crown is an axial electrical contact, so the pair is frictionless
+    (``condim=1``); this prevents tangential rack motion from being converted
+    into spurious spring-pin retraction while retaining a zero physical gap.
+    """
+
+    contact = root.find("contact")
+    if contact is None:
+        contact = ET.SubElement(root, "contact")
+    for tool in ALL_TOOL_IDS:
+        for signal in qc.SIGNALS:
+            ET.SubElement(
+                contact,
+                "pair",
+                {
+                    "name": f"{tool}_{signal}_pogo_pad_pair",
+                    "geom1": f"qc_col_pogo_{signal}",
+                    "geom2": f"{tool}_pad_{signal}_collision",
+                    "condim": "1",
+                    "margin": "0",
+                    "gap": "0",
+                    "solref": "0.0005 1",
+                    "solimp": "0.99 0.9999 0.00001",
+                },
+            )
+
+
 def _build_xml_and_assets() -> tuple[str, dict[str, bytes]]:
     robot_root = ET.parse(ROBOT_XML).getroot()
     scene_root = ET.parse(SCENE_XML).getroot()
@@ -819,6 +850,7 @@ def _build_xml_and_assets() -> tuple[str, dict[str, bytes]]:
             tool,
             stock_gripper if tool == "gripper" else None,
         )
+    _add_pogo_contact_pairs(robot_root)
     _add_workcell(worldbody, equality)
     _add_equalities(robot_root)
     names = qc.collision_geom_names(robot_root)

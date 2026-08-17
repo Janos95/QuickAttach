@@ -195,7 +195,10 @@ def add_robot_quick_change_interface(wrist_output: ET.Element) -> ET.Element:
                     # reach and 0.675 mm P/D/ID reach beyond the mating plane.
                     # Continuous dynamics then settles near 0.858/0.662 mm,
                     # leaving a real preload instead of numerical tangency.
-                    f"{0.009575 if signal == 'ground' else 0.009475:.7f}"
+                    # The shorter signal pins use the same rounded crown but
+                    # a 0.1 mm lower body datum, preserving their calibrated
+                    # 0.675 mm reach.
+                    f"{0.009575 if signal == 'ground' else 0.009375:.7f}"
                 ),
             },
         )
@@ -213,13 +216,16 @@ def add_robot_quick_change_interface(wrist_output: ET.Element) -> ET.Element:
                 "springref": "0",
             },
         )
-        half_height = 0.0008 if signal == "ground" else 0.0007
+        # A rounded pogo crown provides a stable axial contact witness.  The
+        # former flat-ended cylinder met the larger pad exactly edge-on, so
+        # MuJoCo could report only transient radial edge contacts while the
+        # rigid interface remained aligned.
         _geom(
             body,
             name=f"qc_col_pogo_{signal}",
-            geom_type="cylinder",
+            geom_type="sphere",
             pos=(0.0, 0.0, 0.0),
-            size=(0.0008, half_height),
+            size=(0.0008,),
             rgba="1 0.62 0.05 1",
             solref="0.0005 1",
             solimp="0.99 0.9999 0.00001",
