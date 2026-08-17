@@ -149,6 +149,32 @@ DOCK_CAM_Y_MIN = -16.0
 DOCK_CAM_Y_MAX = 0.0
 DOCK_CAM_Z_MIN = -4.15
 DOCK_CAM_THICKNESS = 2.2
+
+# The planar X/Y wedge cannot open the slider during the final axial approach:
+# its first contact occurs after the stud heads reach the slider plane.  A
+# narrow, integral 45-degree lead acts only on the exposed slider tab.  The
+# robot follows the published +0.20 -> 0.00 mm lateral recenter while the lead
+# lowers the slider from locked to the 0.05 mm passive cam-clearance state.
+# All coordinates remain in the dock-local millimetre frame.
+DOCK_CAM_AXIAL_LEAD_X_INNER_LOWER = 27.25
+DOCK_CAM_AXIAL_LEAD_X_INNER_UPPER = DOCK_CAM_X_INNER
+DOCK_CAM_AXIAL_LEAD_X_OUTER = 29.0
+DOCK_CAM_AXIAL_LEAD_Y_MIN = 0.0
+DOCK_CAM_AXIAL_LEAD_Y_MAX = 2.0
+DOCK_CAM_AXIAL_LEAD_Z_LOWER = -9.6
+DOCK_CAM_AXIAL_LEAD_Z_UPPER = -6.4
+DOCK_CAM_AXIAL_HOLD_Z_UPPER = DOCK_CAM_Z_MIN
+# A 1 mm outer root bridge overlaps both source solids while remaining beyond
+# the locked tab's x=27 mm maximum.  This makes the printed cam one OCCT solid
+# without delaying or obstructing the -Y passive-return path.
+DOCK_CAM_AXIAL_ROOT_X_BOUNDS = (28.0, 29.0)
+DOCK_CAM_AXIAL_ROOT_Y_BOUNDS = (-1.0, 1.0)
+DOCK_CAM_AXIAL_ROOT_Z_BOUNDS = (-4.65, -3.65)
+DOCK_CAM_CAPTURE_RECENTER_START_PRESEAT_MM = 6.4
+DOCK_CAM_CAPTURE_RECENTER_END_PRESEAT_MM = 3.2
+DOCK_CAM_HEAD_ENTRY_PRESEAT_MM = 3.1
+DOCK_CAM_PASSIVE_OPEN_Q_MAX_MM = DOCK_CAM_X_INNER - SLIDER_TAB_END_X
+DOCK_CAM_PASSIVE_RELEASE_INITIAL_DWELL_MM = 2.0
 ROBOT_CAM_CLEARANCE_MM = 0.50
 ROBOT_CAM_RELIEF_X_MAX = ROBOT_WIDTH / 2.0 + 1.0
 ROBOT_CAM_RELIEF_X_MIN = DOCK_CAM_X_INNER - ROBOT_CAM_CLEARANCE_MM
@@ -590,6 +616,267 @@ def robot_cam_relief_contract() -> dict[str, object]:
     }
 
 
+def positive_lock_cam_capture_lateral_offset_mm(preseat_mm: float) -> float:
+    """Return the source route's dock-local +X offset at a preseated gap."""
+
+    if not math.isfinite(preseat_mm) or preseat_mm < 0.0:
+        raise ValueError("preseat_mm must be finite and nonnegative")
+    start = DOCK_CAM_CAPTURE_RECENTER_START_PRESEAT_MM
+    end = DOCK_CAM_CAPTURE_RECENTER_END_PRESEAT_MM
+    if preseat_mm >= start:
+        return ROBOT_CAM_GUIDED_APPROACH_OFFSET_MM
+    if preseat_mm <= end:
+        return 0.0
+    return ROBOT_CAM_GUIDED_APPROACH_OFFSET_MM * (
+        (preseat_mm - end) / (start - end)
+    )
+
+
+def positive_lock_cam_capture_q_max_mm(preseat_mm: float) -> float:
+    """Return the frictionless cam-contact upper bound on slider travel.
+
+    ``q=0`` is the nominal unlocked datum.  The cam's intentional 0.05 mm
+    tab clearance lets the passive equilibrium sit at ``q=0.05`` while still
+    remaining inside the released keyhole-entry clearance.
+    """
+
+    lateral = positive_lock_cam_capture_lateral_offset_mm(preseat_mm)
+    if preseat_mm >= DOCK_CAM_CAPTURE_RECENTER_START_PRESEAT_MM:
+        return SLIDER_TRAVEL
+    if preseat_mm <= DOCK_CAM_CAPTURE_RECENTER_END_PRESEAT_MM:
+        return DOCK_CAM_PASSIVE_OPEN_Q_MAX_MM
+    return max(
+        DOCK_CAM_PASSIVE_OPEN_Q_MAX_MM,
+        min(SLIDER_TRAVEL, preseat_mm - 3.15 - lateral),
+    )
+
+
+def positive_lock_cam_release_q_max_mm(withdrawal_mm: float) -> float:
+    """Return the seated X/Y wedge's passive q envelope during -Y exit."""
+
+    if not math.isfinite(withdrawal_mm) or withdrawal_mm < 0.0:
+        raise ValueError("withdrawal_mm must be finite and nonnegative")
+    wedge_slope = (DOCK_CAM_X_OUTER_MIN - DOCK_CAM_X_INNER) / (
+        DOCK_CAM_Y_MAX - DOCK_CAM_Y_MIN
+    )
+    return max(
+        DOCK_CAM_PASSIVE_OPEN_Q_MAX_MM,
+        min(
+            SLIDER_TRAVEL,
+            DOCK_CAM_PASSIVE_OPEN_Q_MAX_MM
+            + wedge_slope
+            * (withdrawal_mm - DOCK_CAM_PASSIVE_RELEASE_INITIAL_DWELL_MM),
+        ),
+    )
+
+
+def positive_lock_cam_contract() -> dict[str, object]:
+    """Return the complete, executable passive-cam source contract."""
+
+    lead_run = (
+        DOCK_CAM_AXIAL_LEAD_X_INNER_LOWER
+        - DOCK_CAM_AXIAL_LEAD_X_INNER_UPPER
+    )
+    lead_rise = DOCK_CAM_AXIAL_LEAD_Z_UPPER - DOCK_CAM_AXIAL_LEAD_Z_LOWER
+    land_width = DOCK_CAM_AXIAL_LEAD_Y_MAX - DOCK_CAM_AXIAL_LEAD_Y_MIN
+    lower_wall = (
+        DOCK_CAM_AXIAL_LEAD_X_OUTER
+        - DOCK_CAM_AXIAL_LEAD_X_INNER_LOWER
+    )
+    upper_wall = (
+        DOCK_CAM_AXIAL_LEAD_X_OUTER
+        - DOCK_CAM_AXIAL_LEAD_X_INNER_UPPER
+    )
+    lead_volume = land_width * lead_rise * (lower_wall + upper_wall) / 2.0
+    hold_volume = (
+        land_width
+        * upper_wall
+        * (DOCK_CAM_AXIAL_HOLD_Z_UPPER - DOCK_CAM_AXIAL_LEAD_Z_UPPER)
+    )
+    root_widths = [
+        bounds[1] - bounds[0]
+        for bounds in (
+            DOCK_CAM_AXIAL_ROOT_X_BOUNDS,
+            DOCK_CAM_AXIAL_ROOT_Y_BOUNDS,
+            DOCK_CAM_AXIAL_ROOT_Z_BOUNDS,
+        )
+    ]
+    root_gross_volume = math.prod(root_widths)
+    # The symmetric bridge overlaps the hold below z=-4.15/y>0 and the main
+    # wedge above z=-4.15/y<0 by equal 0.5 mm3 volumes.
+    root_overlap_each = 0.5
+    root_net_added_volume = root_gross_volume - 2.0 * root_overlap_each
+    lead_angle_deg = math.degrees(math.atan2(lead_rise, lead_run))
+    spring_locked_length = (
+        -LOCK_STUD_X
+        - SLIDER_LOBE_RADIUS
+        + SLIDER_TRAVEL
+        - RETURN_SPRING_FIXED_X
+    )
+    spring_unlocked_length = spring_locked_length - SLIDER_TRAVEL
+    maximum_spring_force = (
+        RETURN_SPRING_FREE_LENGTH - spring_unlocked_length
+    ) * RETURN_SPRING_RATE_N_PER_MM
+    maximum_cam_normal_force = maximum_spring_force / math.cos(
+        math.radians(lead_angle_deg)
+    )
+    contact_face_area = land_width * math.hypot(lead_run, lead_rise)
+    wedge_slope = (DOCK_CAM_X_OUTER_MIN - DOCK_CAM_X_INNER) / (
+        DOCK_CAM_Y_MAX - DOCK_CAM_Y_MIN
+    )
+    q3_release_tangent = DOCK_CAM_PASSIVE_RELEASE_INITIAL_DWELL_MM + (
+        SLIDER_TRAVEL - DOCK_CAM_PASSIVE_OPEN_Q_MAX_MM
+    ) / wedge_slope
+    ramp_contact_start = (
+        SLIDER_TRAVEL + 2.95
+    ) / (1.0 - ROBOT_CAM_GUIDED_APPROACH_OFFSET_MM / lead_rise)
+    return {
+        "schema_version": "1.0",
+        "frame": "dock_local_mm",
+        "construction": (
+            "union_main_xy_wedge_ruled_axial_lead_hold_finger"
+        ),
+        "main_xy_wedge": {
+            "polygon_xy_mm": [
+                [DOCK_CAM_X_OUTER_MIN, DOCK_CAM_Y_MIN],
+                [DOCK_CAM_X_OUTER_MAX, DOCK_CAM_Y_MIN],
+                [DOCK_CAM_X_OUTER_MAX, DOCK_CAM_Y_MAX],
+                [DOCK_CAM_X_INNER, DOCK_CAM_Y_MAX],
+            ],
+            "z_bounds_mm": [
+                DOCK_CAM_Z_MIN,
+                DOCK_CAM_Z_MIN + DOCK_CAM_THICKNESS,
+            ],
+        },
+        "axial_lead": {
+            "kind": "ruled_loft_between_rectangles",
+            "lower_rectangle_mm": {
+                "x": [
+                    DOCK_CAM_AXIAL_LEAD_X_INNER_LOWER,
+                    DOCK_CAM_AXIAL_LEAD_X_OUTER,
+                ],
+                "y": [DOCK_CAM_AXIAL_LEAD_Y_MIN, DOCK_CAM_AXIAL_LEAD_Y_MAX],
+                "z": DOCK_CAM_AXIAL_LEAD_Z_LOWER,
+            },
+            "upper_rectangle_mm": {
+                "x": [
+                    DOCK_CAM_AXIAL_LEAD_X_INNER_UPPER,
+                    DOCK_CAM_AXIAL_LEAD_X_OUTER,
+                ],
+                "y": [DOCK_CAM_AXIAL_LEAD_Y_MIN, DOCK_CAM_AXIAL_LEAD_Y_MAX],
+                "z": DOCK_CAM_AXIAL_LEAD_Z_UPPER,
+            },
+            "run_mm": lead_run,
+            "rise_mm": lead_rise,
+            "contact_angle_deg": lead_angle_deg,
+            "minimum_wall_mm": lower_wall,
+            "contact_land_width_mm": land_width,
+            "volume_mm3": lead_volume,
+        },
+        "hold_finger": {
+            "kind": "axis_aligned_box",
+            "bounds_mm": {
+                "x": [
+                    DOCK_CAM_AXIAL_LEAD_X_INNER_UPPER,
+                    DOCK_CAM_AXIAL_LEAD_X_OUTER,
+                ],
+                "y": [DOCK_CAM_AXIAL_LEAD_Y_MIN, DOCK_CAM_AXIAL_LEAD_Y_MAX],
+                "z": [
+                    DOCK_CAM_AXIAL_LEAD_Z_UPPER,
+                    DOCK_CAM_AXIAL_HOLD_Z_UPPER,
+                ],
+            },
+            "volume_mm3": hold_volume,
+        },
+        "outer_root_bridge": {
+            "kind": "axis_aligned_box",
+            "bounds_mm": {
+                "x": list(DOCK_CAM_AXIAL_ROOT_X_BOUNDS),
+                "y": list(DOCK_CAM_AXIAL_ROOT_Y_BOUNDS),
+                "z": list(DOCK_CAM_AXIAL_ROOT_Z_BOUNDS),
+            },
+            "gross_volume_mm3": root_gross_volume,
+            "overlap_with_hold_mm3": root_overlap_each,
+            "overlap_with_main_wedge_mm3": root_overlap_each,
+            "net_added_volume_mm3": root_net_added_volume,
+            "outside_locked_tab_swept_x": True,
+        },
+        "expected_geometry": {
+            "added_volume_mm3": (
+                lead_volume + hold_volume + root_net_added_volume
+            ),
+            "total_volume_mm3": 325.435,
+            "bounds_mm": {
+                "x": [DOCK_CAM_X_INNER, DOCK_CAM_X_OUTER_MAX],
+                "y": [DOCK_CAM_Y_MIN, DOCK_CAM_AXIAL_LEAD_Y_MAX],
+                "z": [
+                    DOCK_CAM_AXIAL_LEAD_Z_LOWER,
+                    DOCK_CAM_Z_MIN + DOCK_CAM_THICKNESS,
+                ],
+            },
+        },
+        "passive_capture": {
+            "preseat_definition": (
+                "robot_source_translation_dock_local_z_mm=-preseat_mm"
+            ),
+            "lateral_axis": "dock_local_positive_x",
+            "recenter_start_preseat_mm": (
+                DOCK_CAM_CAPTURE_RECENTER_START_PRESEAT_MM
+            ),
+            "recenter_end_preseat_mm": (
+                DOCK_CAM_CAPTURE_RECENTER_END_PRESEAT_MM
+            ),
+            "lateral_offset_breakpoints_mm": [
+                [DOCK_CAM_CAPTURE_RECENTER_START_PRESEAT_MM, 0.20],
+                [DOCK_CAM_CAPTURE_RECENTER_END_PRESEAT_MM, 0.0],
+                [0.0, 0.0],
+            ],
+            "ramp_contact_start_preseat_mm": ramp_contact_start,
+            "head_entry_tangent_preseat_mm": DOCK_CAM_HEAD_ENTRY_PRESEAT_MM,
+            "nominal_unlocked_q_mm": 0.0,
+            "passive_open_q_max_mm": DOCK_CAM_PASSIVE_OPEN_Q_MAX_MM,
+            "ramp_q_affine_coefficients": {
+                "preseat": 1.0,
+                "lateral_offset": -1.0,
+                "constant": -3.15,
+                "clamp_mm": [DOCK_CAM_PASSIVE_OPEN_Q_MAX_MM, SLIDER_TRAVEL],
+            },
+        },
+        "passive_release": {
+            "axis": "dock_local_negative_y",
+            "initial_q_hold_withdrawal_mm": (
+                DOCK_CAM_PASSIVE_RELEASE_INITIAL_DWELL_MM
+            ),
+            "q_per_withdrawal_slope": wedge_slope,
+            "q3_tangent_withdrawal_mm": q3_release_tangent,
+            "nominal_exit_withdrawal_mm": 15.0,
+            "required_exit_clearance_mm": 0.20,
+        },
+        "manufacturability": {
+            "minimum_feature_mm": min(
+                lower_wall, land_width, *root_widths
+            ),
+            "declared_process_floor_mm": 0.20,
+            "lead_is_self_supporting_at_45_deg": lead_angle_deg == 45.0,
+        },
+        "quasistatic_load_envelope": {
+            "return_spring_rate_n_per_mm": RETURN_SPRING_RATE_N_PER_MM,
+            "maximum_spring_deflection_mm": (
+                RETURN_SPRING_FREE_LENGTH - spring_unlocked_length
+            ),
+            "maximum_spring_force_n": maximum_spring_force,
+            "maximum_axial_reaction_n": maximum_spring_force
+            * math.tan(math.radians(lead_angle_deg)),
+            "maximum_cam_normal_force_n": maximum_cam_normal_force,
+            "contact_face_area_mm2": contact_face_area,
+            "mean_contact_pressure_mpa": (
+                maximum_cam_normal_force / contact_face_area
+            ),
+            "semantics": "frictionless_quasistatic_source_envelope",
+        },
+    }
+
+
 def positive_lock_keyhole_contract() -> dict[str, object]:
     """Return the released shoulder-clearance and head-retention geometry."""
 
@@ -658,8 +945,8 @@ def core_dock_stop() -> cq.Workplane:
     return stop.clean()
 
 
-def positive_lock_cam() -> cq.Workplane:
-    """Build the unchanged passive cam that supplies the full unlock stroke."""
+def _positive_lock_cam_main_wedge() -> cq.Workplane:
+    """Build the seated/rack-exit X/Y wedge without the axial lead."""
 
     return (
         cq.Workplane("XY")
@@ -676,6 +963,106 @@ def positive_lock_cam() -> cq.Workplane:
         .translate((0.0, 0.0, DOCK_CAM_Z_MIN))
         .clean()
     )
+
+
+def _rectangle_wire_at_z(
+    x_min: float,
+    x_max: float,
+    y_min: float,
+    y_max: float,
+    z_value: float,
+) -> cq.Wire:
+    """Return a deterministic closed rectangle wire in the dock frame."""
+
+    return cq.Wire.makePolygon(
+        [
+            cq.Vector(x_min, y_min, z_value),
+            cq.Vector(x_max, y_min, z_value),
+            cq.Vector(x_max, y_max, z_value),
+            cq.Vector(x_min, y_max, z_value),
+        ],
+        close=True,
+    )
+
+
+def positive_lock_cam_axial_lead() -> cq.Workplane:
+    """Build the narrow ruled lead and vertical hold finger.
+
+    The lower and upper rectangles share their outer X and Y bounds.  Their
+    inner X values differ by exactly the 3.2 mm axial run, producing the
+    source-authoritative 45-degree tab-contact plane without a faceted or
+    mesh-derived approximation.
+    """
+
+    lower = _rectangle_wire_at_z(
+        DOCK_CAM_AXIAL_LEAD_X_INNER_LOWER,
+        DOCK_CAM_AXIAL_LEAD_X_OUTER,
+        DOCK_CAM_AXIAL_LEAD_Y_MIN,
+        DOCK_CAM_AXIAL_LEAD_Y_MAX,
+        DOCK_CAM_AXIAL_LEAD_Z_LOWER,
+    )
+    upper = _rectangle_wire_at_z(
+        DOCK_CAM_AXIAL_LEAD_X_INNER_UPPER,
+        DOCK_CAM_AXIAL_LEAD_X_OUTER,
+        DOCK_CAM_AXIAL_LEAD_Y_MIN,
+        DOCK_CAM_AXIAL_LEAD_Y_MAX,
+        DOCK_CAM_AXIAL_LEAD_Z_UPPER,
+    )
+    ruled_lead = cq.Workplane(obj=cq.Solid.makeLoft([lower, upper], ruled=True))
+    hold_finger = (
+        cq.Workplane("XY")
+        .box(
+            DOCK_CAM_AXIAL_LEAD_X_OUTER
+            - DOCK_CAM_AXIAL_LEAD_X_INNER_UPPER,
+            DOCK_CAM_AXIAL_LEAD_Y_MAX - DOCK_CAM_AXIAL_LEAD_Y_MIN,
+            DOCK_CAM_AXIAL_HOLD_Z_UPPER - DOCK_CAM_AXIAL_LEAD_Z_UPPER,
+            centered=True,
+        )
+        .translate(
+            (
+                (
+                    DOCK_CAM_AXIAL_LEAD_X_INNER_UPPER
+                    + DOCK_CAM_AXIAL_LEAD_X_OUTER
+                )
+                / 2.0,
+                (DOCK_CAM_AXIAL_LEAD_Y_MIN + DOCK_CAM_AXIAL_LEAD_Y_MAX)
+                / 2.0,
+                (DOCK_CAM_AXIAL_LEAD_Z_UPPER + DOCK_CAM_AXIAL_HOLD_Z_UPPER)
+                / 2.0,
+            )
+        )
+    )
+    root_bridge = (
+        cq.Workplane("XY")
+        .box(
+            DOCK_CAM_AXIAL_ROOT_X_BOUNDS[1]
+            - DOCK_CAM_AXIAL_ROOT_X_BOUNDS[0],
+            DOCK_CAM_AXIAL_ROOT_Y_BOUNDS[1]
+            - DOCK_CAM_AXIAL_ROOT_Y_BOUNDS[0],
+            DOCK_CAM_AXIAL_ROOT_Z_BOUNDS[1]
+            - DOCK_CAM_AXIAL_ROOT_Z_BOUNDS[0],
+            centered=True,
+        )
+        .translate(
+            tuple(
+                (bounds[0] + bounds[1]) / 2.0
+                for bounds in (
+                    DOCK_CAM_AXIAL_ROOT_X_BOUNDS,
+                    DOCK_CAM_AXIAL_ROOT_Y_BOUNDS,
+                    DOCK_CAM_AXIAL_ROOT_Z_BOUNDS,
+                )
+            )
+        )
+    )
+    return ruled_lead.union(hold_finger).union(root_bridge).clean()
+
+
+def positive_lock_cam() -> cq.Workplane:
+    """Build the complete passive X/Y wedge plus axial lead authority."""
+
+    return _positive_lock_cam_main_wedge().union(
+        positive_lock_cam_axial_lead()
+    ).clean()
 
 
 def robot_plate() -> cq.Workplane:
@@ -1045,6 +1432,7 @@ def write_core_manifest(output_dir: Path = EXPORT_DIR) -> dict[str, object]:
             "core_dock_stop": core_dock_stop_spec(),
             "stock_gripper_mount": stock_gripper_mount_contract(),
             "positive_lock_keyhole": positive_lock_keyhole_contract(),
+            "positive_lock_cam": positive_lock_cam_contract(),
         },
         "files": files,
         "file_count": len(files),
@@ -1428,16 +1816,7 @@ def main(argv: list[str] | None = None) -> None:
             "stock_gripper_mount": stock_gripper_mount_contract(),
             "positive_lock_keyhole": positive_lock_keyhole_contract(),
             "positive_lock_cam": {
-                "polygon_xy_mm": [
-                    [DOCK_CAM_X_OUTER_MIN, DOCK_CAM_Y_MIN],
-                    [DOCK_CAM_X_OUTER_MAX, DOCK_CAM_Y_MIN],
-                    [DOCK_CAM_X_OUTER_MAX, DOCK_CAM_Y_MAX],
-                    [DOCK_CAM_X_INNER, DOCK_CAM_Y_MAX],
-                ],
-                "z_range_mm": [
-                    DOCK_CAM_Z_MIN,
-                    DOCK_CAM_Z_MIN + DOCK_CAM_THICKNESS,
-                ],
+                **positive_lock_cam_contract(),
                 "robot_plate_required_clearance_mm": ROBOT_CAM_CLEARANCE_MM,
                 "robot_plate_relief_bounds_native_mm": (
                     robot_cam_relief_contract()["bounds_native_mm"]

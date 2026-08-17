@@ -687,12 +687,14 @@ def _brep_sweep_record(
 def _axial_capture_cam_record(
     robot_plate: BRepComponent, cam_shape: cq.Shape
 ) -> dict[str, Any]:
-    """Certify the guided +X axial approach against the complete dock cam."""
+    """Certify the coupled axial/recenter route against the complete cam."""
 
     offsets = _axial_capture_offsets()
-    lateral_offset = CAD.ROBOT_CAM_GUIDED_APPROACH_OFFSET_MM
-    observations: list[tuple[float, float, float]] = []
+    observations: list[tuple[float, float, float, float]] = []
     for preseated_mm in offsets:
+        lateral_offset = CAD.positive_lock_cam_capture_lateral_offset_mm(
+            preseated_mm
+        )
         placed = robot_plate.shape.translate(
             (lateral_offset, 0.0, -preseated_mm)
         ).val()
@@ -700,11 +702,18 @@ def _axial_capture_cam_record(
         overlap = 0.0
         if distance <= NUMERIC_DISTANCE_TOLERANCE_MM:
             overlap = _intersection_volume_mm3(placed, cam_shape)
-        observations.append((preseated_mm, distance, overlap))
-    witness = min(observations, key=lambda item: (item[1], -item[2]))
-    motion_bound = AXIAL_CAPTURE_SWEEP_STEP_MM / 2.0
-    continuous_clearance = witness[1] - motion_bound
-    maximum_overlap = max(item[2] for item in observations)
+        observations.append((preseated_mm, lateral_offset, distance, overlap))
+    witness = min(observations, key=lambda item: (item[2], -item[3]))
+    interval_motion = [
+        math.hypot(
+            observations[index + 1][0] - observations[index][0],
+            observations[index + 1][1] - observations[index][1],
+        )
+        for index in range(len(observations) - 1)
+    ]
+    motion_bound = max(interval_motion) / 2.0
+    continuous_clearance = witness[2] - motion_bound
+    maximum_overlap = max(item[3] for item in observations)
     passed = bool(
         continuous_clearance + NUMERIC_DISTANCE_TOLERANCE_MM
         >= MANUFACTURING_CLEARANCE_MM
@@ -713,21 +722,380 @@ def _axial_capture_cam_record(
     return {
         "component": robot_plate.name,
         "dock_component": "positive_lock_cam",
-        "semantics": "forbidden_cam_clearance_during_guided_axial_capture",
+        "semantics": "forbidden_cam_clearance_during_coupled_axial_recenter",
         "axis_dock_local": [0.0, 0.0, 1.0],
-        "guided_open_side_offset_mm": lateral_offset,
+        "lateral_axis_dock_local": [1.0, 0.0, 0.0],
+        "lateral_offset_start_mm": CAD.ROBOT_CAM_GUIDED_APPROACH_OFFSET_MM,
+        "lateral_offset_end_mm": 0.0,
+        "recenter_start_preseat_mm": (
+            CAD.DOCK_CAM_CAPTURE_RECENTER_START_PRESEAT_MM
+        ),
+        "recenter_end_preseat_mm": (
+            CAD.DOCK_CAM_CAPTURE_RECENTER_END_PRESEAT_MM
+        ),
         "preseat_start_mm": AXIAL_CAPTURE_PRESEAT_MM,
         "preseat_end_mm": 0.0,
         "sample_count": len(offsets),
         "sample_step_mm": AXIAL_CAPTURE_SWEEP_STEP_MM,
         "sampled_preseat_offsets_sha256": _canonical_sha256(offsets),
-        "minimum_sampled_distance_mm": witness[1],
+        "minimum_sampled_distance_mm": witness[2],
         "maximum_sampled_overlap_volume_mm3": maximum_overlap,
         "maximum_between_sample_motion_bound_mm": motion_bound,
         "continuous_certified_clearance_mm": continuous_clearance,
         "witness_preseat_offset_mm": witness[0],
+        "witness_lateral_offset_mm": witness[1],
+        "route_samples_sha256": _canonical_sha256(
+            [[item[0], item[1]] for item in observations]
+        ),
         "method": "occt_brep_distance_with_near_witness_boolean",
         "passed": passed,
+    }
+
+
+def _passive_positive_lock_cam_record() -> dict[str, Any]:
+    """Recompute the complete passive axial-open and -Y return sequence."""
+
+    cam = CAD.positive_lock_cam().val()
+    lead = CAD.positive_lock_cam_axial_lead().val()
+    slider_native = CAD.locking_slider().val()
+    robot_components = _robot_side_components()
+    tool_components = _tool_side_components()
+    robot_plate = next(
+        component for component in robot_components if component.name == "robot_plate"
+    )
+    studs = {
+        side: CAD.shoulder_lock_stud().translate((x_value, 0.0, 0.0)).val()
+        for side, x_value in (
+            ("left", -CAD.LOCK_STUD_X),
+            ("right", CAD.LOCK_STUD_X),
+        )
+    }
+
+    capture_offsets = _axial_capture_offsets()
+    capture_samples: list[dict[str, float]] = []
+    maximum_slider_cam_overlap = 0.0
+    maximum_slider_stud_overlap = 0.0
+    for preseated_mm in capture_offsets:
+        lateral_mm = CAD.positive_lock_cam_capture_lateral_offset_mm(
+            preseated_mm
+        )
+        q_mm = CAD.positive_lock_cam_capture_q_max_mm(preseated_mm)
+        slider = slider_native.translate(
+            (
+                q_mm + lateral_mm,
+                0.0,
+                CAD.SLIDER_Z - CAD.PLATE_THICKNESS - preseated_mm,
+            )
+        )
+        slider_cam_distance = float(slider.distance(cam))
+        slider_cam_overlap = (
+            _intersection_volume_mm3(slider, cam)
+            if slider_cam_distance <= NUMERIC_DISTANCE_TOLERANCE_MM
+            else 0.0
+        )
+        stud_distances = {
+            side: float(slider.distance(stud)) for side, stud in studs.items()
+        }
+        stud_overlaps = {
+            side: (
+                _intersection_volume_mm3(slider, stud)
+                if stud_distances[side] <= NUMERIC_DISTANCE_TOLERANCE_MM
+                else 0.0
+            )
+            for side, stud in studs.items()
+        }
+        maximum_slider_cam_overlap = max(
+            maximum_slider_cam_overlap, slider_cam_overlap
+        )
+        maximum_slider_stud_overlap = max(
+            maximum_slider_stud_overlap, *stud_overlaps.values()
+        )
+        capture_samples.append(
+            {
+                "preseat_mm": preseated_mm,
+                "lateral_mm": lateral_mm,
+                "q_mm": q_mm,
+                "slider_cam_distance_mm": slider_cam_distance,
+                "minimum_slider_stud_distance_mm": min(stud_distances.values()),
+                "maximum_slider_cam_overlap_mm3": slider_cam_overlap,
+                "maximum_slider_stud_overlap_mm3": max(stud_overlaps.values()),
+            }
+        )
+
+    # Tighten the critical shoulder/head-entry clearance independently of the
+    # coarser full-approach grid.  The slider moves equally in dock X and Z on
+    # the ruled lead, so the half-step Euclidean motion is sqrt(2)*step/2.
+    stud_step_mm = 0.01
+    stud_intervals = round(
+        (CAD.DOCK_CAM_CAPTURE_RECENTER_END_PRESEAT_MM + 0.1) / stud_step_mm
+    )
+    stud_samples: list[tuple[float, float]] = []
+    for index in range(stud_intervals + 1):
+        preseated_mm = round(index * stud_step_mm, 10)
+        lateral_mm = CAD.positive_lock_cam_capture_lateral_offset_mm(
+            preseated_mm
+        )
+        q_mm = CAD.positive_lock_cam_capture_q_max_mm(preseated_mm)
+        slider = slider_native.translate(
+            (
+                q_mm + lateral_mm,
+                0.0,
+                CAD.SLIDER_Z - CAD.PLATE_THICKNESS - preseated_mm,
+            )
+        )
+        stud_samples.append(
+            (
+                preseated_mm,
+                min(float(slider.distance(stud)) for stud in studs.values()),
+            )
+        )
+    stud_witness = min(stud_samples, key=lambda item: item[1])
+    stud_motion_bound = math.sqrt(2.0) * stud_step_mm / 2.0
+    continuous_stud_clearance = stud_witness[1] - stud_motion_bound
+
+    head_entry = next(
+        sample
+        for sample in capture_samples
+        if math.isclose(
+            sample["preseat_mm"],
+            CAD.DOCK_CAM_HEAD_ENTRY_PRESEAT_MM,
+            abs_tol=1.0e-12,
+        )
+    )
+    plate_record = _axial_capture_cam_record(robot_plate, cam)
+
+    # Every source component that can coexist with the dock cam is checked.
+    # Tool components remain fixed while the robot-side magnets follow the
+    # same p/x route.  The physical slider and plate are recorded above.
+    component_records: list[dict[str, Any]] = []
+    for component in tool_components:
+        shape = component.shape.val()
+        distance = float(shape.distance(cam))
+        overlap = (
+            _intersection_volume_mm3(shape, cam)
+            if distance <= NUMERIC_DISTANCE_TOLERANCE_MM
+            else 0.0
+        )
+        component_records.append(
+            {
+                "component": component.name,
+                "motion": "fixed_tool_in_dock",
+                "minimum_sampled_distance_mm": distance,
+                "maximum_overlap_volume_mm3": overlap,
+            }
+        )
+    for component in robot_components:
+        if component.name == "robot_plate" or component.role == "positive_lock_slider":
+            continue
+        observations: list[tuple[float, float]] = []
+        for preseated_mm in capture_offsets:
+            lateral_mm = CAD.positive_lock_cam_capture_lateral_offset_mm(
+                preseated_mm
+            )
+            placed = component.shape.translate(
+                (lateral_mm, 0.0, -preseated_mm)
+            ).val()
+            distance = float(placed.distance(cam))
+            overlap = (
+                _intersection_volume_mm3(placed, cam)
+                if distance <= NUMERIC_DISTANCE_TOLERANCE_MM
+                else 0.0
+            )
+            observations.append((distance, overlap))
+        component_records.append(
+            {
+                "component": component.name,
+                "motion": "coupled_axial_recenter",
+                "minimum_sampled_distance_mm": min(item[0] for item in observations),
+                "maximum_overlap_volume_mm3": max(item[1] for item in observations),
+            }
+        )
+    component_records.extend(
+        [
+            {
+                "component": "robot_plate",
+                "motion": "coupled_axial_recenter",
+                "minimum_sampled_distance_mm": plate_record[
+                    "minimum_sampled_distance_mm"
+                ],
+                "maximum_overlap_volume_mm3": plate_record[
+                    "maximum_sampled_overlap_volume_mm3"
+                ],
+            },
+            {
+                "component": "positive_lock_slider_physical_capture_path",
+                "motion": "coupled_p_x_q",
+                "minimum_sampled_distance_mm": min(
+                    sample["slider_cam_distance_mm"]
+                    for sample in capture_samples
+                ),
+                "maximum_overlap_volume_mm3": maximum_slider_cam_overlap,
+            },
+        ]
+    )
+    component_records.sort(key=lambda item: item["component"])
+
+    release_step_mm = 0.1
+    release_positions = [
+        round(index * release_step_mm, 10)
+        for index in range(round(15.0 / release_step_mm) + 1)
+    ]
+    release_samples: list[dict[str, float]] = []
+    maximum_release_overlap = 0.0
+    for withdrawal_mm in release_positions:
+        q_mm = CAD.positive_lock_cam_release_q_max_mm(withdrawal_mm)
+        slider = slider_native.translate(
+            (
+                q_mm,
+                -withdrawal_mm,
+                CAD.SLIDER_Z - CAD.PLATE_THICKNESS,
+            )
+        )
+        distance = float(slider.distance(cam))
+        overlap = (
+            _intersection_volume_mm3(slider, cam)
+            if distance <= NUMERIC_DISTANCE_TOLERANCE_MM
+            else 0.0
+        )
+        maximum_release_overlap = max(maximum_release_overlap, overlap)
+        release_samples.append(
+            {
+                "withdrawal_mm": withdrawal_mm,
+                "q_mm": q_mm,
+                "slider_cam_distance_mm": distance,
+                "slider_cam_overlap_mm3": overlap,
+            }
+        )
+    exit_sample = release_samples[-1]
+
+    contract = CAD.positive_lock_cam_contract()
+    cam_bounds = _bbox_record(_bbox_tuple(cam))
+    lead_bounds = _bbox_record(_bbox_tuple(lead))
+    geometry = {
+        "cam_is_single_valid_solid": bool(
+            cam.isValid() and len(cam.Solids()) == 1
+        ),
+        "cam_volume_mm3": _shape_volume_mm3(cam),
+        "cam_bounds": cam_bounds,
+        "lead_volume_mm3": _shape_volume_mm3(lead),
+        "lead_bounds": lead_bounds,
+        "contract": contract,
+    }
+    expected = contract["expected_geometry"]
+    load = contract["quasistatic_load_envelope"]
+    manufacturing = contract["manufacturability"]
+    checks = {
+        "cam_is_single_valid_solid": geometry["cam_is_single_valid_solid"],
+        "cam_volume_matches_contract": math.isclose(
+            geometry["cam_volume_mm3"],
+            expected["total_volume_mm3"],
+            abs_tol=1.0e-9,
+        ),
+        "cam_bounds_match_contract": bool(
+            all(
+                math.isclose(
+                    cam_bounds[f"{axis}_mm"][endpoint],
+                    expected["bounds_mm"][axis][endpoint],
+                    abs_tol=1.0e-6,
+                )
+                for axis in ("x", "y", "z")
+                for endpoint in (0, 1)
+            )
+        ),
+        "minimum_feature_exceeds_declared_process_floor": bool(
+            manufacturing["minimum_feature_mm"]
+            >= manufacturing["declared_process_floor_mm"]
+        ),
+        "lead_is_45_degree_self_supporting": bool(
+            manufacturing["lead_is_self_supporting_at_45_deg"]
+        ),
+        "quasistatic_loads_are_finite_and_positive": bool(
+            all(
+                math.isfinite(float(load[key])) and float(load[key]) > 0.0
+                for key in (
+                    "maximum_spring_force_n",
+                    "maximum_axial_reaction_n",
+                    "maximum_cam_normal_force_n",
+                    "contact_face_area_mm2",
+                    "mean_contact_pressure_mpa",
+                )
+            )
+        ),
+        "capture_cam_boolean_overlap_is_zero": bool(
+            maximum_slider_cam_overlap <= OVERLAP_VOLUME_TOLERANCE_MM3
+        ),
+        "capture_stud_boolean_overlap_is_zero": bool(
+            maximum_slider_stud_overlap <= OVERLAP_VOLUME_TOLERANCE_MM3
+        ),
+        "head_entry_occurs_after_open_and_recenter": bool(
+            head_entry["lateral_mm"] == 0.0
+            and head_entry["q_mm"]
+            <= CAD.DOCK_CAM_PASSIVE_OPEN_Q_MAX_MM + 1.0e-12
+        ),
+        "continuous_stud_clearance_meets_manufacturing_floor": bool(
+            continuous_stud_clearance + NUMERIC_DISTANCE_TOLERANCE_MM
+            >= MANUFACTURING_CLEARANCE_MM
+        ),
+        "robot_plate_cam_continuous_clearance_passes": bool(
+            plate_record["passed"]
+        ),
+        "all_component_cam_overlaps_are_zero": bool(
+            all(
+                record["maximum_overlap_volume_mm3"]
+                <= OVERLAP_VOLUME_TOLERANCE_MM3
+                for record in component_records
+            )
+        ),
+        "release_cam_boolean_overlap_is_zero": bool(
+            maximum_release_overlap <= OVERLAP_VOLUME_TOLERANCE_MM3
+        ),
+        "release_reaches_q3_at_nominal_exit": math.isclose(
+            exit_sample["q_mm"], CAD.SLIDER_TRAVEL, abs_tol=1.0e-12
+        ),
+        "nominal_exit_cam_clearance_meets_floor": bool(
+            exit_sample["slider_cam_distance_mm"]
+            + NUMERIC_DISTANCE_TOLERANCE_MM
+            >= MANUFACTURING_CLEARANCE_MM
+        ),
+    }
+    return {
+        "source_contract": contract,
+        "geometry": geometry,
+        "capture": {
+            "sample_step_mm": AXIAL_CAPTURE_SWEEP_STEP_MM,
+            "sample_count": len(capture_samples),
+            "sample_digest_sha256": _canonical_sha256(capture_samples),
+            "ramp_contact_start_preseat_mm": contract["passive_capture"][
+                "ramp_contact_start_preseat_mm"
+            ],
+            "head_entry_sample": head_entry,
+            "maximum_slider_cam_overlap_mm3": maximum_slider_cam_overlap,
+            "maximum_slider_stud_overlap_mm3": maximum_slider_stud_overlap,
+            "tight_stud_clearance": {
+                "sample_step_mm": stud_step_mm,
+                "sample_count": len(stud_samples),
+                "witness_preseat_mm": stud_witness[0],
+                "minimum_sampled_distance_mm": stud_witness[1],
+                "maximum_between_sample_motion_bound_mm": stud_motion_bound,
+                "continuous_certified_clearance_mm": continuous_stud_clearance,
+                "sample_digest_sha256": _canonical_sha256(stud_samples),
+            },
+            "robot_plate_cam": plate_record,
+            "component_cam_records": component_records,
+        },
+        "release": {
+            "axis_dock_local": [0.0, -1.0, 0.0],
+            "sample_step_mm": release_step_mm,
+            "sample_count": len(release_samples),
+            "sample_digest_sha256": _canonical_sha256(release_samples),
+            "maximum_slider_cam_overlap_mm3": maximum_release_overlap,
+            "q3_tangent_withdrawal_mm": contract["passive_release"][
+                "q3_tangent_withdrawal_mm"
+            ],
+            "nominal_exit_sample": exit_sample,
+        },
+        "checks": checks,
+        "passed": all(checks.values()),
     }
 
 
@@ -1181,6 +1549,10 @@ def _thresholds_record() -> dict[str, Any]:
                 "minimum_radial_head_retention_overlap_mm"
             ]
         ),
+        "passive_cam_open_q_max_mm": CAD.DOCK_CAM_PASSIVE_OPEN_Q_MAX_MM,
+        "passive_cam_head_entry_preseat_mm": (
+            CAD.DOCK_CAM_HEAD_ENTRY_PRESEAT_MM
+        ),
     }
 
 
@@ -1190,6 +1562,7 @@ def _expected_core_manifest_contracts() -> dict[str, Any]:
         "core_dock_stop": CAD.core_dock_stop_spec(),
         "stock_gripper_mount": CAD.stock_gripper_mount_contract(),
         "positive_lock_keyhole": CAD.positive_lock_keyhole_contract(),
+        "positive_lock_cam": CAD.positive_lock_cam_contract(),
     }
 
 
@@ -1357,6 +1730,7 @@ def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
     axial_capture = _axial_capture_cam_record(
         robot_plate, dock["positive_lock_cam"].val()
     )
+    passive_cam = _passive_positive_lock_cam_record()
     mechanism_preservation = _mechanism_preservation_record()
     stop = _stop_envelope(
         tool_components,
@@ -1381,6 +1755,8 @@ def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
         blockers.append("stud_cam_inequality")
     if not axial_capture["passed"]:
         blockers.append("axial_capture_cam_clearance")
+    if not passive_cam["passed"]:
+        blockers.append("passive_positive_lock_cam")
     if not mechanism_preservation["passed"]:
         blockers.append("mechanism_preservation")
     if core_manifest_errors:
@@ -1424,6 +1800,7 @@ def build_report(step_mm: float = DEFAULT_SWEEP_STEP_MM) -> dict[str, Any]:
         "stop_envelope": stop,
         "stud_cam_inequality": stud_cam,
         "axial_capture_sweep": axial_capture,
+        "passive_positive_lock_cam": passive_cam,
         "mechanism_preservation": mechanism_preservation,
         "cam_actuation_diagnostics": cam_contact_results,
         "validation": {
@@ -1454,6 +1831,7 @@ def validate_report(report: dict[str, Any]) -> list[str]:
         "stop_envelope",
         "stud_cam_inequality",
         "axial_capture_sweep",
+        "passive_positive_lock_cam",
         "mechanism_preservation",
         "cam_actuation_diagnostics",
         "validation",
@@ -1611,6 +1989,9 @@ def validate_report(report: dict[str, Any]) -> list[str]:
     )
     if report.get("axial_capture_sweep") != expected_axial_capture:
         errors.append("axial_capture_sweep_recomputation_mismatch")
+    expected_passive_cam = _passive_positive_lock_cam_record()
+    if report.get("passive_positive_lock_cam") != expected_passive_cam:
+        errors.append("passive_positive_lock_cam_recomputation_mismatch")
     expected_mechanism = _mechanism_preservation_record()
     if report.get("mechanism_preservation") != expected_mechanism:
         errors.append("mechanism_preservation_recomputation_mismatch")
@@ -1629,6 +2010,8 @@ def validate_report(report: dict[str, Any]) -> list[str]:
         expected_blockers.append("stud_cam_inequality")
     if expected_axial_capture.get("passed") is not True:
         expected_blockers.append("axial_capture_cam_clearance")
+    if expected_passive_cam.get("passed") is not True:
+        expected_blockers.append("passive_positive_lock_cam")
     if expected_mechanism.get("passed") is not True:
         expected_blockers.append("mechanism_preservation")
     if current_manifest_errors:
@@ -1643,6 +2026,7 @@ def validate_report(report: dict[str, Any]) -> list[str]:
         and stop_passed
         and expected_stud_cam.get("passed") is True
         and expected_axial_capture.get("passed") is True
+        and expected_passive_cam.get("passed") is True
         and expected_mechanism.get("passed") is True
         and not current_manifest_errors
         and not expected_blockers

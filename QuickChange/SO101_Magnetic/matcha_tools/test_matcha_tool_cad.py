@@ -36,6 +36,30 @@ class MatchaToolCadTests(unittest.TestCase):
             (-36.0, 28.0, -25.0, 25.0),
         )
 
+    def test_matcha_docks_reuse_complete_core_positive_lock_cam(self) -> None:
+        actual = cad._dock_parts()["positive_lock_cam"].val()
+        expected = cad.INTERFACE.positive_lock_cam().val()
+        common = actual.intersect(expected)
+        self.assertAlmostEqual(actual.Volume(), expected.Volume(), places=9)
+        self.assertAlmostEqual(common.Volume(), expected.Volume(), places=9)
+        self.assertEqual(
+            cad.INTERFACE.positive_lock_cam_contract()["construction"],
+            "union_main_xy_wedge_ruled_axial_lead_hold_finger",
+        )
+        bounds = actual.BoundingBox()
+        for observed, reference in zip(
+            [
+                bounds.xmin,
+                bounds.xmax,
+                bounds.ymin,
+                bounds.ymax,
+                bounds.zmin,
+                bounds.zmax,
+            ],
+            [24.05, 34.0, -16.0, 2.0, -9.6, -1.95],
+        ):
+            self.assertAlmostEqual(observed, reference, places=6)
+
     def test_interface_hardware_inventory_is_complete(self) -> None:
         hardware = cad.tool_interface_hardware_shapes()
         self.assertEqual(len(hardware), 15)

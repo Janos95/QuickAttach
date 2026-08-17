@@ -735,14 +735,10 @@ def _dock_parts() -> dict[str, cq.Workplane]:
         .box(*stop_spec["size_mm"], centered=True)
         .translate(tuple(stop_spec["center_mm"]))
     )
-    # Cam is below the tool face: it acts on the robot-side slider only.
-    parts["positive_lock_cam"] = (
-        cq.Workplane("XY")
-        .polyline([(28.0, -17.0), (34.0, -17.0), (34.0, 1.0), (24.0, 1.0)])
-        .close()
-        .extrude(2.2)
-        .translate((0.0, 0.0, -4.2))
-    )
+    # The core generator is the sole cam authority.  Matcha bays reuse the
+    # complete X/Y wedge plus axial lead; carrying a locally shifted polygon
+    # here would silently change passive-open timing between docks.
+    parts["positive_lock_cam"] = INTERFACE.positive_lock_cam()
     return {name: shape.clean() for name, shape in parts.items()}
 
 
@@ -913,6 +909,7 @@ def generate_exports(output_dir: Path = EXPORT_DIR) -> dict[str, object]:
                 bay_name: matcha_dock_stop_spec(bay_name)
                 for bay_name in RACK_BAY_NAMES
             },
+            "positive_lock_cam": INTERFACE.positive_lock_cam_contract(),
             "stock_gripper_scope": "separate core quick-change dock; not part of this rack",
         },
         "files": [],
