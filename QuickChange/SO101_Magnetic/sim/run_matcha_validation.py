@@ -76,12 +76,16 @@ DEVELOPMENT_TESTS = (
         "test_compiled_cam_union_matches_source_on_all_three_docks",
     ),
     qualified(
-        "CoreCaptureRouteRuntimeAuthorityTests",
-        "test_route_contract_and_result_mutations_fail_closed",
+        "RolledCoreDockRuntimeAuthorityTests",
+        "test_report_binds_sources_frame_proxy_routes_and_false_authority",
     ),
     qualified(
-        "CoreCaptureRouteRuntimeAuthorityTests",
-        "test_compiled_route_replays_dense_fk_actions_and_per_step_guard",
+        "RolledCoreDockRuntimeAuthorityTests",
+        "test_full_arm_continuous_clearance_inventory_and_topology_are_exact",
+    ),
+    qualified(
+        "RolledCoreDockRuntimeAuthorityTests",
+        "test_coherently_resealed_adversarial_mutations_fail_closed",
     ),
     qualified(
         "CoreCamTabContactCheckpointATests",
@@ -281,16 +285,23 @@ PRODUCTION_INPUTS = (
     HERE / "matcha_workflow_scene.xml",
     HERE / "matcha_tool_geometry.json",
     HERE / "qc_collision_geometry.py",
+    HERE / "validate_rolled_core_dock_runtime.py",
+    HERE / "rolled_core_dock_runtime_report.json",
     HERE / "cad_clearance_report.json",
     HERE / "generate_matcha_payload_proxy_report.py",
     HERE / "validate_matcha_payload_proxy_report.py",
     HERE / "matcha_payload_proxy_report.json",
     HERE.parent / "generate_cad.py",
+    HERE.parent / "exports" / "design_parameters.json",
     HERE.parent
     / "source_authority"
     / "millmax_7983"
     / "authority_ledger.json",
     HERE.parent / "exports" / "core_cad_manifest.json",
+    HERE.parent / "exports" / "so101_passive_tool_dock.step",
+    HERE.parent / "exports" / "so101_passive_tool_dock.stl",
+    HERE.parent / "exports" / "so101_core_dock_support_bracket.step",
+    HERE.parent / "exports" / "so101_core_dock_support_bracket.stl",
     HERE.parent / "exports" / "so101_positive_lock_slider.step",
     HERE.parent
     / "exports"
@@ -305,6 +316,7 @@ PRODUCTION_INPUTS = (
     / "matcha_tools"
     / "exports"
     / "so101_matcha_whisk_mass_ledger.json",
+    HERE.parents[2] / "Simulation" / "SO101" / "so101_new_calib.xml",
 )
 
 FINGERPRINT_INPUTS = (

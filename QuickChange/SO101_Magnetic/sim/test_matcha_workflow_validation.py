@@ -43,6 +43,10 @@ PAYLOAD_VALIDATOR = HERE / "validate_matcha_payload_proxy_report.py"
 PAYLOAD_REPORT = HERE / "matcha_payload_proxy_report.json"
 CORE_CLEARANCE_VALIDATOR = HERE / "validate_cad_clearance.py"
 CORE_CLEARANCE_REPORT = HERE / "cad_clearance_report.json"
+ROLLED_CORE_DOCK_RUNTIME_VALIDATOR = (
+    HERE / "validate_rolled_core_dock_runtime.py"
+)
+ROLLED_CORE_DOCK_RUNTIME_REPORT = HERE / "rolled_core_dock_runtime_report.json"
 CORE_CAD_MANIFEST = MAGNETIC_ROOT / "exports" / "core_cad_manifest.json"
 CAD_ROOT = MAGNETIC_ROOT / "matcha_tools"
 MATCHA_CAD_GENERATOR = CAD_ROOT / "generate_matcha_tool_cad.py"
@@ -225,12 +229,13 @@ CORE_CAM_TAB_CONTACT_BLOCKERS = [
     "positive_lock_cam_load_capacity_unqualified",
     "positive_lock_cam_dynamics_unqualified",
     "free_space_servo_tracking_not_yet_closed",
-    "post_capture_negative_z_slider_return_authority_stale_after_hold_finger_addition",
+    "source_negative_y_release_route_is_static_kinematics_only",
+    "source_negative_y_reverse_insertion_and_tracking_unvalidated",
     "continuous_between_mj_steps_tunnel_authority_absent",
     "functional_interval_motion_bound_not_certified",
 ]
 CORE_CAM_COMPILED_MODEL_XML_EQUIVALENT_SHA256 = (
-    "fe3014b0aa0decad9f807f6a96a81a05b5622bed7071bb254d4045658224f94f"
+    "edfc58afb55d83901f3e35f7e3426d5ffeef696257ef55e28955b400249480d0"
 )
 POGO_LEDGER_PATH = (
     MAGNETIC_ROOT
@@ -2088,6 +2093,10 @@ def expected_core_cam_tab_contact_contract(
             "maximum_source_x_error_mm": 0.040,
             "maximum_transverse_y_mm": 0.010,
             "maximum_orientation_error_rad": math.radians(0.1),
+            "orientation_contract": (
+                "fixed_0p1deg_bound_best_attainable_five_dof_orientation"
+            ),
+            "exact_quaternion_required_off_seat": False,
         },
         "surface_classifiers": classifier_surfaces,
         "provisional_development_guard": {
@@ -2275,7 +2284,7 @@ def expected_core_cam_tab_contact_contract(
             "functional_contact_actions": CORE_CAM_CONTACT_ACTIONS[2:],
             "dock_hold_must_be_active": True,
             "attach_equality_must_be_inactive": True,
-            "slider_return_is_excluded": True,
+            "physical_release_action_is_excluded": True,
         },
         "source_surfaces": source_surfaces,
         "provisional_guard": {
@@ -2294,24 +2303,20 @@ def expected_core_cam_tab_contact_contract(
             "retained_lead_normal_gap_at_40um_corridor_mm": 0.010 * inv_sqrt_two,
         },
         "post_capture_exclusion": {
-            "excluded_actions": [
-                "gripper_lock_cam_disengagement",
-                "gripper_slider_return_verify",
-                "gripper_physical_lock_confirm",
-            ],
+            "excluded_action": "gripper_source_negative_y_physical_release",
             "reason": (
-                "negative_z_slider_return_clearance_witness_is_stale_after_"
-                "hold_finger_addition"
+                "source_negative_y_roster_is_static_only_and_has_no_reverse_"
+                "insertion_tracking_or_contact_dynamics_authority"
             ),
-            "q3_negative_z_1p2mm_complete_cam_overlap_mm3": 9.440000000000005,
-            "legacy_main_wedge_only_clearance_mm": 0.25,
-            "must_be_reaudited_before_authorization": True,
-            "retired_default_action_kinds": [
-                "axial_disengage",
-                "slider_return",
-                "physical_lock_confirm",
-            ],
-            "custom_injection_abort_reason": "retired_negative_z_lock_sequence",
+            "static_contract_api": "core_dock_static_release_route_contract",
+            "source_axis": "dock_local_negative_y",
+            "axis_dock_local": [0.0, -1.0, 0.0],
+            "axis_world": [0.0, 0.0, 1.0],
+            "roster_row_count": 31,
+            "roster_canonical_sha256": (
+                "f30b0c178917945fcd45358710e5127302bc5240ca6cb4cdaa7f49d16c4f0293"
+            ),
+            "physical_release_action_implemented": False,
             "default_action_sequence_ends_at": "gripper_dock_release_verify",
         },
         "evidence_requirements": {
@@ -3507,7 +3512,7 @@ def core_cam_tab_result_errors(
         "contact_forces_are_unbounded_diagnostic_evidence_only",
         "contact_force_authority", "friction_coefficient_authority",
         "dynamics_authority",
-        "post_capture_negative_z_and_slider_return_excluded", "passed",
+        "physical_source_negative_y_release_action_excluded", "passed",
         "release_ready",
     }
     if set(evidence) != expected_evidence_keys:
@@ -3524,7 +3529,7 @@ def core_cam_tab_result_errors(
         "contact_force_authority": False,
         "friction_coefficient_authority": False,
         "dynamics_authority": False,
-        "post_capture_negative_z_and_slider_return_excluded": True,
+        "physical_source_negative_y_release_action_excluded": True,
         "release_ready": False,
     }
     for key, expected in expected_header.items():
@@ -4032,22 +4037,22 @@ CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256 = (
     "a84c10e16c890b5e1ee4e4479c0d15d7e07a75f2afae17c62e639e8adc55cc27"
 )
 CORE_CAPTURE_GRAVITY_BIAS_IDENTITY_SHA256 = (
-    "6337ad59be6d90d8e9c72211ee6cd6f5305361dbb0dedafaa89492a972c5c003"
+    "51d3dda6f1653796a6ba371f3eb5acf8d466627c245b507c68ecc34f89629b9b"
 )
 CORE_CAPTURE_GRAVITY_BIAS_DESIRED_START_SHA256 = (
-    "fa630130c3e7a911e81bb01c681ee82a070569256a317cbb8a9474fe441df668"
+    "7216752cb39dc68608396f33d09eadc018c4d936b510a50f456e978e94df0618"
 )
 CORE_CAPTURE_GRAVITY_BIAS_ROUTE_IDENTITY_SHA256 = (
-    "6451fadc64d30fb64523671d7568e4912d7631026c0be8dc336a55d995e7c283"
+    "a8111a9931ebe770198de0397978cdaef06a67705219a9453a0d22abe1edbe4e"
 )
 CORE_CAPTURE_GRAVITY_BIAS_NON_ARM_QPOS_SHA256 = (
-    "0c73793cef16963cc3272489395f735acc98ef1efd77f816fff02798b941469d"
+    "c28ea3a6c2ff43eeab74db3ab36dc6bc37987d64d3ed94dc33808ddf977b8001"
 )
 CORE_CAPTURE_GRAVITY_BIAS_CALLGRAPH_SHA256 = (
-    "89f5970cfbcda100a50960795804ee49a39cb8460228e257860caf92e6b7dddf"
+    "35c5cd0330c1fc140431a15ce70f62a4b2d50d7e44f57e277ce5484afff719a9"
 )
 CORE_CAPTURE_GRAVITY_BIAS_BYTECODE_SHA256 = (
-    "68c9a2fcd64d81913582b74fbf9bca53b697c1a0eb091257d6ad5caa79bcddf1"
+    "8fc01fced6ecc6a679027e971c3e414a600d7fe6735b29ffb7c62ee1cc353f30"
 )
 CORE_CAPTURE_GRAVITY_BIAS_AST_POLICY_SHA256 = (
     "40995993893abbd315a2c95806291116f0a641bb6e8db54fbb576b6a08477d1f"
@@ -4056,16 +4061,16 @@ CORE_CAPTURE_GRAVITY_BIAS_GUARDS_SHA256 = (
     "a30d3c871580b36a8f18eca6f07b6d4e5eee34cbecf50093aaca7c4cb1d3ee40"
 )
 CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_SHA256 = (
-    "0bc63776a5a71bae5b3ba0786f2851ff461bd82bf7126b3a37b6ada632187a22"
+    "97f89d116792946901acaa654b6931cc4e9517a7bd3a5bbdec6b358e2bbcf141"
 )
 CORE_CAPTURE_GRAVITY_BIAS_ACTION_ROSTER_SHA256 = (
-    "563c827f618b8ff51649272db1c41d3949b55df93908a4f9b218f9c7aeead271"
+    "3a3301d0adf98e1e617766891ebf7be4129d94d0440d7f4fcb694f273313a3ba"
 )
 CORE_CAPTURE_GRAVITY_BIAS_FUNCTION_HASHES = {
     "_current_core_capture_route_identity_preimage": {
-        "code_object_sha256": "db5cab09486e17d827298b3660226fc31ab2368a721ba3d0f22b6f51473532b9",
-        "normalized_ast_sha256": "f0860ad02136cbbbb947a4c50de0d7772c1cadb1fa056b486702269e0ddc1400",
-        "source_sha256": "887c97b800d39b97f6bfcb772c9958421affc5754c488572b26dbe11184b4189",
+        "code_object_sha256": "706c34bf3be68b007ec0a7bc73014c1de62c4cd1f3277b0c62033dafffe7d326",
+        "normalized_ast_sha256": "80ce2147fa15ab316a373258cb9a26c857a15fb85c5286e00ba93246006ea885",
+        "source_sha256": "3376655106ed3c30254fe48360ac9618899404e5f18449b69b402f9743caed1c",
     },
     "_current_core_capture_gravity_bias_formula": {
         "code_object_sha256": "ecd0c98eae7bd2ea43f9fc342730a6a9e03df80e941c30c081198525830cebd2",
@@ -4120,11 +4125,11 @@ CORE_CAPTURE_GRAVITY_BIAS_FUNCTION_HASHES = {
 }
 CORE_CAPTURE_GRAVITY_BIAS_EXPECTED_HASHES = {
     "gravity_sha256": "ae1e8d988bda31f91f37b3360818f46f5216924d49e011e065e323fe23f3bf2e",
-    "body_mass_sha256": "2b48d4c24c8566f669be8ceef579e7b080fd278106d17d9021cb6daf166a72da",
-    "body_inertia_sha256": "cb0059bc8551f4b945204d5a54a5216547de9beeae22a52518ac60f34ced603b",
-    "body_ipos_sha256": "f8beb657fa4fa0ab619838d5968d5b17b902649d471d9bf9bac8f0fac0a686e2",
-    "body_iquat_sha256": "63253ecaa2d99939ddf36e6525e230bd0b77d7b2e4c28402a943b25bb9a78deb",
-    "inertial_bundle_sha256": "5b384d20e2eb3b530f0772241c7e9611887c60ce25a73dcad20e7d5e0be3f98d",
+    "body_mass_sha256": "0f0dd621c2dd11a9928b2052897825c0eec541e8ed0d3c2c7a43700077775aa0",
+    "body_inertia_sha256": "b54392d89a7e884c3001f6807f7691a1a29baba7a8018871e2d7ca453538a9a8",
+    "body_ipos_sha256": "2c9487de7d3f29c60f0a304caa83e64b2fc940ca543960b1f9ef43b73bb55e0b",
+    "body_iquat_sha256": "8103edd84053535deee67cd68de775575ad40ff6d3123300e5aa737fdde9b395",
+    "inertial_bundle_sha256": "8960fcae8eab2eb5235c8316271bcdf813051a6d31b55fc992d72d92b54ed29f",
     "arm_gainprm_sha256": "6d15e750d44986e760901cb224115639c75fc49ab17d23f94c74c8678a663a74",
     "arm_gear_sha256": "9c380cb1330e9755842a38183a344f8f159a3224ef409800723e9e10babbcaef",
     "arm_ctrlrange_sha256": "7996351eb41db1364c708be82e65566ef357a359000c965ee48278552b5df209",
@@ -4553,7 +4558,11 @@ def _independent_gravity_bias_desired_starts(
     states = route_contract["source_states"]
     return {
         CORE_CAPTURE_GRAVITY_BIAS_ACTIONS[0]: [
-            -0.72, -1.11771, 1.13502, -0.01731, 0.0
+            -0.7200000000000006,
+            -1.1177085425081206,
+            1.1350213393902684,
+            -0.017312796882147836,
+            -1.522116811941434,
         ],
         CORE_CAPTURE_GRAVITY_BIAS_ACTIONS[1]: [
             float(value) for value in states[0]["q_rad"]
@@ -4605,7 +4614,7 @@ def expected_core_capture_gravity_bias_contract(
     desired_start_sha256 = canonical_json_sha256(desired_starts)
     dynamics = _expected_gravity_bias_dynamics_binding(model, demo)
     source_model_sha256 = (
-        "eedc60724d743b8c16deb7a0d10d4c1c73819fdba680722cb479105e4a09bdea"
+        "d919728e7108061f7ede7bd74991c2b5e42fa0985d5e731c30c95e0a660a953a"
     )
     compiled_sha256 = _independent_compiled_model_xml_equivalent_sha256(model)
     scratch = demo.mujoco.MjData(model)
@@ -4679,10 +4688,10 @@ def expected_core_capture_gravity_bias_contract(
         "robot_xml_sha256": sha256_file(robot_xml),
         "model_xml_sha256": source_model_sha256,
         "compiled_model_xml_equivalent_sha256": (
-            "fe3014b0aa0decad9f807f6a96a81a05b5622bed7071bb254d4045658224f94f"
+            "edfc58afb55d83901f3e35f7e3426d5ffeef696257ef55e28955b400249480d0"
         ),
         "initialized_active_collision_geometry_sha256": (
-            "98d04acb1bbdb614eaa8cd827da7417c82e8f6ecc0e25b93f7e2f573ccf06773"
+            "401cbab95925ec5688d54b875c7d9e2e3788ebaa717cc2eb92fe94b1600b2083"
         ),
         "capture_route_contract_identity_sha256": (
             CORE_CAPTURE_GRAVITY_BIAS_ROUTE_IDENTITY_SHA256
@@ -8399,7 +8408,10 @@ class CoreCaptureRouteRuntimeAuthorityTests(unittest.TestCase):
         identity["q_roster_sha256"] = mutated["q_roster_sha256"]
         mutated["contract_identity_sha256"] = canonical_json_sha256(identity)
 
-    def test_route_contract_and_result_mutations_fail_closed(self) -> None:
+    # Superseded by ``RolledCoreDockRuntimeAuthorityTests`` below.  Retain the
+    # historical implementation as readable migration context, but do not
+    # discover its stale pre-roll schema assertions as current authority.
+    def superseded_route_contract_and_result_mutations_fail_closed(self) -> None:
         baseline = self.contract
         self.assertEqual(
             core_capture_route_contract_errors(baseline, self.cad), []
@@ -8570,7 +8582,9 @@ class CoreCaptureRouteRuntimeAuthorityTests(unittest.TestCase):
                     core_capture_route_result_errors(mutated, baseline), []
                 )
 
-    def test_compiled_route_replays_dense_fk_actions_and_per_step_guard(self) -> None:
+    def superseded_compiled_route_replays_dense_fk_actions_and_per_step_guard(
+        self,
+    ) -> None:
         demo = self.demo
         contract = self.contract
         self.assertEqual(core_capture_route_contract_errors(contract, self.cad), [])
@@ -9182,10 +9196,10 @@ class CoreCamTabContactCheckpointATests(unittest.TestCase):
             "functional_envelope_sampling"
         ]["continuous_tunnel_authority"] = True
 
-        mutations["full_cam_overlap_removed"] = copy.deepcopy(contract)
-        mutations["full_cam_overlap_removed"]["post_capture_exclusion"][
-            "q3_negative_z_1p2mm_complete_cam_overlap_mm3"
-        ] = 0.0
+        mutations["physical_release_implemented"] = copy.deepcopy(contract)
+        mutations["physical_release_implemented"]["post_capture_exclusion"][
+            "physical_release_action_implemented"
+        ] = True
 
         mutations["source_hash_altered"] = copy.deepcopy(contract)
         mutations["source_hash_altered"]["source_binding"]["generator_file"][
@@ -9460,7 +9474,7 @@ class CoreCamTabContactCheckpointATests(unittest.TestCase):
         )
         classified_by_role: dict[str, dict[str, Any]] = {}
         static_cases = (
-            (244, 2, {CORE_CAM_FUNCTIONAL_ROLES[0]}),
+            (259, 2, {CORE_CAM_FUNCTIONAL_ROLES[0]}),
             (
                 260,
                 3,
@@ -9580,6 +9594,11 @@ class CoreCamTabContactCheckpointATests(unittest.TestCase):
                 side_effect=lambda *_: events.append("route"),
             ),
             mock.patch.object(
+                audit_controller,
+                "_record_core_capture_gravity_bias_feedforward",
+                side_effect=lambda *_: events.append("ff"),
+            ),
+            mock.patch.object(
                 audit_controller, "_record_core_capture_free_space_tracking",
                 side_effect=lambda *_: events.append("free"),
             ),
@@ -9601,13 +9620,16 @@ class CoreCamTabContactCheckpointATests(unittest.TestCase):
             ),
             mock.patch.object(demo, "PHYSICS_SUBSTEPS_PER_CONTROLLER_STEP", 2),
         )
-        with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5], patches[6], patches[7]:
+        with (
+            patches[0], patches[1], patches[2], patches[3], patches[4],
+            patches[5], patches[6], patches[7], patches[8]
+        ):
             audit_controller._integrate()
         self.assertEqual(
             events,
             [
-                "step", "route", "free", "cam", "corridor", "generic", "loads",
-                "step", "route", "free", "cam", "corridor", "generic", "loads",
+                "step", "route", "ff", "free", "cam", "corridor", "generic", "loads",
+                "step", "route", "ff", "free", "cam", "corridor", "generic", "loads",
             ],
         )
         allowed_source = inspect.getsource(
@@ -9699,6 +9721,17 @@ class CoreCamTabContactCheckpointATests(unittest.TestCase):
         self.assertTrue(retired_kinds.isdisjoint(
             action.kind for action in default_actions
         ))
+        retired_handlers = {
+            "_command_axial_disengage",
+            "_command_slider_return",
+            "_command_physical_lock_confirm",
+        }
+        self.assertTrue(
+            all(
+                not hasattr(demo.MatchaWorkflowController, method_name)
+                for method_name in retired_handlers
+            )
+        )
         for kind in sorted(retired_kinds):
             with self.subTest(retired_kind=kind):
                 model = demo.build_model()
@@ -9719,7 +9752,7 @@ class CoreCamTabContactCheckpointATests(unittest.TestCase):
                     controller.step()
                 result = controller.result()
                 self.assertEqual(
-                    result["abort_reason"], "retired_negative_z_lock_sequence"
+                    result["abort_reason"], f"unknown_action:{kind}"
                 )
                 self.assertEqual(result["physics_substep_count"], 0)
                 self.assertEqual(float(data.time), initial_time)
@@ -9736,49 +9769,28 @@ class CoreCamTabContactCheckpointATests(unittest.TestCase):
                 self.assertIs(result["physical_lock_confirmed"], False)
                 self.assertIs(result["locked"], False)
                 self.assertIs(result["success"], False)
-
-        for method_name in (
-            "_command_axial_disengage",
-            "_command_slider_return",
-            "_command_physical_lock_confirm",
-        ):
-            source = inspect.getsource(
-                getattr(demo.MatchaWorkflowController, method_name)
-            )
-            self.assertIn('self._abort("retired_negative_z_lock_sequence")', source)
-            self.assertNotIn("_integrate", source)
-            self.assertNotIn("physical_lock_confirmed = True", source)
-
-        cad = self.cad
-        slider = cad.locking_slider().translate(
-            (3.0, 0.0, cad.SLIDER_Z - cad.PLATE_THICKNESS - 1.2)
-        ).val()
-        complete_cam = cad.positive_lock_cam().val()
-        main_only = cad._positive_lock_cam_main_wedge().val()
-
-        def overlap_mm3(first: Any, second: Any) -> float:
-            if float(first.distance(second)) > 1.0e-9:
-                return 0.0
-            return math.fsum(
-                float(solid.Volume())
-                for solid in first.intersect(second).Solids()
-            )
-
-        complete_overlap = overlap_mm3(slider, complete_cam)
-        self.assertAlmostEqual(complete_overlap, 9.44, places=9)
-        self.assertLessEqual(overlap_mm3(slider, main_only), 1.0e-6)
-        self.assertAlmostEqual(float(slider.distance(main_only)), 0.25, places=9)
         exclusion = self.contract["post_capture_exclusion"]
-        self.assertAlmostEqual(
-            float(exclusion["q3_negative_z_1p2mm_complete_cam_overlap_mm3"]),
-            complete_overlap,
-            places=12,
+        self.assertEqual(
+            exclusion["excluded_action"],
+            "gripper_source_negative_y_physical_release",
         )
-        self.assertAlmostEqual(
-            float(exclusion["legacy_main_wedge_only_clearance_mm"]), 0.25,
-            places=12,
+        self.assertEqual(
+            exclusion["static_contract_api"],
+            "core_dock_static_release_route_contract",
         )
-        self.assertIs(exclusion["must_be_reaudited_before_authorization"], True)
+        self.assertEqual(exclusion["source_axis"], "dock_local_negative_y")
+        self.assertEqual(exclusion["axis_dock_local"], [0.0, -1.0, 0.0])
+        self.assertEqual(exclusion["axis_world"], [0.0, 0.0, 1.0])
+        self.assertEqual(exclusion["roster_row_count"], 31)
+        self.assertEqual(
+            exclusion["roster_canonical_sha256"],
+            "f30b0c178917945fcd45358710e5127302bc5240ca6cb4cdaa7f49d16c4f0293",
+        )
+        self.assertIs(exclusion["physical_release_action_implemented"], False)
+        self.assertIs(
+            self.contract["authority_scope"]["post_capture_release_authority"],
+            False,
+        )
         self.assertIs(self.contract["release_ready"], False)
 
 
@@ -9807,7 +9819,7 @@ class CoreCaptureGravityBiasFeedforwardTests(unittest.TestCase):
         demo = self.demo
         self.assertEqual(
             sha256_file(MATCHA_DEMO),
-            "6cbcd9b3eb13e1cc119ff8e5d99f0333d65b13e4eaab1c36752128a08a9b93a5",
+            "512aad1d1787fd820b5a1e8919eb39124716bb1f45cc25eedf6c106a90b40f99",
         )
         self.assertEqual(
             _evidence_mismatches(self.contract, self.expected_contract), []
@@ -10376,12 +10388,15 @@ class ControllerSourceSafetyTests(unittest.TestCase):
     def test_capture_path_cannot_claim_a_returned_physical_lock(self) -> None:
         violations: list[str] = []
         forbidden_phase_roots = {
-            "_command_axial_disengage",
             "_command_capture",
             "_command_lock_verify",
             "_command_move",
             "_command_release_verify",
+        }
+        retired_handlers = {
+            "_command_axial_disengage",
             "_command_slider_return",
+            "_command_physical_lock_confirm",
         }
 
         def target_is_physical_lock(target: ast.AST) -> bool:
@@ -10451,6 +10466,7 @@ class ControllerSourceSafetyTests(unittest.TestCase):
                 for node in class_node.body
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
             }
+            self.assertTrue(retired_handlers.isdisjoint(methods), methods)
             self.assertTrue(forbidden_phase_roots.issubset(methods), methods)
             calls = {
                 method_name: {
@@ -10747,16 +10763,31 @@ class SimCadPlacementContractTests(unittest.TestCase):
                     f"dock_{tool}_support_collision",
                 }
             )
-            for tool in self.demo.ALL_TOOL_IDS
+            for tool in ("spoon", "whisk")
         }
         expected_support_pairs.update(
             frozenset(
                 {f"dock_{tool}_support_collision", "matcha_floor_collision"}
             )
-            for tool in self.demo.ALL_TOOL_IDS
+            for tool in ("spoon", "whisk")
+        )
+        expected_support_pairs.update(
+            frozenset(pair)
+            for pair in self.demo.qc.CORE_DOCK_SUPPORT_PROXY_FACE_TANGENCIES
+        )
+        expected_support_pairs.update(
+            frozenset({name, "matcha_floor_collision"})
+            for name in self.demo.qc.CORE_DOCK_SUPPORT_PROXY_FLOOR_CONTACT_GEOM_NAMES
         )
         self.assertEqual(controller.support_contact_pairs, expected_support_pairs)
         self.assertIsInstance(controller.support_contact_pairs, frozenset)
+        self.assertTrue(
+            all(
+                "dock_gripper_support" not in name
+                for pair in controller.support_contact_pairs
+                for name in pair
+            )
+        )
         self.assertEqual(
             controller.slider_tab_geom_ids,
             tuple(
@@ -11433,11 +11464,16 @@ class SimCadPlacementContractTests(unittest.TestCase):
         self.assertNotEqual(observed_bounds["gripper"], observed_bounds["spoon"])
 
     def test_core_keeper_contract_is_exact_and_excludes_the_air_gap_stop(self) -> None:
-        self.assertEqual(
-            float(self.demo.MINIMUM_SOURCE_AXIS_WITHDRAWAL_MM), 1.15
-        )
-        self.assertEqual(float(self.demo.CORE_LOCK_RELEASE_MIN_STROKE_MM), 1.15)
-        self.assertEqual(float(self.demo.CORE_LOCK_RELEASE_STROKE_MM), 1.20)
+        release = self.demo.core_dock_static_release_route_contract()
+        self.assertEqual(release["row_count"], 31)
+        self.assertEqual(release["withdrawal_bounds_mm"], [0.0, 15.0])
+        self.assertEqual(release["step_mm"], 0.5)
+        self.assertEqual(release["axis_dock_local"], [0.0, -1.0, 0.0])
+        self.assertEqual(release["axis_world"], [0.0, 0.0, 1.0])
+        self.assertIs(release["included_in_default_controller_actions"], False)
+        self.assertIs(release["physical_release_action_implemented"], False)
+        self.assertIs(release["physical_release_authority"], False)
+        self.assertIs(release["release_ready"], False)
         self.assertTrue(
             {
                 "axial_disengage", "slider_return", "physical_lock_confirm"
@@ -13519,11 +13555,11 @@ class SimCadPlacementContractTests(unittest.TestCase):
         )
         self.assertEqual(
             records[screw_relative]["sha256"],
-            "1a302d3674952d881df75e25e47b64a60b23a72b66fde48c35a0924ca1df6990",
+            "c2612e972d5af7ae9b9ebd1ec78b8e2b563cd536173ad30230a7f60b8d844f2b",
         )
         self.assertEqual(
             records[nut_relative]["sha256"],
-            "7f19e5abdb33083e7d179df78d5dc1a130140eadb74a3b22aa2d8f3c078266c7",
+            "2682fb17a7a369998b89cb9fe5f5b3b1fe3708ed2ac2a1a67ebb22cd3ace8261",
         )
         for relative_path in (screw_relative, nut_relative):
             artifact = REPOSITORY_ROOT / relative_path
@@ -13814,7 +13850,19 @@ class SimCadPlacementContractTests(unittest.TestCase):
         report = load_json(CORE_CLEARANCE_REPORT, "core CAD clearance report")
         self.assertIs(report.get("passed"), False, report)
         self.assertIs(report.get("release_ready"), False, report)
-        self.assertEqual(report.get("blockers"), ["interface_hardware_fit_authority"])
+        self.assertEqual(
+            report.get("blockers"),
+            [
+                "core_dock_floor_support:PA12_modulus_strength_creep_and_process_allowables_unqualified",
+                "core_dock_floor_support:cam_contact_friction_reverse_insertion_and_capture_dynamics_unvalidated",
+                "core_dock_floor_support:floor_fixture_substrate_and_M6_thread_authority_missing",
+                "core_dock_floor_support:full_compiled_arm_collision_screen_not_yet_regenerated_from_this_source",
+                "core_dock_floor_support:printed_dimensional_tolerance_and_anchor_strength_unqualified",
+                "core_dock_floor_support:runtime_placements_and_matcha_base_authority_are_stale",
+                "core_dock_floor_support:vendor_or_normative_source_missing_for_selected_M4_and_M6_fasteners",
+                "interface_hardware_fit_authority",
+            ],
+        )
         interface_fit = report.get("interface_hardware_fit")
         self.assertIsInstance(interface_fit, dict, report)
         self.assertIs(interface_fit.get("passed"), False, interface_fit)
@@ -13830,15 +13878,15 @@ class SimCadPlacementContractTests(unittest.TestCase):
         expected_sources = {
             "QuickChange/SO101_Magnetic/exports/so101_positive_lock_slider.step": (
                 94_504,
-                "37771b10b4fe82614f0f7b460d44cdc81ea8505b4e6c7ac7b20a1f413b7ca848",
+                "b9853fe1fcbd7dff91129d7b37c3e1be87d48189486ad91c4c8ab6d57edcbad1",
             ),
             "QuickChange/SO101_Magnetic/exports/hardware_McMaster_90318A720_shoulder_screw.step": (
                 13_596,
-                "1a302d3674952d881df75e25e47b64a60b23a72b66fde48c35a0924ca1df6990",
+                "c2612e972d5af7ae9b9ebd1ec78b8e2b563cd536173ad30230a7f60b8d844f2b",
             ),
             "QuickChange/SO101_Magnetic/exports/hardware_DIN934_M3_lock_stud_nut.step": (
-                27_468,
-                "7f19e5abdb33083e7d179df78d5dc1a130140eadb74a3b22aa2d8f3c078266c7",
+                27_470,
+                "2682fb17a7a369998b89cb9fe5f5b3b1fe3708ed2ac2a1a67ebb22cd3ace8261",
             ),
         }
         for relative_path, (expected_bytes, expected_sha256) in expected_sources.items():
@@ -15792,6 +15840,290 @@ class FcpwFastGateContractTests(unittest.TestCase):
                 source_error_mm=0.01,
                 proxy_error_mm=0.02,
             )
+
+
+class RolledCoreDockRuntimeAuthorityTests(unittest.TestCase):
+    """Independent consumer of the canonical rolled full-arm checkpoint."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.validator = import_file(
+            ROLLED_CORE_DOCK_RUNTIME_VALIDATOR,
+            "rolled_core_dock_runtime_validation_under_test",
+            "rolled core-dock runtime validator",
+        )
+        cls.report = load_json(
+            ROLLED_CORE_DOCK_RUNTIME_REPORT,
+            "rolled core-dock runtime report",
+        )
+
+    def _errors(self, report: dict[str, Any]) -> list[str]:
+        return self.validator.rolled_core_dock_runtime_report_errors(
+            report,
+            repository_root=REPOSITORY_ROOT,
+        )
+
+    def _reseal(self, report: dict[str, Any]) -> None:
+        report["canonical_sha256_without_this_field"] = None
+        report["canonical_sha256_without_this_field"] = (
+            self.validator.canonical_sha256(report)
+        )
+
+    def test_report_binds_sources_frame_proxy_routes_and_false_authority(
+        self,
+    ) -> None:
+        report = self.report
+        self.assertEqual(self._errors(report), [])
+        self.validator.validate_rolled_core_dock_runtime_report(
+            report,
+            repository_root=REPOSITORY_ROOT,
+        )
+        source = report["source_binding"]
+        self.assertIs(source["triple_contract_equal"], True)
+        self.assertEqual(
+            source["source_contract_canonical_sha256"],
+            self.validator.EXPECTED_SOURCE_CONTRACT_SHA256,
+        )
+        for record in source["directly_consumed_runtime_files"]:
+            path = REPOSITORY_ROOT / record["path"]
+            self.assertEqual(path.stat().st_size, record["bytes"])
+            self.assertEqual(sha256_file(path), record["sha256"])
+
+        frame = report["rolled_frame"]
+        self.assertEqual(
+            frame["position_m"],
+            list(self.validator.EXPECTED_CORE_DOCK_POSITION_M),
+        )
+        self.assertEqual(
+            frame["quat_wxyz"],
+            list(self.validator.EXPECTED_CORE_DOCK_QUAT_WXYZ),
+        )
+        self.assertEqual(frame["tool_view_roll_deg"], -87.21086925015224)
+        self.assertEqual(frame["release_axis_world"], [0.0, 0.0, 1.0])
+
+        proxy = report["support_proxy"]
+        self.assertEqual(proxy["component_count"], 11)
+        self.assertEqual(proxy["pairwise_positive_overlap_count"], 0)
+        self.assertEqual(proxy["source_missing_volume_mm3"], 0.0)
+        self.assertEqual(
+            proxy["analytic_excess_volume_mm3"],
+            15381.827700519032,
+        )
+        self.assertIs(proxy["passage_witness_inside_proxy"], False)
+        self.assertEqual(
+            proxy["filled_hole_witnesses_inside_proxy"], [True] * 6
+        )
+        self.assertEqual(
+            proxy["removed_legacy_geom_names"],
+            [
+                "dock_gripper_support_collision",
+                "dock_gripper_support_anchor_collision",
+            ],
+        )
+
+        for tool, expected in (
+            ("spoon", self.validator.EXPECTED_SPOON_POSE),
+            ("whisk", self.validator.EXPECTED_WHISK_POSE),
+        ):
+            observed = report["unchanged_matcha_docks"][tool]
+            self.assertEqual(observed["declared_position_m"], list(expected[0]))
+            self.assertEqual(observed["declared_quat_wxyz"], list(expected[1]))
+
+        capture = report["capture_route"]
+        self.assertEqual(capture["row_count"], 276)
+        self.assertEqual(capture["f8le_shape"], [276, 7])
+        self.assertEqual(capture["preseat_bounds_mm"], [55.0, 0.0])
+        self.assertEqual(capture["preseat_step_mm"], -0.2)
+        self.assertEqual(capture["orientation_bound_rad"], math.radians(0.1))
+        self.assertLessEqual(
+            capture["maximum_dense_orientation_error_rad"],
+            math.radians(0.1),
+        )
+        self.assertIs(capture["exact_quaternion_required_off_seat"], False)
+
+        release = report["release_route"]
+        self.assertEqual(release["row_count"], 31)
+        self.assertEqual(release["f8le_shape"], [31, 6])
+        self.assertEqual(
+            [row["withdrawal_mm"] for row in release["roster"]],
+            [0.5 * index for index in range(31)],
+        )
+        self.assertEqual(
+            release["roster"][0]["q_rad"],
+            [-0.72, -0.5, 0.8, -0.3, -1.522116811941435],
+        )
+        self.assertEqual(
+            report["default_actions"]["names"],
+            list(self.validator.EXPECTED_DEFAULT_ACTION_NAMES),
+        )
+        self.assertIs(
+            report["default_actions"]["static_release_continuation_included"],
+            False,
+        )
+        self.assertIs(report["release_ready"], False)
+        for field in (
+            "material_authority",
+            "mass_authority",
+            "fastener_authority",
+            "substrate_authority",
+            "contact_dynamics_authority",
+            "physical_release_authority",
+            "release_ready",
+        ):
+            self.assertIs(report["authority_scope"][field], False, field)
+
+    def test_full_arm_continuous_clearance_inventory_and_topology_are_exact(
+        self,
+    ) -> None:
+        report = self.report
+        inventory = report["inventory"]
+        sampling = report["sampling"]
+        clearance = report["continuous_clearance"]
+        self.assertEqual(inventory["arm_geom_count"], 14)
+        self.assertEqual(inventory["support_geom_count"], 11)
+        self.assertEqual(inventory["dock_target_geom_count"], 90)
+        self.assertEqual(sampling["unique_state_count"], 301)
+        self.assertEqual(sampling["joint_linear_substeps_per_interval"], 10)
+        self.assertEqual(sampling["distance_evaluation_count"], 379260)
+        self.assertAlmostEqual(
+            clearance["minimum_sampled_outer_aabb_lower_bound_mm"]
+            - clearance["maximum_pair_specific_topology_motion_bound_mm"],
+            clearance["continuous_clearance_lower_bound_mm"],
+            places=12,
+        )
+        self.assertGreaterEqual(
+            clearance["continuous_clearance_lower_bound_mm"], 0.20
+        )
+        self.assertEqual(report["support_topology"]["tangency_count"], 15)
+        self.assertTrue(report["support_topology"]["passed"])
+        self.assertEqual(report["startup"]["penetration_count"], 0)
+        self.assertTrue(report["geometry_passed"])
+
+    def test_coherently_resealed_adversarial_mutations_fail_closed(self) -> None:
+        def source_hash(payload: dict[str, Any]) -> None:
+            records = payload["source_binding"][
+                "directly_consumed_runtime_files"
+            ]
+            records[0]["sha256"] = "0" * 64
+            payload["source_binding"][
+                "directly_consumed_runtime_files_canonical_sha256"
+            ] = self.validator.canonical_sha256(records)
+
+        def undercoverage(payload: dict[str, Any]) -> None:
+            components = payload["support_proxy"]["components"]
+            components.pop()
+            payload["support_proxy"]["component_count"] = len(components)
+            payload["support_proxy"]["components_canonical_sha256"] = (
+                self.validator.canonical_sha256(components)
+            )
+
+        def overcoverage(payload: dict[str, Any]) -> None:
+            components = payload["support_proxy"]["components"]
+            components[0]["bounds_m"][0][0] = -0.040
+            payload["support_proxy"]["components_canonical_sha256"] = (
+                self.validator.canonical_sha256(components)
+            )
+            payload["support_proxy"]["analytic_box_union_volume_mm3"] += 344.0
+            payload["support_proxy"]["analytic_excess_volume_mm3"] += 344.0
+
+        def legacy_support(payload: dict[str, Any]) -> None:
+            names = payload["inventory"]["dock_target_geom_names"]
+            names.append("dock_gripper_support_collision")
+            payload["inventory"]["dock_target_geom_count"] += 1
+            payload["inventory"]["dock_target_geom_names_sha256"] = (
+                self.validator.canonical_sha256(names)
+            )
+
+        def roster(payload: dict[str, Any]) -> None:
+            rows = payload["release_route"]["roster"]
+            rows[1]["q_rad"][2] += 0.01
+            payload["release_route"]["canonical_sha256"] = (
+                self.validator.canonical_sha256(rows)
+            )
+            f8le = np.asarray(
+                [[row["withdrawal_mm"], *row["q_rad"]] for row in rows],
+                dtype="<f8",
+            )
+            payload["release_route"]["f8le_sha256"] = hashlib.sha256(
+                f8le.tobytes()
+            ).hexdigest()
+
+        def omitted_arm(payload: dict[str, Any]) -> None:
+            names = payload["inventory"]["arm_geom_names"]
+            records = payload["inventory"]["arm_compiled_geom_records"]
+            names.pop()
+            records.pop()
+            payload["inventory"]["arm_geom_count"] = len(names)
+            payload["inventory"]["arm_geom_names_sha256"] = (
+                self.validator.canonical_sha256(names)
+            )
+            payload["inventory"]["arm_compiled_geom_records_sha256"] = (
+                self.validator.canonical_sha256(records)
+            )
+
+        def motion_bound_shrink(payload: dict[str, Any]) -> None:
+            clearance = payload["continuous_clearance"]
+            clearance["maximum_pair_specific_topology_motion_bound_mm"] = 0.01
+            clearance["continuous_clearance_lower_bound_mm"] = (
+                clearance["minimum_sampled_outer_aabb_lower_bound_mm"] - 0.01
+            )
+
+        mutations = (
+            ("source_hash_reseal", source_hash),
+            (
+                "roll_sign",
+                lambda payload: payload["rolled_frame"].__setitem__(
+                    "tool_view_roll_deg", 87.21086925015224
+                ),
+            ),
+            ("support_undercoverage", undercoverage),
+            ("support_overcoverage", overcoverage),
+            ("old_support_resurrection", legacy_support),
+            ("release_roster", roster),
+            (
+                "capture_route",
+                lambda payload: payload["capture_route"].__setitem__(
+                    "state_bytes_sha256", "0" * 64
+                ),
+            ),
+            (
+                "compiled_model",
+                lambda payload: payload["model_binding"].__setitem__(
+                    "compiled_model_xml_equivalent_sha256", "0" * 64
+                ),
+            ),
+            (
+                "gravity_ff",
+                lambda payload: payload["gravity_feedforward"].__setitem__(
+                    "identity_sha256", "0" * 64
+                ),
+            ),
+            ("omitted_arm_geom", omitted_arm),
+            (
+                "omitted_state",
+                lambda payload: payload["sampling"].__setitem__(
+                    "unique_state_count", 300
+                ),
+            ),
+            ("motion_bound_shrink", motion_bound_shrink),
+            (
+                "authority_promotion",
+                lambda payload: payload["authority_scope"].__setitem__(
+                    "physical_release_authority", True
+                ),
+            ),
+        )
+        for label, mutate in mutations:
+            with self.subTest(label=label):
+                changed = copy.deepcopy(self.report)
+                mutate(changed)
+                self._reseal(changed)
+                self.assertTrue(self._errors(changed), label)
+                with self.assertRaises(ValueError):
+                    self.validator.validate_rolled_core_dock_runtime_report(
+                        changed,
+                        repository_root=REPOSITORY_ROOT,
+                    )
 
 
 class ValidationTierContractTests(unittest.TestCase):
