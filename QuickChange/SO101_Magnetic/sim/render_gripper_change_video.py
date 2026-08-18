@@ -129,7 +129,10 @@ def build_render_geometry(model: mujoco.MjModel, cell: float) -> list[tuple[np.n
         elif geom_type == mujoco.mjtGeom.mjGEOM_PLANE:
             triangles = _plane_triangles(model.geom_size[geom_id])
         else:
-            continue
+            # Preserve one render-geometry slot per compiled geom.  The scene
+            # transform loop indexes this list by geom ID; dropping an
+            # unsupported capsule/ellipsoid shifted every later transform.
+            triangles = np.empty((0, 3, 3), dtype=np.float32)
         material_id = int(model.geom_matid[geom_id])
         rgba = model.mat_rgba[material_id] if material_id >= 0 else model.geom_rgba[geom_id]
         color = np.clip(rgba[:3] * 255.0, 0, 255).astype(np.uint8)

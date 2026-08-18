@@ -1,0 +1,1832 @@
+{
+  "contracts": {
+    "core_dock_floor_support": {
+      "blockers": [
+        "vendor_or_normative_source_missing_for_selected_M4_and_M6_fasteners",
+        "floor_fixture_substrate_and_M6_thread_authority_missing",
+        "PA12_modulus_strength_creep_and_process_allowables_unqualified",
+        "printed_dimensional_tolerance_and_anchor_strength_unqualified",
+        "cam_contact_friction_reverse_insertion_and_capture_dynamics_unvalidated"
+      ],
+      "fasteners": {
+        "lower": {
+          "analytic_envelope_volume_mm3": 2714.3361,
+          "nominal_selection": "ISO_10642_M6x20",
+          "pitch_mm": 1.0,
+          "quantity": 4,
+          "required_tapped_engagement_below_base_mm": 12.0,
+          "substrate_authority": false
+        },
+        "total_analytic_envelope_volume_mm3": 3785.823076873815,
+        "upper": {
+          "analytic_envelope_volume_mm3": 1071.487,
+          "joint_grip_mm": 14.0,
+          "nominal_selection": "ISO_10642_M4x25_A2",
+          "nominal_thread_protrusion_mm": 5.2,
+          "nut": "DIN_985_M4_AF7x5",
+          "quantity": 2,
+          "source_authority": false,
+          "washer": "DIN_125_M4_OD9x0.8",
+          "washer_plus_nut_mm": 5.8
+        }
+      },
+      "frame": {
+        "dock_local_axes_world_columns": [
+          [
+            0.6593846719714732,
+            -0.751805729140895,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.0
+          ],
+          [
+            0.751805729140895,
+            0.6593846719714733,
+            0.0
+          ]
+        ],
+        "matrix_composition": "R_world_new=R_world_old*Rz(+87.21086925015224deg)",
+        "position_m": [
+          0.19082795371216685,
+          0.1330713713445051,
+          0.1939154579377553
+        ],
+        "quat_wxyz": [
+          0.6440855284765126,
+          -0.6440855284765125,
+          0.2918112952014223,
+          -0.2918112952014225
+        ],
+        "rotation_scope": "core_interface_and_dock_datum_only",
+        "source_negative_y_is_world_up": true,
+        "source_negative_y_world": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "tool_view_roll_deg": -87.21086925015224
+      },
+      "geometry_audit": {
+        "full_arm_screen": {
+          "compiled_arm_mesh_count": 14,
+          "continuous_clearance_lower_bound_mm": 4.220501516110517,
+          "distance_evaluation_count": 379260,
+          "dock_target_geom_count": 90,
+          "evaluated_state_count": 301,
+          "explicit_exclusions": [
+            "robot_self_collision",
+            "controller_execution_or_tracking",
+            "matcha_physical_base_or_floor_fixture_authority",
+            "contact_force_friction_or_dynamics",
+            "material_fastener_substrate_or_load_path_authority",
+            "reverse_insertion_or_physical_release_authority"
+          ],
+          "geometric_clearance_authority": true,
+          "joint_linear_substeps_per_interval": 10,
+          "maximum_pair_specific_topology_motion_bound_mm": 0.13870802188957512,
+          "maximum_substep_sum_abs_dq_rad": 0.0008238065187196941,
+          "minimum_sampled_outer_aabb_lower_bound_mm": 4.3592095380000915,
+          "passed": true,
+          "physical_release_authority": false,
+          "release_interval_count": 30,
+          "required_clearance_mm": 0.2,
+          "runtime_recomputation_pending": false,
+          "runtime_report": {
+            "method": "actual_compiled_mesh_outer_AABB_to_actual_compiled_static_dock_geom_outer_AABB_with_topology_joint_motion_bound",
+            "path": "QuickChange/SO101_Magnetic/sim/rolled_core_dock_runtime_report.json",
+            "required_schema_version": "1.0-rolled-core-dock-runtime-authority"
+          },
+          "scope": "upstream_compiled_arm_meshes_against_static_core_dock_targets_along_the_exact_31_row_joint_linear_release_only",
+          "startup_contact_count": 65,
+          "startup_penetration_count": 0,
+          "support_continuous_clearance_lower_bound_mm": 16.201539960841686,
+          "support_geom_count": 11,
+          "support_minimum_sampled_outer_aabb_lower_bound_mm": 16.34024798273126,
+          "support_tangency_count": 15,
+          "topology_global_chain_radius_bound_m": 0.3987479600566484
+        },
+        "legacy_report_count_with_both_mutually_exclusive_sliders_and_jaw": 23,
+        "minimum_fixed_dock_distances_mm": {
+          "left_lower_rail": 4.031128874,
+          "left_upper_rail": 1.118033989,
+          "left_wall": 9.0,
+          "positive_lock_cam": 30.35827729,
+          "right_lower_rail": 1.414213562,
+          "right_upper_rail": 1.0,
+          "right_wall": 6.0,
+          "seating_stop": 0.0
+        },
+        "moving_jaw_mesh_count": 1,
+        "moving_source_minimum_distances_mm": {
+          "moving_jaw_continuous_aabb": 7.9002132,
+          "official_fixed_gripper_body": 7.632880447,
+          "robot_plate": 8.015609771,
+          "stock_tool_plate": 7.0
+        },
+        "positive_overlap_with_forbidden_dock_features_mm3": 0.0,
+        "runtime_brep_breakdown": {
+          "magnets": 2,
+          "robot_plate": 1,
+          "selected_slider_state": 1,
+          "tool_side": 17
+        },
+        "runtime_physical_brep_count_per_state": 21,
+        "seating_stop_zero_distance_semantic": "explicit_two_M4_bolted_joint"
+      },
+      "ligaments_mm": {
+        "base_countersink_minimum_edge": 6.0,
+        "support_wall": 4.0,
+        "top_hole_left_x": 4.8,
+        "top_hole_minimum_z": 2.05,
+        "top_hole_right_x": 3.8
+      },
+      "load_proxy": {
+        "assumed_elastic_modulus_mpa": 1500.0,
+        "bending_stress_mpa": 0.5720015948048459,
+        "cantilever_euler_load_kN": 27.040274440975477,
+        "cantilever_length_mm": 147.9154579377553,
+        "combined_moment_Nm": 4.25271213611,
+        "compression_force_N": 140.923995,
+        "compression_stress_mpa": 0.22583973557692305,
+        "euler_load_ratio": 191.87842667230288,
+        "joint_force_proxies_N": {
+          "floor_over_56mm": 75.941,
+          "floor_over_76mm": 55.957,
+          "top_over_15.5mm": 274.369,
+          "top_over_46mm": 92.45
+        },
+        "proof_target": "4.253_Nm_plus_reverse_insertion_load",
+        "scope": "screening_only_not_material_or_joint_certification",
+        "second_moment_mm4": 159848.0,
+        "section_area_mm2": 624.0,
+        "section_modulus_mm3": 7434.790697674419,
+        "tip_deflection_mm": 0.1940281084551153,
+        "tip_rotation_deg": 0.15031548259226407
+      },
+      "passive_release": {
+        "axis": "dock_local_negative_y",
+        "full_cam_clearance_at_15_mm": 0.251814779,
+        "slider_q_mm": {
+          "0_to_2_mm": 0.05,
+          "2_to_15_mm_formula": "min(3,0.05+0.246875*(withdrawal_mm-2))",
+          "q3_withdrawal_mm": 13.949367088607595,
+          "slope": 0.246875
+        }
+      },
+      "printed_brep": {
+        "boolean_primitives": {
+          "base_box_bounds_mm": {
+            "x": [
+              -52.0,
+              48.0
+            ],
+            "y": [
+              185.9154579377553,
+              193.9154579377553
+            ],
+            "z": [
+              -35.25,
+              44.75
+            ]
+          },
+          "base_passage_box_bounds_mm": {
+            "x": [
+              -19.5,
+              15.5
+            ],
+            "y": [
+              185.9154579377553,
+              193.9154579377553
+            ],
+            "z": [
+              -12.75,
+              22.25
+            ]
+          },
+          "head_main_box_bounds_mm": {
+            "x": [
+              -32.0,
+              24.0
+            ],
+            "y": [
+              32.0,
+              40.0
+            ],
+            "z": [
+              0.5,
+              9.0
+            ]
+          },
+          "head_post_positive_overlap_mm3_after_pockets": 716.8886804667261,
+          "head_post_positive_overlap_mm3_before_pockets": 731.0,
+          "m4_clearance_holes": {
+            "axis": [
+              0.0,
+              1.0,
+              0.0
+            ],
+            "centres_xz_mm": [
+              [
+                -25.0,
+                4.75
+              ],
+              [
+                21.0,
+                4.75
+              ]
+            ],
+            "diameter_mm": 4.4,
+            "y_bounds_mm": [
+              31.9,
+              40.1
+            ]
+          },
+          "m4_nut_pockets": {
+            "radius_mm": 4.75,
+            "y_bounds_mm": [
+              39.8,
+              46.5
+            ]
+          },
+          "m4_thread_tail_pockets": {
+            "radius_mm": 2.3,
+            "y_bounds_mm": [
+              46.5,
+              51.2
+            ]
+          },
+          "m6_floor_holes": {
+            "axis": [
+              0.0,
+              1.0,
+              0.0
+            ],
+            "centres_xz_mm": [
+              [
+                -40.0,
+                -23.25
+              ],
+              [
+                -40.0,
+                32.75
+              ],
+              [
+                36.0,
+                -23.25
+              ],
+              [
+                36.0,
+                32.75
+              ]
+            ],
+            "countersink_depth_mm": 2.7,
+            "countersink_included_angle_deg": 90.0,
+            "countersink_major_diameter_mm": 12.0,
+            "diameter_mm": 6.6,
+            "through_y_bounds_mm": [
+              185.8154579377553,
+              194.0154579377553
+            ]
+          },
+          "post_base_positive_overlap_mm3": 1248.0,
+          "post_inner_passage_box_bounds_mm": {
+            "x": [
+              -19.5,
+              15.5
+            ],
+            "y": [
+              50.0,
+              193.9154579377553
+            ],
+            "z": [
+              -12.75,
+              22.25
+            ]
+          },
+          "post_outer_box_bounds_mm": {
+            "x": [
+              -23.5,
+              19.5
+            ],
+            "y": [
+              38.0,
+              187.9154579377553
+            ],
+            "z": [
+              -16.75,
+              26.25
+            ]
+          },
+          "right_reinforcement_box_bounds_mm": {
+            "x": [
+              23.0,
+              27.0
+            ],
+            "y": [
+              32.0,
+              40.0
+            ],
+            "z": [
+              1.0,
+              8.5
+            ]
+          },
+          "right_reinforcement_overlap_mm3": 60.0
+        },
+        "component_inventory": [
+          {
+            "connection": "two_explicit_M4_stop_fasteners",
+            "expected_volume_mm3": 21743.904784962568,
+            "name": "core_passive_tool_dock",
+            "solid_count": 1
+          },
+          {
+            "bounds_mm": {
+              "x": [
+                -52.0,
+                48.0
+              ],
+              "y": [
+                32.0,
+                193.9154579377553
+              ],
+              "z": [
+                -35.25,
+                44.75
+              ]
+            },
+            "connection": "four_explicit_M6_floor_fasteners",
+            "expected_volume_mm3": 162415.4180526403,
+            "name": "core_dock_floor_support_bracket",
+            "solid_count": 1
+          }
+        ],
+        "installed_printed_volume_mm3": 184159.32283760287,
+        "mass_blocker": "printed_material_density_and_condition_not_selected",
+        "mass_claim": null,
+        "superseded_non_brep_estimate_mm3": 162308.50715898623
+      },
+      "release_ready": false,
+      "release_roster": {
+        "canonical_sha256": "f30b0c178917945fcd45358710e5127302bc5240ca6cb4cdaa7f49d16c4f0293",
+        "endpoint_q_deg": [
+          -41.25296124941928,
+          -30.31146891049615,
+          40.60847001055017,
+          -10.29700110005403,
+          -87.21086925015223
+        ],
+        "expected_canonical_sha256": "f30b0c178917945fcd45358710e5127302bc5240ca6cb4cdaa7f49d16c4f0293",
+        "maximum_joint_step_deg": 0.2360031832899985,
+        "row_count": 31,
+        "rows": [
+          {
+            "q_rad": [
+              -0.72,
+              -0.5,
+              0.8,
+              -0.3,
+              -1.522116811941435
+            ],
+            "withdrawal_mm": 0.0
+          },
+          {
+            "q_rad": [
+              -0.7200000000000001,
+              -0.5012713525907627,
+              0.7971523199971643,
+              -0.29588096740640185,
+              -1.5221168119414348
+            ],
+            "withdrawal_mm": 0.5
+          },
+          {
+            "q_rad": [
+              -0.7199999999999999,
+              -0.5025209619924711,
+              0.7942909079367223,
+              -0.29176994594425143,
+              -1.522116811941435
+            ],
+            "withdrawal_mm": 1.0
+          },
+          {
+            "q_rad": [
+              -0.72,
+              -0.5037489159236884,
+              0.7914158067505378,
+              -0.2876668908268499,
+              -1.5221168119414346
+            ],
+            "withdrawal_mm": 1.5
+          },
+          {
+            "q_rad": [
+              -0.7199999999999999,
+              -0.5049553020734726,
+              0.7885270586980251,
+              -0.28357175662455236,
+              -1.5221168119414348
+            ],
+            "withdrawal_mm": 2.0
+          },
+          {
+            "q_rad": [
+              -0.7199999999999998,
+              -0.5061402080808916,
+              0.785624705362152,
+              -0.27948449728126057,
+              -1.5221168119414346
+            ],
+            "withdrawal_mm": 2.5
+          },
+          {
+            "q_rad": [
+              -0.7199999999999999,
+              -0.5073037215149596,
+              0.7827087876455384,
+              -0.2754050661305792,
+              -1.5221168119414348
+            ],
+            "withdrawal_mm": 3.0
+          },
+          {
+            "q_rad": [
+              -0.72,
+              -0.5084459298549687,
+              0.7797793457666375,
+              -0.271333415911669,
+              -1.5221168119414348
+            ],
+            "withdrawal_mm": 3.5
+          },
+          {
+            "q_rad": [
+              -0.7200000000000001,
+              -0.5095669204712283,
+              0.7768364192560011,
+              -0.26726949878477324,
+              -1.522116811941435
+            ],
+            "withdrawal_mm": 4.0
+          },
+          {
+            "q_rad": [
+              -0.7199999999999999,
+              -0.5106667806061898,
+              0.7738800469526174,
+              -0.2632132663464279,
+              -1.5221168119414348
+            ],
+            "withdrawal_mm": 4.5
+          },
+          {
+            "q_rad": [
+              -0.72,
+              -0.5117455973559675,
+              0.7709102670003262,
+              -0.2591646696443586,
+              -1.5221168119414346
+            ],
+            "withdrawal_mm": 5.0
+          },
+          {
+            "q_rad": [
+              -0.7200000000000001,
+              -0.5128034576522418,
+              0.7679271168443034,
+              -0.25512365919206204,
+              -1.5221168119414348
+            ],
+            "withdrawal_mm": 5.5
+          },
+          {
+            "q_rad": [
+              -0.7200000000000001,
+              -0.5138404482445372,
+              0.7649306332276101,
+              -0.2510901849830732,
+              -1.5221168119414348
+            ],
+            "withdrawal_mm": 6.0
+          },
+          {
+            "q_rad": [
+              -0.7199999999999999,
+              -0.5148566556828839,
+              0.7619208521878057,
+              -0.24706419650492184,
+              -1.5221168119414343
+            ],
+            "withdrawal_mm": 6.5
+          },
+          {
+            "q_rad": [
+              -0.7199999999999998,
+              -0.5158521663008359,
+              0.7588978090536203,
+              -0.24304564275278437,
+              -1.5221168119414348
+            ],
+            "withdrawal_mm": 7.0
+          },
+          {
+            "q_rad": [
+              -0.72,
+              -0.5168270661988639,
+              0.7558615384416828,
+              -0.2390344722428192,
+              -1.5221168119414348
+            ],
+            "withdrawal_mm": 7.5
+          },
+          {
+            "q_rad": [
+              -0.72,
+              -0.5177814412280972,
+              0.7528120742532991,
+              -0.23503063302520222,
+              -1.5221168119414348
+            ],
+            "withdrawal_mm": 8.0
+          },
+          {
+            "q_rad": [
+              -0.7200000000000005,
+              -0.5187153769744209,
+              0.7497494496712797,
+              -0.23103407269685902,
+              -1.5221168119414346
+            ],
+            "withdrawal_mm": 8.5
+          },
+          {
+            "q_rad": [
+              -0.7199999999999999,
+              -0.519628958742918,
+              0.7466736971568104,
+              -0.22704473841389222,
+              -1.5221168119414343
+            ],
+            "withdrawal_mm": 9.0
+          },
+          {
+            "q_rad": [
+              -0.7199999999999999,
+              -0.5205222715426575,
+              0.7435848484463662,
+              -0.22306257690370881,
+              -1.5221168119414343
+            ],
+            "withdrawal_mm": 9.5
+          },
+          {
+            "q_rad": [
+              -0.7199999999999999,
+              -0.5213954000718088,
+              0.7404829345486624,
+              -0.2190875344768539,
+              -1.5221168119414348
+            ],
+            "withdrawal_mm": 10.0
+          },
+          {
+            "q_rad": [
+              -0.7200000000000001,
+              -0.5222484287030923,
+              0.7373679857416372,
+              -0.21511955703854524,
+              -1.5221168119414343
+            ],
+            "withdrawal_mm": 10.5
+          },
+          {
+            "q_rad": [
+              -0.72,
+              -0.5230814414695496,
+              0.7342400315694654,
+              -0.21115859009991603,
+              -1.5221168119414346
+            ],
+            "withdrawal_mm": 11.0
+          },
+          {
+            "q_rad": [
+              -0.7200000000000001,
+              -0.5238945220506328,
+              0.7310991008396011,
+              -0.20720457878896845,
+              -1.5221168119414348
+            ],
+            "withdrawal_mm": 11.5
+          },
+          {
+            "q_rad": [
+              -0.7200000000000001,
+              -0.5246877537586018,
+              0.7279452216198397,
+              -0.20325746786123822,
+              -1.5221168119414348
+            ],
+            "withdrawal_mm": 12.0
+          },
+          {
+            "q_rad": [
+              -0.7199999999999999,
+              -0.5254612195252387,
+              0.7247784212354064,
+              -0.19931720171016784,
+              -1.522116811941435
+            ],
+            "withdrawal_mm": 12.5
+          },
+          {
+            "q_rad": [
+              -0.7199999999999998,
+              -0.5262150018888452,
+              0.7215987262660535,
+              -0.19538372437720883,
+              -1.5221168119414346
+            ],
+            "withdrawal_mm": 13.0
+          },
+          {
+            "q_rad": [
+              -0.7200000000000001,
+              -0.526949182981541,
+              0.7184061625431684,
+              -0.19145697956162747,
+              -1.522116811941435
+            ],
+            "withdrawal_mm": 13.5
+          },
+          {
+            "q_rad": [
+              -0.7200000000000001,
+              -0.5276638445168658,
+              0.7152007551469122,
+              -0.18753691063004685,
+              -1.5221168119414343
+            ],
+            "withdrawal_mm": 14.0
+          },
+          {
+            "q_rad": [
+              -0.7199999999999998,
+              -0.5283590677776248,
+              0.7119825284033249,
+              -0.18362346062570054,
+              -1.522116811941435
+            ],
+            "withdrawal_mm": 14.5
+          },
+          {
+            "q_rad": [
+              -0.7200000000000001,
+              -0.5290349336040562,
+              0.708751505881477,
+              -0.17971657227742088,
+              -1.5221168119414346
+            ],
+            "withdrawal_mm": 15.0
+          }
+        ],
+        "solver_audit": {
+          "maximum_row_fk_orientation_error_rad": 6.990106082579211e-16,
+          "maximum_row_fk_position_error_mm": 1.3645432973688894e-13,
+          "passed": true,
+          "runtime_recomputation_pending": false,
+          "runtime_report": {
+            "method": "actual_compiled_mesh_outer_AABB_to_actual_compiled_static_dock_geom_outer_AABB_with_topology_joint_motion_bound",
+            "path": "QuickChange/SO101_Magnetic/sim/rolled_core_dock_runtime_report.json",
+            "required_schema_version": "1.0-rolled-core-dock-runtime-authority"
+          },
+          "source_method": "deterministic_continuation_from_exact_seated_state"
+        },
+        "step_mm": 0.5,
+        "withdrawal_bounds_mm": [
+          0.0,
+          15.0
+        ]
+      },
+      "schema_version": "1.1-source-runtime-geometric-closure",
+      "tolerance_budget": {
+        "dimensionally_qualified": false,
+        "minimum_nominal_fixed_clearance_mm": 1.0,
+        "required_residual_mm": 0.2,
+        "residual_mm": 0.3,
+        "terms_mm": {
+          "bolt_float": 0.15,
+          "dock_print": 0.2,
+          "numeric": 0.05,
+          "seating_and_roll": 0.1,
+          "support_print": 0.2
+        },
+        "total_mm": 0.7
+      }
+    },
+    "core_dock_stop": {
+      "bounds_mm": {
+        "x": [
+          -45.0,
+          37.0
+        ],
+        "y": [
+          26.0,
+          32.0
+        ],
+        "z": [
+          -3.0,
+          12.5
+        ]
+      },
+      "center_mm": [
+        -4.0,
+        29.0,
+        4.75
+      ],
+      "countersink_removed_volume_mm3": 64.26651371693515,
+      "dock": "core_stock_gripper",
+      "expected_volume_mm3": 7379.269784962569,
+      "front_countersinks": [
+        {
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "included_angle_deg": 90.0,
+          "major_diameter_mm": 8.2,
+          "minor_diameter_mm": 4.4,
+          "target_head_recess_mm": [
+            0.05,
+            0.15
+          ],
+          "x_mm": -25.0,
+          "y_bounds_mm": [
+            26.0,
+            27.9
+          ],
+          "z_mm": 4.75
+        },
+        {
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "included_angle_deg": 90.0,
+          "major_diameter_mm": 8.2,
+          "minor_diameter_mm": 4.4,
+          "target_head_recess_mm": [
+            0.05,
+            0.15
+          ],
+          "x_mm": 21.0,
+          "y_bounds_mm": [
+            26.0,
+            27.9
+          ],
+          "z_mm": 4.75
+        }
+      ],
+      "remaining_ligaments_mm": {
+        "minimum_x": 11.9,
+        "minimum_z": 3.65,
+        "rear_y_wall": 4.1
+      },
+      "size_mm": [
+        82.0,
+        6.0,
+        15.5
+      ],
+      "through_holes": [
+        {
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "diameter_mm": 4.4,
+          "x_mm": -25.0,
+          "y_start_mm": 25.9,
+          "z_mm": 4.75
+        },
+        {
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "diameter_mm": 4.4,
+          "x_mm": 21.0,
+          "y_start_mm": 25.9,
+          "z_mm": 4.75
+        }
+      ]
+    },
+    "interface_hardware_fit": {
+      "fixed_stud_head_wells": {
+        "bottom_native_z_mm": 2.8,
+        "cam_relief_ligament_mm": 7.950000000000001,
+        "diameter_mm": 7.2,
+        "nearest_horn_counterbore_ligament_mm": 1.9142324092167384,
+        "nominal_axial_clearance_mm": 0.40000000000000036,
+        "nominal_radial_clearance_mm": 0.6000000000000001,
+        "slider_lobe_bearing_annulus_mm": 0.8000000000000003,
+        "stud_head_diameter_mm": 6.0
+      },
+      "frame": "mating_component_native_mm",
+      "magnetic_hardware": {
+        "combined_magnet_target_air_gap_mm": 0.1,
+        "component_width_mm": 12.0,
+        "face_recess_each_mm": 0.05,
+        "magnet_native_z_bounds_mm": [
+          5.45,
+          9.45
+        ],
+        "magnet_pocket_width_mm": 12.6,
+        "nominal_lateral_clearance_mm": 0.2999999999999998,
+        "own_pocket_support": "named_rear_face_to_pocket_floor_tangency",
+        "target_pocket_width_mm": 12.6,
+        "target_tool_local_z_bounds_mm": [
+          0.05,
+          3.05
+        ]
+      },
+      "pogo_target_pad_relief": {
+        "depth_mm": 0.35,
+        "diameter_mm": 4.6,
+        "minimum_adjacent_surface_web_mm": 0.40000000000000036,
+        "minimum_outer_y_surface_web_mm": 2.2,
+        "nominal_axial_clearance_mm": 0.3,
+        "nominal_radial_clearance_mm": 0.2999999999999998,
+        "pogo_interface_authority": {
+          "dimensioned_profile": {
+            "barb_axial_reference_mm": 0.635,
+            "cup_bore_length_mm": 2.54,
+            "cup_reference_length_mm": 3.6829999999999994,
+            "fixed_shell_collision_envelope_segments": [
+              {
+                "name": "solder_cup",
+                "outer_diameter_mm": 1.5239999999999998,
+                "semantics": "drawing_nominal_outer_envelope",
+                "z_bounds_mm": [
+                  0.0,
+                  3.6829999999999994
+                ]
+              },
+              {
+                "name": "cup_to_knurl_transition_bound",
+                "outer_diameter_mm": 1.651,
+                "semantics": "conservative_largest_adjacent_dimensioned_diameter",
+                "z_bounds_mm": [
+                  3.6829999999999994,
+                  3.809999999999999
+                ]
+              },
+              {
+                "name": "knurl",
+                "outer_diameter_mm": 1.651,
+                "semantics": "dimensioned_press_fit_feature",
+                "z_bounds_mm": [
+                  3.809999999999999,
+                  4.571999999999999
+                ]
+              },
+              {
+                "name": "shoulder",
+                "outer_diameter_mm": 2.1082,
+                "semantics": "dimensioned_hard_stop_feature",
+                "z_bounds_mm": [
+                  4.571999999999999,
+                  5.283199999999999
+                ]
+              },
+              {
+                "name": "plunger_side_fixed_features",
+                "outer_diameter_mm": 1.9430999999999998,
+                "semantics": "conservative_full_span_envelope_of_dimensioned_upper_guide_upper_shell_and_barb_diameters",
+                "z_bounds_mm": [
+                  5.283199999999999,
+                  7.924799999999999
+                ]
+              }
+            ],
+            "fixed_shell_length_mm": 7.924799999999999,
+            "knurl_length_mm": 0.7619999999999999,
+            "maximum_exposed_plunger_mm": 1.5748,
+            "moving_plunger": {
+              "collision_shape_semantics": "official-drawing-derived conservative cylindrical envelope of round tip; not manufacturer 3D CAD",
+              "compression_range_mm": [
+                0.0,
+                1.524
+              ],
+              "maximum_exposed_length_mm": 1.5748,
+              "motion_axis": [
+                0.0,
+                0.0,
+                -1.0
+              ],
+              "motion_kind": "prismatic",
+              "outer_diameter_mm": 1.0668
+            },
+            "nominal_diameters_mm": {
+              "barb": 1.9430999999999998,
+              "knurl": 1.651,
+              "moving_plunger": 1.0668,
+              "shoulder": 2.1082,
+              "solder_cup_bore": 0.9652,
+              "solder_cup_outer": 1.5239999999999998,
+              "upper_guide": 1.7272,
+              "upper_shell": 1.8541999999999998
+            },
+            "overall_reference_length_mm": 9.4996,
+            "overall_reference_semantics": "parenthesized drawing reference; independently checked against the dimensioned .180+.132+.062 chain",
+            "shell_top_to_shoulder_bottom_mm": 3.3528,
+            "shoulder_bottom_from_base_mm": 4.571999999999999,
+            "shoulder_thickness_mm": 0.7111999999999999
+          },
+          "drawing_tolerances": {
+            "standard_angle_deg": 2.0,
+            "standard_diameter_mm": 0.0508,
+            "standard_length_mm": 0.1524
+          },
+          "first_mate_tolerance_stack": {
+            "guaranteed_worst_case_ground_lead_mm": -0.40959999999999996,
+            "independent_pin_pair_error_bound_mm": 0.6096,
+            "independent_standard_length_tolerance_term_count": 4,
+            "nominal_ground_lead_mm": 0.20000000000000007,
+            "passed": false,
+            "shoulder_to_tip_dimension_terms_per_pin": [
+              ".132_in_fixed_span",
+              ".062_in_maximum_exposed_plunger"
+            ]
+          },
+          "fixed_shell_envelope_authority": {
+            "kind": "official-drawing-derived_conservative_nominal_exterior",
+            "manufacturer_3d_cad": false,
+            "manufacturing_diameter_tolerance_included": false,
+            "mass_or_internal_material_authority": false,
+            "transition_spans_enlarged_to_adjacent_maximum_diameter": true
+          },
+          "official_sources": {
+            "derived_authority_ledger": {
+              "bytes": 2031,
+              "path": "QuickChange/SO101_Magnetic/source_authority/millmax_7983/authority_ledger.json",
+              "sha256": "120fda06cb2e889800e5d18ce556b320ed8ba8c1de97b6a48e556d0433353c05"
+            },
+            "dimension_drawing_svg": {
+              "bytes": 175611,
+              "media_type": "image/svg+xml",
+              "sha256": "c97327d953663a0aa04ea389ee2d2be19372ffa21503f46e5cbbfb0fd2e890e8",
+              "url": "https://www.mill-max.com/sites/default/files/external/products/fullsize/2020-09/7983.svg"
+            },
+            "hash_pin_semantics": "records the recovered manufacturer byte digests; cached manufacturer artwork is not redistributed",
+            "offline_manufacturer_byte_revalidation_available": false,
+            "press_fit_application_note_pdf": {
+              "bytes": 509252,
+              "media_type": "application/pdf",
+              "sha256": "bbf4c414a11bd3355cde2bb25624c6736b61942964b2cbb3fc42c67c09e87adf",
+              "url": "https://www.mill-max.com/sites/default/files/external/assets/2020-10/spring-loaded_solder-cup_pin_2.pdf"
+            },
+            "product_page": "https://www.mill-max.com/products/discrete-spring-loaded-pins/spring-loaded-pin-with-solder-cup-termination/7983/7983-1-15-20-75-14-11-0",
+            "redistribution": {
+              "manufacturer_file_license_confirmed": false,
+              "manufacturer_files_vendored": false,
+              "semantics": "URLs, byte counts, SHA-256 digests, and dimension facts are retained; cached manufacturer artwork is not redistributed because redistribution terms were not established."
+            }
+          },
+          "part_number": "7983-1-15-20-75-14-11-0",
+          "pin_source_frame": "solder_cup_end_z0_axis_positive_toward_plunger",
+          "release_authority": {
+            "blockers": [
+              "ground_first_mate_tolerance_stack_unqualified",
+              "knurl_press_fit_process_and_pullout_unqualified",
+              "installed_electrical_cycle_reliability_unqualified"
+            ],
+            "fixed_shell_drawing_envelope_reconstructed": true,
+            "ground_first_mate_shoulder_datum_resolved": true,
+            "ground_first_mate_tolerance_stack_qualified": false,
+            "installed_electrical_cycle_reliability_qualified": false,
+            "knurl_mounting_mode_selected": true,
+            "knurl_press_fit_process_and_pullout_qualified": false,
+            "moving_plunger_split_from_fixed_shell": true,
+            "official_sources_hash_pinned": true,
+            "release_ready": false,
+            "sectional_bore_and_shoulder_stop_resolved": true
+          },
+          "schema_version": "1.0",
+          "selected_mounting_design": {
+            "application_note_hole_exact_inch_conversion_mm": 1.5748,
+            "application_note_hole_rounded_label_mm": 1.58,
+            "application_note_knurl_feature_label_mm": 1.65,
+            "barb_alternative_recommended_hole_diameter_mm": 1.9176999999999997,
+            "body_counterbore_design_diameter_mm": 2.31,
+            "body_counterbore_minimum_diameter_mm": 2.2097999999999995,
+            "drawing_knurl_nominal_diameter_mm": 1.651,
+            "installed_datums": [
+              {
+                "base_z_mm": 0.9004000000000012,
+                "body_counterbore_z_bounds_mm": [
+                  5.4724,
+                  9.5
+                ],
+                "centre_xy_mm": [
+                  -31.0,
+                  -7.5
+                ],
+                "fixed_shell_top_z_mm": 8.8252,
+                "full_extension_tip_z_mm": 10.4,
+                "insertion_direction": "mating_face_toward_rear_negative_z",
+                "installation_mode": "knurl_solder_cup_first",
+                "knurl_z_bounds_mm": [
+                  4.710400000000001,
+                  5.4724
+                ],
+                "mated_compression_mm": 0.9500000000000011,
+                "mated_tip_z_mm": 9.45,
+                "nominal_design_remaining_against_catalog_minimum_stroke_mm": 0.31999999999999895,
+                "nominal_face_protrusion_mm": 0.9,
+                "remaining_stroke_semantics": "nominal installation arithmetic only; part, bore, target, and fabrication tolerances are not included",
+                "retention_land_z_bounds_mm": [
+                  1.8499999999999999,
+                  5.4724
+                ],
+                "shoulder_stop_plane_z_mm": 5.4724,
+                "shoulder_z_bounds_mm": [
+                  5.4724,
+                  6.1836
+                ],
+                "signal": "GND",
+                "target_pad_exposed_contact_plane_z_mm": 9.45
+              },
+              {
+                "base_z_mm": 0.7004000000000001,
+                "body_counterbore_z_bounds_mm": [
+                  5.272399999999999,
+                  9.5
+                ],
+                "centre_xy_mm": [
+                  -31.0,
+                  -2.5
+                ],
+                "fixed_shell_top_z_mm": 8.6252,
+                "full_extension_tip_z_mm": 10.2,
+                "insertion_direction": "mating_face_toward_rear_negative_z",
+                "installation_mode": "knurl_solder_cup_first",
+                "knurl_z_bounds_mm": [
+                  4.5104,
+                  5.272399999999999
+                ],
+                "mated_compression_mm": 0.75,
+                "mated_tip_z_mm": 9.45,
+                "nominal_design_remaining_against_catalog_minimum_stroke_mm": 0.52,
+                "nominal_face_protrusion_mm": 0.7,
+                "remaining_stroke_semantics": "nominal installation arithmetic only; part, bore, target, and fabrication tolerances are not included",
+                "retention_land_z_bounds_mm": [
+                  1.8499999999999999,
+                  5.272399999999999
+                ],
+                "shoulder_stop_plane_z_mm": 5.272399999999999,
+                "shoulder_z_bounds_mm": [
+                  5.272399999999999,
+                  5.983599999999999
+                ],
+                "signal": "+12V",
+                "target_pad_exposed_contact_plane_z_mm": 9.45
+              },
+              {
+                "base_z_mm": 0.7004000000000001,
+                "body_counterbore_z_bounds_mm": [
+                  5.272399999999999,
+                  9.5
+                ],
+                "centre_xy_mm": [
+                  -31.0,
+                  2.5
+                ],
+                "fixed_shell_top_z_mm": 8.6252,
+                "full_extension_tip_z_mm": 10.2,
+                "insertion_direction": "mating_face_toward_rear_negative_z",
+                "installation_mode": "knurl_solder_cup_first",
+                "knurl_z_bounds_mm": [
+                  4.5104,
+                  5.272399999999999
+                ],
+                "mated_compression_mm": 0.75,
+                "mated_tip_z_mm": 9.45,
+                "nominal_design_remaining_against_catalog_minimum_stroke_mm": 0.52,
+                "nominal_face_protrusion_mm": 0.7,
+                "remaining_stroke_semantics": "nominal installation arithmetic only; part, bore, target, and fabrication tolerances are not included",
+                "retention_land_z_bounds_mm": [
+                  1.8499999999999999,
+                  5.272399999999999
+                ],
+                "shoulder_stop_plane_z_mm": 5.272399999999999,
+                "shoulder_z_bounds_mm": [
+                  5.272399999999999,
+                  5.983599999999999
+                ],
+                "signal": "TTL_DATA",
+                "target_pad_exposed_contact_plane_z_mm": 9.45
+              },
+              {
+                "base_z_mm": 0.7004000000000001,
+                "body_counterbore_z_bounds_mm": [
+                  5.272399999999999,
+                  9.5
+                ],
+                "centre_xy_mm": [
+                  -31.0,
+                  7.5
+                ],
+                "fixed_shell_top_z_mm": 8.6252,
+                "full_extension_tip_z_mm": 10.2,
+                "insertion_direction": "mating_face_toward_rear_negative_z",
+                "installation_mode": "knurl_solder_cup_first",
+                "knurl_z_bounds_mm": [
+                  4.5104,
+                  5.272399999999999
+                ],
+                "mated_compression_mm": 0.75,
+                "mated_tip_z_mm": 9.45,
+                "nominal_design_remaining_against_catalog_minimum_stroke_mm": 0.52,
+                "nominal_face_protrusion_mm": 0.7,
+                "remaining_stroke_semantics": "nominal installation arithmetic only; part, bore, target, and fabrication tolerances are not included",
+                "retention_land_z_bounds_mm": [
+                  1.8499999999999999,
+                  5.272399999999999
+                ],
+                "shoulder_stop_plane_z_mm": 5.272399999999999,
+                "shoulder_z_bounds_mm": [
+                  5.272399999999999,
+                  5.983599999999999
+                ],
+                "signal": "TOOL_ID_SPARE",
+                "target_pad_exposed_contact_plane_z_mm": 9.45
+              }
+            ],
+            "mode": "knurl_solder_cup_first",
+            "nominal_and_part_tolerance_only_fit": {
+              "body_counterbore_minimum_radial_clearance_mm": 0.0754999999999999,
+              "fabrication_hole_tolerance_included": false,
+              "knurl_diameter_range_mm": [
+                1.6002,
+                1.7018
+              ],
+              "knurl_diametral_interference_range_mm": [
+                0.020199999999999996,
+                0.12179999999999991
+              ],
+              "minimum_shoulder_bearing_radial_overlap_mm": 0.2386999999999999,
+              "pullout_force_bound_included": false,
+              "shoulder_diameter_range_mm": [
+                2.0574,
+                2.1590000000000003
+              ],
+              "solder_cup_max_diameter_mm": 1.5747999999999998,
+              "solder_cup_minimum_diametral_passage_mm": 0.0052000000000003155
+            },
+            "retention_land_diameter_mm": 1.58
+          },
+          "stroke": {
+            "full_stroke_nominal_mm": 1.397,
+            "full_stroke_tolerance_mm": 0.127,
+            "guaranteed_minimum_full_stroke_mm": 1.27,
+            "maximum_full_stroke_mm": 1.524,
+            "mid_stroke_nominal_mm": 0.6985
+          },
+          "units": "mm"
+        },
+        "selected_sectional_mount": {
+          "body_counterbore_diameter_mm": 2.31,
+          "fabrication_hole_tolerance_included": false,
+          "ground_shell_top_to_face_relief_floor_mm": 0.32479999999999976,
+          "installed_datums": [
+            {
+              "base_z_mm": 0.9004000000000012,
+              "body_counterbore_z_bounds_mm": [
+                5.4724,
+                9.5
+              ],
+              "centre_xy_mm": [
+                -31.0,
+                -7.5
+              ],
+              "fixed_shell_top_z_mm": 8.8252,
+              "full_extension_tip_z_mm": 10.4,
+              "insertion_direction": "mating_face_toward_rear_negative_z",
+              "installation_mode": "knurl_solder_cup_first",
+              "knurl_z_bounds_mm": [
+                4.710400000000001,
+                5.4724
+              ],
+              "mated_compression_mm": 0.9500000000000011,
+              "mated_tip_z_mm": 9.45,
+              "nominal_design_remaining_against_catalog_minimum_stroke_mm": 0.31999999999999895,
+              "nominal_face_protrusion_mm": 0.9,
+              "remaining_stroke_semantics": "nominal installation arithmetic only; part, bore, target, and fabrication tolerances are not included",
+              "retention_land_z_bounds_mm": [
+                1.8499999999999999,
+                5.4724
+              ],
+              "shoulder_stop_plane_z_mm": 5.4724,
+              "shoulder_z_bounds_mm": [
+                5.4724,
+                6.1836
+              ],
+              "signal": "GND",
+              "target_pad_exposed_contact_plane_z_mm": 9.45
+            },
+            {
+              "base_z_mm": 0.7004000000000001,
+              "body_counterbore_z_bounds_mm": [
+                5.272399999999999,
+                9.5
+              ],
+              "centre_xy_mm": [
+                -31.0,
+                -2.5
+              ],
+              "fixed_shell_top_z_mm": 8.6252,
+              "full_extension_tip_z_mm": 10.2,
+              "insertion_direction": "mating_face_toward_rear_negative_z",
+              "installation_mode": "knurl_solder_cup_first",
+              "knurl_z_bounds_mm": [
+                4.5104,
+                5.272399999999999
+              ],
+              "mated_compression_mm": 0.75,
+              "mated_tip_z_mm": 9.45,
+              "nominal_design_remaining_against_catalog_minimum_stroke_mm": 0.52,
+              "nominal_face_protrusion_mm": 0.7,
+              "remaining_stroke_semantics": "nominal installation arithmetic only; part, bore, target, and fabrication tolerances are not included",
+              "retention_land_z_bounds_mm": [
+                1.8499999999999999,
+                5.272399999999999
+              ],
+              "shoulder_stop_plane_z_mm": 5.272399999999999,
+              "shoulder_z_bounds_mm": [
+                5.272399999999999,
+                5.983599999999999
+              ],
+              "signal": "+12V",
+              "target_pad_exposed_contact_plane_z_mm": 9.45
+            },
+            {
+              "base_z_mm": 0.7004000000000001,
+              "body_counterbore_z_bounds_mm": [
+                5.272399999999999,
+                9.5
+              ],
+              "centre_xy_mm": [
+                -31.0,
+                2.5
+              ],
+              "fixed_shell_top_z_mm": 8.6252,
+              "full_extension_tip_z_mm": 10.2,
+              "insertion_direction": "mating_face_toward_rear_negative_z",
+              "installation_mode": "knurl_solder_cup_first",
+              "knurl_z_bounds_mm": [
+                4.5104,
+                5.272399999999999
+              ],
+              "mated_compression_mm": 0.75,
+              "mated_tip_z_mm": 9.45,
+              "nominal_design_remaining_against_catalog_minimum_stroke_mm": 0.52,
+              "nominal_face_protrusion_mm": 0.7,
+              "remaining_stroke_semantics": "nominal installation arithmetic only; part, bore, target, and fabrication tolerances are not included",
+              "retention_land_z_bounds_mm": [
+                1.8499999999999999,
+                5.272399999999999
+              ],
+              "shoulder_stop_plane_z_mm": 5.272399999999999,
+              "shoulder_z_bounds_mm": [
+                5.272399999999999,
+                5.983599999999999
+              ],
+              "signal": "TTL_DATA",
+              "target_pad_exposed_contact_plane_z_mm": 9.45
+            },
+            {
+              "base_z_mm": 0.7004000000000001,
+              "body_counterbore_z_bounds_mm": [
+                5.272399999999999,
+                9.5
+              ],
+              "centre_xy_mm": [
+                -31.0,
+                7.5
+              ],
+              "fixed_shell_top_z_mm": 8.6252,
+              "full_extension_tip_z_mm": 10.2,
+              "insertion_direction": "mating_face_toward_rear_negative_z",
+              "installation_mode": "knurl_solder_cup_first",
+              "knurl_z_bounds_mm": [
+                4.5104,
+                5.272399999999999
+              ],
+              "mated_compression_mm": 0.75,
+              "mated_tip_z_mm": 9.45,
+              "nominal_design_remaining_against_catalog_minimum_stroke_mm": 0.52,
+              "nominal_face_protrusion_mm": 0.7,
+              "remaining_stroke_semantics": "nominal installation arithmetic only; part, bore, target, and fabrication tolerances are not included",
+              "retention_land_z_bounds_mm": [
+                1.8499999999999999,
+                5.272399999999999
+              ],
+              "shoulder_stop_plane_z_mm": 5.272399999999999,
+              "shoulder_z_bounds_mm": [
+                5.272399999999999,
+                5.983599999999999
+              ],
+              "signal": "TOOL_ID_SPARE",
+              "target_pad_exposed_contact_plane_z_mm": 9.45
+            }
+          ],
+          "minimum_adjacent_counterbore_web_mm": 2.69,
+          "minimum_body_counterbore_depth_mm": 4.0276,
+          "minimum_outer_y_counterbore_web_mm": 3.3449999999999998,
+          "minimum_retention_land_height_mm": 3.4223999999999997,
+          "mode": "knurl_solder_cup_first",
+          "pullout_force_bound_included": false,
+          "rear_wiring_pocket_top_z_mm": 1.8499999999999999,
+          "retention_land_diameter_mm": 1.58
+        },
+        "target_pad_diameter_mm": 4.0
+      },
+      "release_authority": {
+        "blockers": [
+          "fabrication_process_tolerance_unqualified",
+          "ground_first_mate_tolerance_stack_unqualified",
+          "knurl_press_fit_process_and_pullout_unqualified",
+          "installed_electrical_cycle_reliability_unqualified",
+          "magnetic_fastener_seating_and_preload_unproven",
+          "moving_interface_pair_route_not_recomputed",
+          "printed_interface_feature_strength_unqualified"
+        ],
+        "fabrication_process_tolerance_qualified": false,
+        "fixed_pogo_shell_bound_semantics": "official-drawing-derived conservative nominal exterior; not manufacturer 3D CAD or manufacturing-tolerance authority",
+        "fixed_pogo_shell_exact_drawing_bound": true,
+        "ground_first_mate_shoulder_datum_resolved": true,
+        "ground_first_mate_tolerance_stack_qualified": false,
+        "installed_electrical_cycle_reliability_qualified": false,
+        "knurl_press_fit_process_and_pullout_qualified": false,
+        "magnetic_fastener_seating_and_preload_bound": false,
+        "moving_interface_pair_route_recomputed": false,
+        "pogo_mounting_sectional_bore_resolved": true,
+        "printed_interface_feature_strength_qualified": false,
+        "qualified_combined_error_limit_mm": null,
+        "release_ready": false
+      },
+      "required_clearance_mm": 0.2,
+      "schema_version": "1.0",
+      "unqualified_arithmetic_residual_mm": 0.0499,
+      "unqualified_local_motion_allowance_mm": 0.0501
+    },
+    "positive_lock_cam": {
+      "axial_lead": {
+        "contact_angle_deg": 45.0,
+        "contact_land_width_mm": 2.0,
+        "kind": "ruled_loft_between_rectangles",
+        "lower_rectangle_mm": {
+          "x": [
+            27.25,
+            29.0
+          ],
+          "y": [
+            0.0,
+            2.0
+          ],
+          "z": -9.6
+        },
+        "minimum_wall_mm": 1.75,
+        "rise_mm": 3.1999999999999993,
+        "run_mm": 3.1999999999999993,
+        "upper_rectangle_mm": {
+          "x": [
+            24.05,
+            29.0
+          ],
+          "y": [
+            0.0,
+            2.0
+          ],
+          "z": -6.4
+        },
+        "volume_mm3": 21.439999999999994
+      },
+      "construction": "union_main_xy_wedge_ruled_axial_lead_hold_finger",
+      "expected_geometry": {
+        "added_volume_mm3": 44.71499999999999,
+        "bounds_mm": {
+          "x": [
+            24.05,
+            34.0
+          ],
+          "y": [
+            -16.0,
+            2.0
+          ],
+          "z": [
+            -9.6,
+            -1.9500000000000002
+          ]
+        },
+        "total_volume_mm3": 325.435
+      },
+      "frame": "dock_local_mm",
+      "hold_finger": {
+        "bounds_mm": {
+          "x": [
+            24.05,
+            29.0
+          ],
+          "y": [
+            0.0,
+            2.0
+          ],
+          "z": [
+            -6.4,
+            -4.15
+          ]
+        },
+        "kind": "axis_aligned_box",
+        "volume_mm3": 22.275
+      },
+      "main_xy_wedge": {
+        "polygon_xy_mm": [
+          [
+            28.0,
+            -16.0
+          ],
+          [
+            34.0,
+            -16.0
+          ],
+          [
+            34.0,
+            0.0
+          ],
+          [
+            24.05,
+            0.0
+          ]
+        ],
+        "z_bounds_mm": [
+          -4.15,
+          -1.9500000000000002
+        ]
+      },
+      "manufacturability": {
+        "declared_process_floor_mm": 0.2,
+        "lead_is_self_supporting_at_45_deg": true,
+        "minimum_feature_mm": 1.0
+      },
+      "outer_root_bridge": {
+        "bounds_mm": {
+          "x": [
+            28.0,
+            29.0
+          ],
+          "y": [
+            -1.0,
+            1.0
+          ],
+          "z": [
+            -4.65,
+            -3.65
+          ]
+        },
+        "gross_volume_mm3": 2.000000000000001,
+        "kind": "axis_aligned_box",
+        "net_added_volume_mm3": 1.0000000000000009,
+        "outside_locked_tab_swept_x": true,
+        "overlap_with_hold_mm3": 0.5,
+        "overlap_with_main_wedge_mm3": 0.5
+      },
+      "passive_capture": {
+        "head_entry_tangent_preseat_mm": 3.1,
+        "lateral_axis": "dock_local_positive_x",
+        "lateral_offset_breakpoints_mm": [
+          [
+            6.4,
+            0.2
+          ],
+          [
+            3.2,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "nominal_unlocked_q_mm": 0.0,
+        "passive_open_q_max_mm": 0.05000000000000071,
+        "preseat_definition": "robot_source_translation_dock_local_z_mm=-preseat_mm",
+        "ramp_contact_start_preseat_mm": 6.346666666666667,
+        "ramp_q_affine_coefficients": {
+          "clamp_mm": [
+            0.05000000000000071,
+            3.0
+          ],
+          "constant": -3.15,
+          "lateral_offset": -1.0,
+          "preseat": 1.0
+        },
+        "recenter_end_preseat_mm": 3.2,
+        "recenter_start_preseat_mm": 6.4
+      },
+      "passive_release": {
+        "axis": "dock_local_negative_y",
+        "initial_q_hold_withdrawal_mm": 2.0,
+        "nominal_exit_withdrawal_mm": 15.0,
+        "q3_tangent_withdrawal_mm": 13.949367088607595,
+        "q_per_withdrawal_slope": 0.24687499999999996,
+        "required_exit_clearance_mm": 0.2
+      },
+      "quasistatic_load_envelope": {
+        "contact_face_area_mm2": 9.050966799187806,
+        "maximum_axial_reaction_n": 3.5279999999999974,
+        "maximum_cam_normal_force_n": 4.989345448052276,
+        "maximum_spring_deflection_mm": 3.599999999999998,
+        "maximum_spring_force_n": 3.527999999999998,
+        "mean_contact_pressure_mpa": 0.5512499999999998,
+        "return_spring_rate_n_per_mm": 0.98,
+        "semantics": "frictionless_quasistatic_source_envelope"
+      },
+      "schema_version": "1.0"
+    },
+    "positive_lock_keyhole": {
+      "head_to_slider_axial_gap_mm": 0.20000000000000018,
+      "keyhole_entry_diameter_mm": 6.5,
+      "minimum_radial_head_retention_overlap_mm": 0.875,
+      "minimum_radial_shoulder_clearance_mm": 0.125,
+      "neck_radius_mm": 2.125,
+      "neck_width_mm": 4.25,
+      "shoulder_path_centerline_x_offsets_mm": [
+        -3.0,
+        0.0
+      ],
+      "shoulder_path_kind": "capsule",
+      "shoulder_path_overall_length_mm": 7.25,
+      "shoulder_path_overall_x_offsets_mm": [
+        -5.125,
+        2.125
+      ],
+      "slider_locked_translation_mm": [
+        3.0,
+        0.0,
+        0.0
+      ],
+      "slider_travel_mm": 3.0,
+      "stud_centres_x_mm": [
+        -12.0,
+        12.0
+      ],
+      "stud_head_diameter_mm": 6.0,
+      "stud_shoulder_diameter_mm": 4.0
+    },
+    "robot_plate_cam_relief": {
+      "bounds_native_mm": {
+        "x": [
+          23.55,
+          25.0
+        ],
+        "y": [
+          -16.5,
+          24.5
+        ],
+        "z": [
+          0.0,
+          9.5
+        ]
+      },
+      "cam_inner_x_mm": 24.05,
+      "guided_axial_approach_offset_mm": 0.2,
+      "minimum_relief_to_slider_lobe_ligament_mm": 7.150000000000002,
+      "minimum_relief_to_stud_well_ligament_mm": 7.950000000000001,
+      "required_clearance_mm": 0.5,
+      "slider_travel_mm": 3.0,
+      "stud_centres_x_mm": [
+        -12.0,
+        12.0
+      ],
+      "stud_well_radius_mm": 3.6,
+      "through_full_printed_plate_thickness": true
+    },
+    "stock_gripper_mount": {
+      "fixed_step_assembly_pos_mm": [
+        0.4875,
+        0.218,
+        19.051
+      ],
+      "fixed_step_tool_local_pos_mm": [
+        0.4875,
+        0.218,
+        9.551
+      ],
+      "fixed_step_tool_local_quat_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "tool_plate_assembly_pos_mm": [
+        0.0,
+        0.0,
+        9.5
+      ]
+    }
+  },
+  "file_count": 29,
+  "files": [
+    {
+      "bytes": 3018,
+      "path": "QuickChange/SO101_Magnetic/exports/bill_of_materials.csv",
+      "role": "bill_of_materials",
+      "sha256": "2ebebff4b645f6c4318eac867a1f0f47d8ca453020de485b63902f95292d978a"
+    },
+    {
+      "bytes": 58919,
+      "path": "QuickChange/SO101_Magnetic/exports/design_parameters.json",
+      "role": "design_parameters",
+      "sha256": "74da4648a0115746efb6e1db26faf722c70bfa298049d4db9c064e226de9c05b"
+    },
+    {
+      "bytes": 395,
+      "path": "QuickChange/SO101_Magnetic/exports/electrical_pinout.csv",
+      "role": "electrical_pinout",
+      "sha256": "0d8afe99656525fe47bf339dd6edc22bfe3102701405f3f78b2363decf97935a"
+    },
+    {
+      "bytes": 515,
+      "path": "QuickChange/SO101_Magnetic/exports/engineering_check.json",
+      "role": "engineering_check",
+      "sha256": "d6e4de6f0bdb1fae1c49cf9afbdbb789c1d9601166e064fff1ea16c354db64d7"
+    },
+    {
+      "bytes": 23342,
+      "path": "QuickChange/SO101_Magnetic/exports/hardware_CS-Q-12-12-04-N.step",
+      "role": "exact_cad_step",
+      "sha256": "f431e0094b8dc70814791d80d1732b33b415a57cf256ea0da7719dc7e19c21f2"
+    },
+    {
+      "bytes": 27470,
+      "path": "QuickChange/SO101_Magnetic/exports/hardware_DIN934_M3_lock_stud_nut.step",
+      "role": "exact_cad_step",
+      "sha256": "2682fb17a7a369998b89cb9fe5f5b3b1fe3708ed2ac2a1a67ebb22cd3ace8261"
+    },
+    {
+      "bytes": 75578,
+      "path": "QuickChange/SO101_Magnetic/exports/hardware_E-GUL4-10_reference.step",
+      "role": "exact_cad_step",
+      "sha256": "827a68dcdb5b8e7f27a9b7f3555c0ce599e75a45b7618f1ef5f1788730ec68e0"
+    },
+    {
+      "bytes": 19292,
+      "path": "QuickChange/SO101_Magnetic/exports/hardware_MC-12-12-03.step",
+      "role": "exact_cad_step",
+      "sha256": "bd98e462086ddc28e32cb54231d424dd0eed4abc8b60658cc3c03f28b17f9b38"
+    },
+    {
+      "bytes": 13596,
+      "path": "QuickChange/SO101_Magnetic/exports/hardware_McMaster_90318A720_shoulder_screw.step",
+      "role": "exact_cad_step",
+      "sha256": "c2612e972d5af7ae9b9ebd1ec78b8e2b563cd536173ad30230a7f60b8d844f2b"
+    },
+    {
+      "bytes": 21732,
+      "path": "QuickChange/SO101_Magnetic/exports/hardware_Mill-Max_7983-1-15-20-75-14-11-0_reference.step",
+      "role": "exact_cad_step",
+      "sha256": "04b14a5d2dd2bcb62b610887a28939e57c421e157c78fb235d1f41a384f7c0c1"
+    },
+    {
+      "bytes": 170428,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_core_dock_support_bracket.step",
+      "role": "exact_cad_step",
+      "sha256": "239134fb6933cfd63e50117ec61b1a73873f7e396dbcf6da3c94916dc949b4de"
+    },
+    {
+      "bytes": 281884,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_core_dock_support_bracket.stl",
+      "role": "tessellated_mesh_export",
+      "sha256": "c4928349dbaba21da41e584eab25eee08cb0b82243080800469efb10a5be0c7b"
+    },
+    {
+      "bytes": 180034,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_passive_tool_dock.step",
+      "role": "exact_cad_step",
+      "sha256": "90aaf1b3c887b4d182358ee1e9037f4159d5959d5822263830dd14854749c389"
+    },
+    {
+      "bytes": 104084,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_passive_tool_dock.stl",
+      "role": "tessellated_mesh_export",
+      "sha256": "6337352213b600efcd7d1b8fc02fc4834b04ea12976898399c889950eece84eb"
+    },
+    {
+      "bytes": 94504,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_positive_lock_slider.step",
+      "role": "exact_cad_step",
+      "sha256": "b9853fe1fcbd7dff91129d7b37c3e1be87d48189486ad91c4c8ab6d57edcbad1"
+    },
+    {
+      "bytes": 98284,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_positive_lock_slider.stl",
+      "role": "tessellated_mesh_export",
+      "sha256": "75384cc6ab23a5e1bb45b51bbe82d95eeb26ecf192d2657d2b1bac6c188b6d44"
+    },
+    {
+      "bytes": 18552,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_positive_lock_slider_profile.dxf",
+      "role": "fabrication_profile_dxf",
+      "sha256": "94f07e6278ef395413ad8ecf2b55711b549b3b4a74ecbeea5b992e9d0ce4cbcd"
+    },
+    {
+      "bytes": 1048097,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_quick_change_assembly.step",
+      "role": "complete_assembly_step",
+      "sha256": "84442e2f491023e598324dd290616cfa17f09cb2dd43a8e7b1c745895a813a78"
+    },
+    {
+      "bytes": 395527,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_robot_plate.step",
+      "role": "exact_cad_step",
+      "sha256": "7786f55a5a4ed1e73396cce3a028926be6e60ea9006ef8ac8476fc18b26b6354"
+    },
+    {
+      "bytes": 807084,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_robot_plate.stl",
+      "role": "tessellated_mesh_export",
+      "sha256": "58af74b7a4a0c95d74e98c45419dcf5e65924f50617f3d0fbedf8a8b5ae2a7ba"
+    },
+    {
+      "bytes": 3346361,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_retrofit_assembly.step",
+      "role": "complete_assembly_step",
+      "sha256": "ddd625bfd7944cfecc00a0273575d236b2530fea46396580441365df5f2fe499"
+    },
+    {
+      "bytes": 248872,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_tool_plate.step",
+      "role": "exact_cad_step",
+      "sha256": "ca2eb199b43ec63c38c49a4e954ed2238348bb10a03206abe6eb3233343cb526"
+    },
+    {
+      "bytes": 298984,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_stock_gripper_tool_plate.stl",
+      "role": "tessellated_mesh_export",
+      "sha256": "c5fc27a53b63e11e91688669803ddb9da71cb883e1bc66131222ec17e638ba29"
+    },
+    {
+      "bytes": 29920,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_tool_contact_board_reference.step",
+      "role": "exact_cad_step",
+      "sha256": "f399a21914f94661da1a07695d4da1337f62c6809ae46fbaea273ca5efd4a910"
+    },
+    {
+      "bytes": 85484,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_tool_contact_board_reference.stl",
+      "role": "tessellated_mesh_export",
+      "sha256": "16dccaa4012093fe099266e4df97df38235ad62743dd3b831da01eaecf0b8b69"
+    },
+    {
+      "bytes": 255055,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_tool_plate.step",
+      "role": "exact_cad_step",
+      "sha256": "ce27c671c049940d8649f39a0d7e56c5b8a2d0f50bba4643598f3368ee3f8119"
+    },
+    {
+      "bytes": 320984,
+      "path": "QuickChange/SO101_Magnetic/exports/so101_tool_plate.stl",
+      "role": "tessellated_mesh_export",
+      "sha256": "0001ba82ac8d357113823ff0cd85a8cf18668fce2a189b8fb7830f55d2c35b2d"
+    },
+    {
+      "bytes": 2384,
+      "path": "QuickChange/SO101_Magnetic/exports/tool_contact_board.kicad_pcb",
+      "role": "editable_pcb_source",
+      "sha256": "30f26a337f57db4f650a041a7d434111fe09c09e3c4a093816d64bd4a0b2fa39"
+    },
+    {
+      "bytes": 2178,
+      "path": "QuickChange/SO101_Magnetic/exports/tool_contact_board_fab_drawing.svg",
+      "role": "pcb_fabrication_drawing",
+      "sha256": "125b65d670b3f0f7a5acea7d415c0ae5f04fd1adeecdc901f68188c588d21f1c"
+    }
+  ],
+  "generator": {
+    "bytes": 140090,
+    "path": "QuickChange/SO101_Magnetic/generate_cad.py",
+    "sha256": "f16352a11128bb93599b83cb51fabdf47520d379f14cdfdb5ae4d5f404e90818"
+  },
+  "inventory_sha256": "b16cd415080f50732c168584b1f66f85ab6834562451ed192e93634c12612daa",
+  "schema_version": "1.0",
+  "units": "mm"
+}

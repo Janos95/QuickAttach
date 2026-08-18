@@ -3,9 +3,10 @@
 This is a retrofit, passively docked quick changer for an existing SO-101. Two
 permanent magnets perform forgiving capture and face preload; they are **not**
 the safety lock. A spring-return stainless keyhole slider positively captures
-two metal pull studs. The passive rack cams that slider open, so the robot only
-needs straight approach/withdrawal and one rack-exit translation—no wrist
-twist, release servo, solenoid, or electromagnet.
+two metal pull studs. The passive rack cams that slider open. A narrow axial
+lead couples the last 3.2 mm of approach to a 0.20-to-0.00 mm lateral recenter;
+the existing X/Y wedge then controls spring return during rack exit. No release
+servo, solenoid, or electromagnet is required.
 
 The same interface carries power and the existing half-duplex TTL bus. The
 first tool can therefore be the standard SO-101 gripper on a detachable adapter
@@ -30,8 +31,18 @@ are recorded in the repository-root `THIRD_PARTY_NOTICES.md`.
   relieved to avoid an over-constrained fit.
 - **Positive lock:** two 4 mm pull-stud shoulders enter 6.5 mm keyholes. On
   leaving the rack, the E-GUL4-10 return spring shifts a 1.6 mm stainless slider
-  by 3 mm so 4.25 mm necks sit under the 6 mm stud heads. The printed roof, not
-  the M2 guide screw, reacts separation load. Loss of power leaves it locked.
+  by 3 mm so 4.25 mm necks sit under the 6 mm stud heads. Each neck is a 7.25 mm
+  capsule covering the complete 3 mm shoulder-centre path, not a short
+  centre-to-centre rectangle. It provides 0.125 mm radial shoulder clearance
+  and 0.875 mm radial head-retention overlap. The printed roof, not the M2 guide
+  screw, reacts separation load. Loss of power leaves it locked.
+- **Cam corridor:** the passive cam retains its `x = 24.05 mm` unlock datum and
+  rack-exit wedge. Its integral source lead is a 45-degree ruled loft from
+  `x = 27.25` at `z = -9.60` mm to `x = 24.05` at `z = -6.40` mm over the
+  narrow `y = 0..2` mm tab land. A vertical finger joins the main wedge, and a
+  1 mm root bridge at `x = 28..29` mm lies beyond the locked tab's `x = 27` mm
+  maximum. The full-depth robot-plate recess preserves the certified approach
+  clearance without changing slider travel, keyhole alignment, or retention.
 - **Electrical interface:** four Mill-Max pins on 5 mm pitch: GND, +12 V,
   TTL_DATA, and a spare TOOL_ID line. GND protrudes 0.2 mm farther so it mates
   first and breaks last.
@@ -43,22 +54,74 @@ check.
 
 ## Attach and detach sequence
 
-1. Approach the docked tool axially. Tapered locators enter first; magnets then
-   close the final gap and compress the contacts.
-2. Verify contact—for the first gripper, read servo ID 6 with torque still off.
-3. Translate out of the rack. The rack releases the slider tab and the spring
-   closes the positive lock.
-4. Enable the tool and work normally.
-5. To detach, command gripper torque off and stop bus packets, then return the
+1. Approach at the published +0.20 mm open-side offset. From 6.4 to 3.2 mm
+   preseated, recenter linearly to zero while the 45-degree lead opens the
+   slider to `q <= 0.05 mm`. This finishes before the stud heads first reach
+   the slider plane at 3.1 mm preseated.
+2. Continue axially at zero offset. Tapered locators enter first; magnets then
+   close the final gap while the hold finger keeps the keyhole entries open.
+3. Verify contact—for the first gripper, read servo ID 6 with torque still off.
+4. Translate in dock-local -Y. The main wedge permits spring return after the
+   first 2 mm; `q = 3 mm` is reached at 13.9494 mm and has 0.2518 mm exact cam
+   clearance at the nominal 15 mm witness.
+5. Enable the tool and work normally.
+6. To detach, command gripper torque off and stop bus packets, then return the
    still-locked assembly to the rack.
-6. During the final rack travel, the fixed wedge pushes the exposed tab 3 mm,
+7. During the final rack travel, the fixed wedge pushes the exposed tab 3 mm,
    aligning both large keyholes with the stud heads.
-7. The rack retains the tool plate while the arm withdraws axially. Contacts and
+8. The rack retains the tool plate while the arm withdraws axially. Contacts and
    magnets separate; no powered release actuator is involved.
 
 The MuJoCo model uses conditional welds for capture and lock state. It validates
 this state sequence and geometry; it does not predict magnetic fields, contact
 arcing, printed-part strength, fatigue, or wear.
+
+## CAD/simulation geometry contract
+
+`generate_cad.py` publishes the exact core dock-stop bounds, stock-gripper STEP
+mount, full-depth robot-plate cam-relief bounds, swept keyhole-capsule contract,
+and executable passive-cam `p/x/q` and `-Y/q` laws in both
+`design_parameters.json` and `exports/core_cad_manifest.json`. The relief
+contract also records the 0.20 mm guided approach offset and retained 8.225 mm
+stud-well / 7.150 mm slider-lobe ligaments. The stock dock stop is not interchangeable
+with the spoon/whisk stops: core bounds are `X[-45,37]`, `Y[26,32]`,
+`Z[-3,12.5]` mm, while the two-bay matcha package publishes its own per-bay
+contracts. Simulation builders must consume the matching contract rather than
+reuse one generic box for all docks.
+
+The calibrated stock-gripper wrapper pose is solved from the live child-geom
+transform and the released CAD datum. `sim/validate_cad_clearance.py` records
+that composed transform and rejects a nonzero composition residual. It also
+checks the complete 0–80 mm rack path, using a focused 0.10 mm grid for the cam
+corridor; the 0.50 mm sampled clearance yields a conservative 0.45 mm
+continuous bound. A separate exact OCCT sweep checks both 4 mm shoulders every
+0.05 mm from unlocked through the full 3.0 mm stroke, verifies the analytic
+0.125 mm continuous capsule clearance, confirms that both 6.5 mm entries pass
+the heads when unlocked, and confirms projected head retention when locked.
+The 15→0 mm capture sweep follows the coupled recenter rather than assuming a
+fixed lateral offset. Its 0.3000 mm sampled robot-plate/cam gap minus the full
+two-axis half-step motion certifies 0.249902 mm continuous clearance. A tighter
+0.01 mm slider/stud sweep certifies 0.205264 mm continuous clearance before the
+3.1 mm head-entry event. OCCT also requires zero cam/stud overlap throughout
+capture, full component closure, passive -Y return, and at least 0.20 mm q=3
+cam clearance at the 15 mm exit witness.
+
+Core exports are timestamp-canonicalized and hash-closed. To verify byte
+reproducibility in two temporary directories, run `generate_cad.py` twice with
+`--output-dir`; the canonical checked-in generation and exact report are:
+
+```bash
+XDG_CACHE_HOME=/tmp/cq-cache .venv/bin/python \
+  QuickChange/SO101_Magnetic/generate_cad.py
+XDG_CACHE_HOME=/tmp/cq-cache .venv/bin/python \
+  QuickChange/SO101_Magnetic/sim/validate_cad_clearance.py
+```
+
+`core_cad_manifest.json` excludes itself to avoid circular hashing, but records
+the generator, deterministic inventory digest, every contained artifact's
+repo-relative path/byte count/SHA-256, and every published geometry contract. The
+clearance report separately pins the manifest file record and independently
+recomputes its contents.
 
 ## Full SO-101 detachable-gripper MuJoCo example
 
@@ -108,6 +171,21 @@ OSMesa, X11, or a GPU, use the deterministic CPU z-buffer renderer (system
 The recorder produces a split-screen view of the complete arm and a tracked
 coupler close-up. It renders MuJoCo's compiled geometry and live body poses; it
 does not reuse the discarded conceptual animation.
+
+The complete Matcha showcase uses the collision-complete three-tool workcell
+and one fixed scene camera. It acquires and returns the stock gripper, spoon,
+and powered whisk; the gripper handles the hot-water and milk pitchers, the
+spoon doses through the sieve, and the whisk mixes in the bowl:
+
+```bash
+XDG_CACHE_HOME=/tmp/cq-cache .venv/bin/python \
+  QuickChange/SO101_Magnetic/sim/render_matcha_workflow_video.py
+```
+
+The emitted JSON report binds the H.264 file to the ordered visual story. This
+is a presentation proof over compiled MuJoCo geometry, not physical release
+evidence; material, fastener, friction, reverse-insertion, and durability
+blockers remain fail-closed.
 
 The XML file beside the controller is a scene overlay. The controller merges it
 with the upstream robot in memory so there is no duplicated SO-101 description
@@ -176,7 +254,7 @@ adhesive and verify that the board remains flush.
 | 2/tool | tool | [McMaster 90318A720](https://www.mcmaster.com/90318A720/) | 316 SS ultra-low-profile shoulder screw; M3 thread, 4 mm shoulder diameter, 5 mm shoulder length, 6 x 1.3 mm head, 4 mm thread length |
 | 2/tool | tool | [DIN 934 M3 nut](https://accu-components.com/us/hexagon-nuts/7888-HPN-M3-A2) | 5.5 mm across flats x 2.4 mm; captive pull-stud retention |
 | 1 | robot | [MISUMI E-GUL4-10](https://us.misumi-ec.com/vona2/detail/110310903689/?HissuCode=E-GUL4-10) | 304 SS compression spring, OD 4 x 10 mm free, 0.98 N/mm, 4 mm permitted deflection |
-| 4 | robot | [Mill-Max 7983-1-15-20-75-14-11-0](https://www.mill-max.com/products/new/high-current-small-scale-spring-loaded-pins) | Solder-cup spring pin, 1.397 mm full stroke, 0.7 mm midstroke; 8 A max / 6.4 A derated catalog values |
+| 4 | robot | [Mill-Max 7983-1-15-20-75-14-11-0](https://www.mill-max.com/products/discrete-spring-loaded-pins/spring-loaded-pin-with-solder-cup-termination/7983/7983-1-15-20-75-14-11-0) | Solder-cup spring pin, drawing Ø1.0668 mm plunger and 1.397 ± 0.127 mm full stroke. This design selects solder-cup-first knurl retention: Ø1.58 mm land, separate Ø2.31 mm body counterbore, and shoulder hard-stop. Process fit/pull-out and installed reliability remain unqualified. |
 | 4 | gripper tool | [Ruthex RX-M3x5.7](https://www.ruthex.de/en/products/ruthex-gewindeeinsatz-m3-100-stuck-rx-m3x5-7-messing-gewindebuchsen) | M3 heat-set inserts for the original gripper-hole pattern |
 
 Standard fasteners per robot: four M3x10 socket-head wrist screws, two ISO
@@ -235,14 +313,94 @@ Official references: [SO-101 assembly and motor IDs](https://huggingface.co/docs
 - Laser- or waterjet-cut the working slider from 1.5-1.6 mm 304 stainless using
   `so101_positive_lock_slider_profile.dxf`. The slider STL is a fit-check model,
   not the working load-bearing part. Deburr and polish both faces and keyholes.
-- Ream the printed pogo pilots to the 1.575 mm Mill-Max recommendation only
-  after a fit coupon establishes the needed compensation for the chosen print
-  process. Do not force the pins through undersized holes.
+- The CAD now implements one specific Mill-Max mounting mode rather than a
+  straight pilot: insert the solder-cup side first through a Ø1.58 mm knurl
+  land into a separate Ø2.31 mm body counterbore, stopping the shoulder on
+  the signal-specific internal ledge. This is dimensionally reconstructed from
+  the official drawing and [press-fit application note](https://www.mill-max.com/sites/default/files/external/assets/2020-10/spring-loaded_solder-cup_pin_2.pdf),
+  but it is **not released for fabrication** until a process-specific coupon
+  establishes bore tolerance, insertion force, and pull-out retention. The
+  nominal GND shoulder datum is 0.20 mm ahead; four independent ±0.1524 mm
+  drawing-length terms yield a conservative worst-case lead of -0.4096 mm, so
+  first-mate is not qualified.
+- Manufacturer artwork is not redistributed because its redistribution terms
+  were not established. The derived ledger at
+  `source_authority/millmax_7983/authority_ledger.json` records the official
+  URLs, byte counts, SHA-256 digests, exact inch callouts, and this provenance
+  limitation. The reconstructed solids are official-drawing-derived nominal
+  collision envelopes, not official Mill-Max 3D CAD; deterministic generation
+  uses the checked-in ledger and never silently refetches mutable web content.
 - Keep magnets and steel targets flush to 0.05 mm below their mating faces so
   impact lands on printed face lands, not brittle nickel plating.
+- The current exact CAD leaves 0.0499 mm after its route interval and 0.20 mm
+  clearance deductions using an unqualified local motion allowance. That
+  number is arithmetic residue, not a sampled route or an SLS/FDM or
+  catalog-part tolerance. Release remains blocked until a process/fit coupon
+  qualifies the combined error budget. The pogo exterior is a conservative
+  nominal drawing-derived envelope with unqualified part/process tolerances;
+  knurl pull-out, installed electrical cycling, and magnetic fastener
+  seating/preload still need physical evidence. Do not fabricate the
+  electrical mounting interface from this checkpoint.
 - Check that the slider moves the full 3.0 mm without binding. At the current
   endpoints the spring is 9.4 mm locked and 6.4 mm unlocked: 3.6 mm maximum
   compression, leaving 0.4 mm margin to the catalog deflection limit.
+
+## Rolled core-dock source and runtime geometric checkpoint
+
+The core interface now has a source-only installation contract for a
+`-87.21086925015224 deg` tool-view roll about the mating normal. Its published
+world pose is `(0.19082795371216685, 0.1330713713445051,
+0.1939154579377553) m`, quaternion `wxyz=(0.6440855284765126,
+-0.6440855284765125, 0.2918112952014223, -0.2918112952014225)`. In that frame,
+dock-local `-Y` is world-up. The exact 0–15 mm release continuation has 31
+rows at 0.5 mm, SHA-256
+`f30b0c178917945fcd45358710e5127302bc5240ca6cb4cdaa7f49d16c4f0293`,
+and a 0.2360031833 deg maximum joint step.
+
+The dock remains a separate one-solid BRep and bolts to a hollow floor
+pedestal. The pedestal is a one-solid 43 mm square / 35 mm square hollow post
+with 4 mm walls, a 100 x 80 x 8 mm floor plate, a 56 x 8 x 8.5 mm head, and a
+right bolt reinforcement. Its exact post/head and post/base positive overlaps
+are 716.8886804667 and 1248 mm3 after the hardware cuts. Two countersunk M4
+fasteners join the stop to the head; four countersunk M6 fasteners join the
+base to a future tapped fixture. The source BReps close at:
+
+- stop: 7379.269784962569 mm3;
+- complete dock: 21743.904784962568 mm3;
+- support: 162415.4180526403 mm3;
+- installed printed total: 184159.32283760287 mm3.
+
+The earlier 162308.50715898623 mm3 support estimate was not the volume of the
+specified Boolean construction and is superseded. No material mass is claimed
+until material condition and density are selected. The minimum fixed-feature
+clearance is 1.0 mm; the explicit 0.70 mm nominal tolerance allocation leaves
+0.30 mm arithmetic residue, but the print process is not qualified. The
+screening-only 1.5 GPa load proxy gives 4.25271213611 N.m combined moment,
+0.5720 MPa bending stress, and 0.1940 mm tip deflection; these are not material
+or joint allowables.
+
+The committed `sim/rolled_core_dock_runtime_report.json` replays the exact
+31-row roster in the compiled rolled frame. Its maximum row FK errors are
+`1.3645432973688894e-13 mm` and `6.990106082579211e-16 rad`. The bounded
+screen evaluates 14 upstream arm meshes against 90 static core-dock targets
+over 301 joint-linear states (`30 * 10 + 1`), or 379260 pair evaluations. The
+`4.3592095380000915 mm` sampled lower bound minus the
+`0.13870802188957512 mm` pair-specific topology motion bound gives a
+`4.220501516110517 mm` continuous lower bound, above the required `0.20 mm`.
+The 11-piece support proxy retains a separate
+`16.201539960841686 mm` continuous lower bound. Startup has 65 intended
+tangent contacts and zero penetrations, and the support chain has 15 verified
+tangencies.
+
+That evidence closes only the exact hash-bound runtime geometric
+recomputation for this roster and compiled inventory. It does not authorize
+robot self-collision, controller execution/tracking, the physical Matcha base
+or floor fixture, contact forces, friction, materials, fasteners, load paths,
+reverse insertion, or physical release. `release_ready` remains false pending
+normative M4/M6 hardware authority, an authoritative tapped floor substrate,
+PA12 material/process/creep allowables, printed dimensional and anchor-strength
+qualification, cam contact/friction/reverse-insertion/capture-dynamics
+validation, and the existing interface-hardware blockers.
 
 ## Generate, inspect, and simulate
 
@@ -255,11 +413,14 @@ From the repository root:
 .venv/bin/python QuickChange/SO101_Magnetic/sim/so101_gripper_change_demo.py --headless
 ```
 
-The CAD generator exports printable STEP/STL parts, a stainless-slider DXF,
-reference models for every selected special component, complete assembly STEP
-files, design and engineering JSON, and PCB files. The older isolated-coupler
-demo remains useful for constraint debugging, but the full-arm demo is the
-integration example and acceptance check.
+The CAD generator exports STEP/STL geometry, a stainless-slider DXF,
+illustrative assembly STEP files, design and engineering JSON, and PCB files.
+The assemblies are not complete hardware authorities: several fasteners, the
+harness, and the exact purchased pogo section are still absent. The older
+isolated-coupler demo remains useful for constraint debugging, while the
+full-arm demo is a development integration example, not an acceptance check.
+The clearance validator deliberately keeps `release_ready` false until the
+machine-readable interface blockers are closed.
 
 ## Required physical validation
 

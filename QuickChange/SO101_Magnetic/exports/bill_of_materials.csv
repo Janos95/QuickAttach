@@ -7,7 +7,7 @@ robot,4,M3x10 socket-head,robot plate to existing wrist horn,standard fastener,n
 robot,1,304 stainless lock slider,1.5-1.6 mm sheet,exports/so101_positive_lock_slider_profile.dxf,new; STL is fit-check only
 robot,1,E-GUL4-10,"OD4 x L10 mm, 0.98 N/mm return spring",https://us.misumi-ec.com/vona2/detail/110310903689/?HissuCode=E-GUL4-10,new
 robot,1,M2x6 flat-head,slider guide/retainer,standard fastener,new
-robot,4,7983-1-15-20-75-14-11-0,high-current solder-cup spring pin,https://www.mill-max.com/products/new/high-current-small-scale-spring-loaded-pins,new
+robot,4,7983-1-15-20-75-14-11-0,high-current solder-cup spring pin,https://www.mill-max.com/products/discrete-spring-loaded-pins/spring-loaded-pin-with-solder-cup-termination/7983/7983-1-15-20-75-14-11-0,"knurl/solder-cup-first sectional mount; fit, pull-out, first-mate tolerance, and cycle reliability unqualified"
 tool,1,so101_stock_gripper_tool_plate,printed PA12/PA-CF part,exports/so101_stock_gripper_tool_plate.step,new
 tool,2,MC-12-12-03,12x12x3 mm Q235 steel magnet target,https://www.supermagnete.de/eng/magnet-counterparts-to-screw-on/metal-plates-with-countersunk-hole-12-x-12-x-3mm_MC-12-12-03,new
 tool,2,ISO 10642 M5x10,countersunk screw for steel target,standard fastener,new
@@ -19,3 +19,7 @@ gripper retrofit,4,Ruthex RX-M3x5.7,heat-set insert,https://www.ruthex.de/en/pro
 gripper retrofit,4,M3x6,stock gripper to detachable tool plate,standard fastener,reuse original
 gripper retrofit,1,3-wire adapter harness,GND/+12V/TTL; mating stock connectors,electrical_pinout.csv,new; do not cut stock arm harness
 dock,1,so101_passive_tool_dock,printed PA12/PA-CF part,exports/so101_passive_tool_dock.step,new
+dock,1,so101_core_dock_support_bracket,printed PA12/PA-CF floor pedestal,exports/so101_core_dock_support_bracket.step,source checkpoint; do not fabricate before blockers close
+dock,2,ISO 10642 M4x25 A2,stop-to-support countersunk screw,standard/vendor authority pending,blocked
+dock,2,DIN 125 M4 + DIN 985 M4,washer and locknut for support head,standard/vendor authority pending,blocked
+dock,4,ISO 10642 M6x20,support-to-tapped-fixture countersunk screw,standard/vendor and fixture-substrate authority pending,blocked

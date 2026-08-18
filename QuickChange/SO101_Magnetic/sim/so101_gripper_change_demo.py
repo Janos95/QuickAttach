@@ -91,37 +91,47 @@ def _make_robot_plate_frame(wrist_output: ET.Element) -> None:
             frame,
             "geom",
             {
+                "name": f"qc_col_robot_target_{'left' if y < 0 else 'right'}",
                 "type": "box",
                 "pos": f"0 {y} 0.0075",
                 "size": "0.006 0.006 0.002",
                 "material": "qc_magnet",
-                "contype": "0",
-                "conaffinity": "0",
+                "contype": "1",
+                "conaffinity": "1",
+                "group": "3",
             },
         )
     ET.SubElement(
         frame,
         "geom",
         {
+            "name": "qc_col_robot_positive_lock",
             "type": "box",
             "pos": "0.003 0 0.0055",
             "size": "0.020 0.0024 0.0008",
             "material": "qc_lock",
-            "contype": "0",
-            "conaffinity": "0",
+            "contype": "1",
+            "conaffinity": "1",
+            "group": "3",
         },
     )
-    for y in (-0.0075, -0.0025, 0.0025, 0.0075):
+    for signal, y in zip(
+        ("ground", "power", "data", "id"),
+        (-0.0075, -0.0025, 0.0025, 0.0075),
+        strict=True,
+    ):
         ET.SubElement(
             frame,
             "geom",
             {
+                "name": f"qc_col_robot_pogo_{signal}",
                 "type": "cylinder",
                 "pos": f"-0.031 {y} 0.0097",
                 "size": "0.00105 0.0007",
                 "material": "qc_contact",
-                "contype": "0",
-                "conaffinity": "0",
+                "contype": "1",
+                "conaffinity": "1",
+                "group": "3",
             },
         )
     ET.SubElement(
@@ -151,11 +161,9 @@ def _split_stock_gripper(robot_root: ET.Element, scene_root: ET.Element) -> None
     if wrist_roll_joint is None:
         raise RuntimeError("Stock model no longer contains the wrist_roll joint")
     stock_gripper.remove(wrist_roll_joint)
-    # These meshes are retained for exact appearance but disabled for contact;
-    # the demo validates changer state/control, not grasp or rack contact.
-    for geom in stock_gripper.iter("geom"):
-        geom.set("contype", "0")
-        geom.set("conaffinity", "0")
+    # Preserve the calibrated model's explicit visual/collision split.  In
+    # particular, do not blanket-disable the stock collision meshes after the
+    # subtree is moved behind the detachable plate.
 
     wrist_joint = original.find("./joint[@name='wrist_roll']")
     if wrist_joint is None:
@@ -243,11 +251,15 @@ def set_weld(
     active: bool,
     update_pose: bool = False,
 ) -> None:
+    """Toggle a pre-authored equality without mutating its reference pose.
+
+    All three equality references are established by ``initialize`` at their
+    authored coincident frames.  Rewriting ``model.eq_data`` at runtime makes
+    a failed or misaligned capture self-fulfilling and invalidates negative
+    controls, so ``update_pose`` is retained only for API compatibility.
+    """
     equality_id = model.equality(name).id
-    if active and update_pose:
-        body1 = model.eq_obj1id[equality_id]
-        body2 = model.eq_obj2id[equality_id]
-        model.eq_data[equality_id, 3:10] = relative_pose(data, body1, body2)
+    del update_pose
     data.eq_active[equality_id] = int(active)
     mujoco.mj_forward(model, data)
 
@@ -271,6 +283,7 @@ class QuickChangeController:
         self.mating_site = model.site("robot_mating_face").id
         self.tool_body = model.body("tool_plate").id
         self.dock_body = model.body("tool_dock").id
+        self.tool_servo_numeric_adr = int(model.numeric("tool_servo_id").adr[0])
         self.captured = False
         self.locked = False
         self.bus_connected = False
@@ -284,6 +297,23 @@ class QuickChangeController:
         self.max_locked_position_error = 0.0
         self.max_locked_angle_error = 0.0
         self.last_phase = ""
+
+    def _expected_tool_id_present(self) -> bool:
+        return bool(
+            int(round(float(self.model.numeric_data[self.tool_servo_numeric_adr])))
+            == TOOL_SERVO_ID
+        )
+
+    def _tool_is_physically_docked(self) -> bool:
+        separation = float(
+            np.linalg.norm(
+                self.data.xpos[self.tool_body] - self.data.xpos[self.dock_body]
+            )
+        )
+        dock_active = bool(
+            self.data.eq_active[self.model.equality("tool_in_dock").id]
+        )
+        return dock_active and separation < 0.003
 
     def _phase(self, sim_time: float) -> str:
         if sim_time < 0.5:
@@ -350,8 +380,19 @@ class QuickChangeController:
             position_error, angle_error = pose_error(
                 self.data, self.mating_site, self.tool_body
             )
-            if position_error < 0.002 and angle_error < np.deg2rad(2.0):
+            if (
+                position_error < 0.002
+                and angle_error < np.deg2rad(2.0)
+                and self._tool_is_physically_docked()
+                and self._expected_tool_id_present()
+            ):
                 set_weld(self.model, self.data, "magnetic_capture", True, update_pose=True)
+                if not bool(
+                    self.data.eq_active[
+                        self.model.equality("magnetic_capture").id
+                    ]
+                ):
+                    return
                 set_weld(self.model, self.data, "tool_in_dock", False)
                 self.captured = True
                 self.bus_connected = True
@@ -366,6 +407,10 @@ class QuickChangeController:
 
         if sim_time >= 2.9 and self.captured and not self.locked:
             set_weld(self.model, self.data, "positive_lock", True, update_pose=True)
+            if not bool(
+                self.data.eq_active[self.model.equality("positive_lock").id]
+            ):
+                return
             set_weld(self.model, self.data, "magnetic_capture", False)
             self.locked = True
             self.lock_achieved = True

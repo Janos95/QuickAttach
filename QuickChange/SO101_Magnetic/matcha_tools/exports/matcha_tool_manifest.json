@@ -1,0 +1,346 @@
+{
+  "files": [
+    {
+      "bytes": 19270,
+      "path": "exports/so101_matcha_spoon_mass_ledger.json",
+      "role": "mass_ledger",
+      "sha256": "8871e3225cd0ce2b94df96c211d490fd581f83aba555d1cd62f46ad41dd81e37"
+    },
+    {
+      "bytes": 440542,
+      "path": "exports/so101_matcha_spoon_printed_body.step",
+      "role": "printable_body_step",
+      "sha256": "228035ed8d977855e10144b3e4e783d938b1c2fc455a6723cb3eaa7a8593f89a"
+    },
+    {
+      "bytes": 570684,
+      "path": "exports/so101_matcha_spoon_printed_body.stl",
+      "role": "printable_body_stl",
+      "sha256": "111b85b4a6878f7f84fff838ce5c67770275200e5071b096c7e67a72379d7586"
+    },
+    {
+      "bytes": 800089,
+      "path": "exports/so101_matcha_spoon_tool_assembly.step",
+      "role": "complete_rigid_assembly_step",
+      "sha256": "5a231604084f557b3f6d5db25c122cd3400a43aca9dd6347e053aa041225a6ef"
+    },
+    {
+      "bytes": 397116,
+      "path": "exports/so101_matcha_two_bay_rack.step",
+      "role": "rack_step",
+      "sha256": "04413d422d54de81449e5da2f4f247f065e70bb64ec524a30f40b720a35971b9"
+    },
+    {
+      "bytes": 16084,
+      "path": "exports/so101_matcha_two_bay_rack.stl",
+      "role": "rack_stl",
+      "sha256": "6966858adc45713ae21acfb1c70fe0ec8948bda224516dfe690f0513ed508219"
+    },
+    {
+      "bytes": 27362,
+      "path": "exports/so101_matcha_whisk_mass_ledger.json",
+      "role": "mass_ledger",
+      "sha256": "4a66b75393e42f7004db99badc13d9a94898d28c2c1383c33fc0c8e00fc535fd"
+    },
+    {
+      "bytes": 324066,
+      "path": "exports/so101_matcha_whisk_printed_body.step",
+      "role": "printable_body_step",
+      "sha256": "3219079b0eccce577878321f83ae0abd9d2cf1d5fdc737ed840b43bf3deb2e88"
+    },
+    {
+      "bytes": 497684,
+      "path": "exports/so101_matcha_whisk_printed_body.stl",
+      "role": "printable_body_stl",
+      "sha256": "282a2a80347d88096a90c96e5a444687b565a8a4a7314c41c78e1edcc2a44061"
+    },
+    {
+      "bytes": 789947,
+      "path": "exports/so101_matcha_whisk_tool_assembly.step",
+      "role": "complete_rigid_assembly_step",
+      "sha256": "0d57df4fd7ff97089a6f0dff454fcc38b98cc1e424c836df1d720de5b97767e2"
+    }
+  ],
+  "generator": {
+    "path": "generate_matcha_tool_cad.py",
+    "sha256": "877f8c75eab5c68ab6771a5d4fd77cfd201df7100c0ae1ad587fbbd430da20c2"
+  },
+  "interface_authority": {
+    "construction": "unmodified tool_plate(stock_gripper=False)",
+    "path": "QuickChange/SO101_Magnetic/generate_cad.py",
+    "sha256": "f16352a11128bb93599b83cb51fabdf47520d379f14cdfdb5ae4d5f404e90818"
+  },
+  "rack": {
+    "bay_names": [
+      "spoon",
+      "whisk"
+    ],
+    "bay_pitch_mm": 96.0,
+    "insertion_y_mm": [
+      -80.0,
+      0.0
+    ],
+    "pcb_lower_rail_clearance_mm": 0.3,
+    "positive_lock_cam": {
+      "axial_lead": {
+        "contact_angle_deg": 45.0,
+        "contact_land_width_mm": 2.0,
+        "kind": "ruled_loft_between_rectangles",
+        "lower_rectangle_mm": {
+          "x": [
+            27.25,
+            29.0
+          ],
+          "y": [
+            0.0,
+            2.0
+          ],
+          "z": -9.6
+        },
+        "minimum_wall_mm": 1.75,
+        "rise_mm": 3.1999999999999993,
+        "run_mm": 3.1999999999999993,
+        "upper_rectangle_mm": {
+          "x": [
+            24.05,
+            29.0
+          ],
+          "y": [
+            0.0,
+            2.0
+          ],
+          "z": -6.4
+        },
+        "volume_mm3": 21.439999999999994
+      },
+      "construction": "union_main_xy_wedge_ruled_axial_lead_hold_finger",
+      "expected_geometry": {
+        "added_volume_mm3": 44.71499999999999,
+        "bounds_mm": {
+          "x": [
+            24.05,
+            34.0
+          ],
+          "y": [
+            -16.0,
+            2.0
+          ],
+          "z": [
+            -9.6,
+            -1.9500000000000002
+          ]
+        },
+        "total_volume_mm3": 325.435
+      },
+      "frame": "dock_local_mm",
+      "hold_finger": {
+        "bounds_mm": {
+          "x": [
+            24.05,
+            29.0
+          ],
+          "y": [
+            0.0,
+            2.0
+          ],
+          "z": [
+            -6.4,
+            -4.15
+          ]
+        },
+        "kind": "axis_aligned_box",
+        "volume_mm3": 22.275
+      },
+      "main_xy_wedge": {
+        "polygon_xy_mm": [
+          [
+            28.0,
+            -16.0
+          ],
+          [
+            34.0,
+            -16.0
+          ],
+          [
+            34.0,
+            0.0
+          ],
+          [
+            24.05,
+            0.0
+          ]
+        ],
+        "z_bounds_mm": [
+          -4.15,
+          -1.9500000000000002
+        ]
+      },
+      "manufacturability": {
+        "declared_process_floor_mm": 0.2,
+        "lead_is_self_supporting_at_45_deg": true,
+        "minimum_feature_mm": 1.0
+      },
+      "outer_root_bridge": {
+        "bounds_mm": {
+          "x": [
+            28.0,
+            29.0
+          ],
+          "y": [
+            -1.0,
+            1.0
+          ],
+          "z": [
+            -4.65,
+            -3.65
+          ]
+        },
+        "gross_volume_mm3": 2.000000000000001,
+        "kind": "axis_aligned_box",
+        "net_added_volume_mm3": 1.0000000000000009,
+        "outside_locked_tab_swept_x": true,
+        "overlap_with_hold_mm3": 0.5,
+        "overlap_with_main_wedge_mm3": 0.5
+      },
+      "passive_capture": {
+        "head_entry_tangent_preseat_mm": 3.1,
+        "lateral_axis": "dock_local_positive_x",
+        "lateral_offset_breakpoints_mm": [
+          [
+            6.4,
+            0.2
+          ],
+          [
+            3.2,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "nominal_unlocked_q_mm": 0.0,
+        "passive_open_q_max_mm": 0.05000000000000071,
+        "preseat_definition": "robot_source_translation_dock_local_z_mm=-preseat_mm",
+        "ramp_contact_start_preseat_mm": 6.346666666666667,
+        "ramp_q_affine_coefficients": {
+          "clamp_mm": [
+            0.05000000000000071,
+            3.0
+          ],
+          "constant": -3.15,
+          "lateral_offset": -1.0,
+          "preseat": 1.0
+        },
+        "recenter_end_preseat_mm": 3.2,
+        "recenter_start_preseat_mm": 6.4
+      },
+      "passive_release": {
+        "axis": "dock_local_negative_y",
+        "initial_q_hold_withdrawal_mm": 2.0,
+        "nominal_exit_withdrawal_mm": 15.0,
+        "q3_tangent_withdrawal_mm": 13.949367088607595,
+        "q_per_withdrawal_slope": 0.24687499999999996,
+        "required_exit_clearance_mm": 0.2
+      },
+      "quasistatic_load_envelope": {
+        "contact_face_area_mm2": 9.050966799187806,
+        "maximum_axial_reaction_n": 3.5279999999999974,
+        "maximum_cam_normal_force_n": 4.989345448052276,
+        "maximum_spring_deflection_mm": 3.599999999999998,
+        "maximum_spring_force_n": 3.527999999999998,
+        "mean_contact_pressure_mpa": 0.5512499999999998,
+        "return_spring_rate_n_per_mm": 0.98,
+        "semantics": "frictionless_quasistatic_source_envelope"
+      },
+      "schema_version": "1.0"
+    },
+    "rear_clearance_mm": 0.3,
+    "stock_gripper_scope": "separate core quick-change dock; not part of this rack",
+    "stop_contracts": {
+      "spoon": {
+        "bay_x_mm": -48.0,
+        "bounds_mm": {
+          "x": [
+            -89.0,
+            -15.0
+          ],
+          "y": [
+            25.0,
+            31.0
+          ],
+          "z": [
+            -3.0,
+            12.5
+          ]
+        },
+        "center_mm": [
+          -52.0,
+          28.0,
+          4.75
+        ],
+        "dock": "matcha_spoon",
+        "size_mm": [
+          74.0,
+          6.0,
+          15.5
+        ]
+      },
+      "whisk": {
+        "bay_x_mm": 48.0,
+        "bounds_mm": {
+          "x": [
+            7.0,
+            81.0
+          ],
+          "y": [
+            25.0,
+            31.0
+          ],
+          "z": [
+            -3.0,
+            12.5
+          ]
+        },
+        "center_mm": [
+          44.0,
+          28.0,
+          4.75
+        ],
+        "dock": "matcha_whisk",
+        "size_mm": [
+          74.0,
+          6.0,
+          15.5
+        ]
+      }
+    },
+    "wall_clearance_mm": 0.5
+  },
+  "schema_version": "1.0",
+  "tools": {
+    "matcha_spoon": {
+      "assembly_path": "exports/so101_matcha_spoon_tool_assembly.step",
+      "bus_address": null,
+      "component_count": 22,
+      "mass_ledger_path": "exports/so101_matcha_spoon_mass_ledger.json",
+      "tool_id": 21
+    },
+    "matcha_whisk": {
+      "assembly_path": "exports/so101_matcha_whisk_tool_assembly.step",
+      "bus_address": 7,
+      "component_count": 32,
+      "mass_ledger_path": "exports/so101_matcha_whisk_mass_ledger.json",
+      "tool_id": 22
+    }
+  },
+  "units": "mm",
+  "whisk_mechanism": {
+    "compliance_limits_mm": [
+      -5.05,
+      0.05
+    ],
+    "compliance_travel_mm": 5.1,
+    "eccentric_mm": 4.0
+  }
+}

@@ -1,0 +1,4903 @@
+{
+  "authority_scope": {
+    "capture_dynamics_authority": false,
+    "checkpoint_blockers": [
+      "printed_material_and_process_allowables_unqualified",
+      "M4_M6_fastener_and_joint_authority_missing",
+      "floor_substrate_and_thread_authority_missing",
+      "contact_force_and_friction_authority_missing",
+      "capture_and_release_dynamics_not_validated",
+      "physical_lock_and_reverse_insertion_not_validated"
+    ],
+    "contact_dynamics_authority": false,
+    "contact_force_authority": false,
+    "continuous_geometric_clearance_authority": true,
+    "continuous_geometric_clearance_scope": "only_the_exact_hash_bound_31_row_joint_linear_release_continuation_and_compiled_collision_inventory",
+    "default_action_roster_identity_authority": true,
+    "default_runtime_action_authority": false,
+    "exact_source_brep_boundary_authority": false,
+    "fastener_authority": false,
+    "friction_coefficient_authority": false,
+    "load_path_authority": false,
+    "mass_authority": false,
+    "material_authority": false,
+    "physical_lock_authority": false,
+    "physical_release_authority": false,
+    "release_ready": false,
+    "runtime_contract_blockers": [
+      "vendor_or_normative_source_missing_for_selected_M4_and_M6_fasteners",
+      "floor_fixture_substrate_and_M6_thread_authority_missing",
+      "PA12_modulus_strength_creep_and_process_allowables_unqualified",
+      "printed_dimensional_tolerance_and_anchor_strength_unqualified",
+      "cam_contact_friction_reverse_insertion_and_capture_dynamics_unvalidated",
+      "runtime_support_proxy_fills_M4_M6_clearances_and_countersinks",
+      "runtime_support_proxy_head_envelope_overcovers_source_for_nonoverlap",
+      "runtime_support_proxy_is_not_physical_or_load_path_authority"
+    ],
+    "runtime_contract_required_false_fields": {
+      "authority_scope.capture_dynamics_authority": false,
+      "authority_scope.physical_release_authority": false,
+      "authority_scope.release_ready": false,
+      "release.physical_release_authority": false,
+      "support_proxy.exact_source_brep_boundary_authority": false,
+      "support_proxy.fastener_authority": false,
+      "support_proxy.load_path_authority": false,
+      "support_proxy.mass_authority": false,
+      "support_proxy.physical_geometry_authority": false,
+      "support_proxy.substrate_authority": false,
+      "support_proxy.tolerance_authority": false,
+      "top_level.release_ready": false
+    },
+    "substrate_authority": false,
+    "tolerance_authority": false
+  },
+  "canonical_sha256_without_this_field": "fdce9679727e1096e8578f133757e99fb06b49864d3765fb3d66da6d6d9468d9",
+  "capture_route": {
+    "alignment_q_sha256": "692cc966e266841bbe864d180a90083410089bd85f327c3f579276625a66e22c",
+    "contract_identity_sha256": "1db1e8a2325a4afdc451330c2b464ee9d85930a956ca22b8f073bdfa16105088",
+    "dense_fk_sha256": "703f7fc4b77b1fa3c97fd499b99b4c7911660429e762ce359adad021be4a804b",
+    "endpoint_fk_maxima_sha256": "4d6672e5955d670e2a608bbfc41f01542877d3aebade080204cd83751a65066b",
+    "endpoint_fk_sha256": "f209f29fb26d24e3acd32e198340fcfb96d97022b1b2d5f681f90fdfda654b75",
+    "exact_quaternion_required_off_seat": false,
+    "f8le_shape": [
+      276,
+      7
+    ],
+    "maximum_dense_orientation_error_rad": 0.0013603481241099057,
+    "maximum_endpoint_orientation_error_rad": 0.0013603481241099057,
+    "orientation_bound_rad": 0.0017453292519943296,
+    "orientation_rule": "fixed_rolled_frame_best_attainable_5DOF_error_at_most_0.1deg",
+    "passed": true,
+    "phase_contract_sha256": "eda9370110ed58ac4d625fa6d5015398c8c71f1501b2498cf274e0510e7cad77",
+    "phase_row_ranges_inclusive": {
+      "gripper_capture_axial_open_side": [
+        0,
+        243
+      ],
+      "gripper_capture_centered_final": [
+        259,
+        275
+      ],
+      "gripper_capture_coupled_recenter": [
+        243,
+        259
+      ]
+    },
+    "phase_timing_s_duration_timeout": {
+      "gripper_capture_axial_open_side": [
+        1.6,
+        3.0
+      ],
+      "gripper_capture_centered_final": [
+        0.5,
+        1.5
+      ],
+      "gripper_capture_coupled_recenter": [
+        0.5,
+        1.5
+      ],
+      "gripper_capture_lateral_align": [
+        0.25,
+        1.0
+      ]
+    },
+    "preseat_bounds_mm": [
+      55.0,
+      0.0
+    ],
+    "preseat_step_mm": -0.2,
+    "q_roster_sha256": "141701b473e207995738331a6324f8c1b9f65af1472a98a5d7e3138eeff1891e",
+    "row_count": 276,
+    "source_state_sha256": "000c6323497fe2b99d03d19f831524d0dc02a2ef6bdbac41eaa8da8d4520719b",
+    "source_x_breakpoints_mm": [
+      [
+        55.0,
+        0.2
+      ],
+      [
+        6.4,
+        0.2
+      ],
+      [
+        3.2,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ]
+    ],
+    "state_bytes_sha256": "3df49a196375ee9ec2f2aab2a8750c7ab0d8f4f8bde79144630cf406c7c008cc",
+    "wrist_roll_f8le_sha256": "1aa8b9c2d5348864b0b7ad4ee3e1d999e4778572289fcfd3aa461a5862a1aff4",
+    "wrist_roll_q_sha256": "e3fb0426f9defe378ee7d245a30c216321cc0335c12f1bd555e2614696796854"
+  },
+  "continuous_clearance": {
+    "coarse_global_motion_bound_mm": 0.32849116882084717,
+    "continuous_clearance_lower_bound_mm": 4.220501516110517,
+    "maximum_pair_specific_topology_motion_bound_mm": 0.13870802188957512,
+    "maximum_substep_sum_abs_dq_rad": 0.0008238065187196941,
+    "minimum_sampled_outer_aabb_lower_bound_mm": 4.3592095380000915,
+    "minimum_witness": {
+      "arm_aabb_world_m": [
+        [
+          0.11291840389581845,
+          0.06029250793796644,
+          0.17850565514668978
+        ],
+        [
+          0.18549523406969776,
+          0.1537990140396628,
+          0.21416540754951494
+        ]
+      ],
+      "arm_geom": "robot_col_wrist_01",
+      "distance_mm": 4.3592095380000915,
+      "fraction_index": 5,
+      "interval_index": 0,
+      "sample_index": 5,
+      "target_aabb_world_m": [
+        [
+          0.1602189956299708,
+          0.1581582235776629,
+          0.1579154579377553
+        ],
+        [
+          0.16709010552119383,
+          0.1653990176975636,
+          0.2339154579377553
+        ]
+      ],
+      "target_geom": "dock_gripper_keeper_left_lower_collision",
+      "withdrawal_mm": 0.25
+    },
+    "motion_witness": {
+      "arm_geom": "robot_col_wrist_01",
+      "interval_index": 0,
+      "motion_bound_mm": 0.13870802188957512,
+      "substep_delta_q_rad": [
+        -1.1102230246251566e-17,
+        -0.000127135259076272,
+        -0.00028476800028357505,
+        0.00041190325935981377,
+        2.2204460492503132e-17
+      ],
+      "sum_abs_delta_q_rad": 0.0008238065187196941
+    },
+    "passed": true,
+    "required_clearance_mm": 0.2,
+    "target_family_clearance": {
+      "core_dock_fixture": {
+        "continuous_clearance_lower_bound_mm": 4.220501516110517,
+        "distance_evaluation_count": 332906,
+        "minimum_sampled_outer_aabb_lower_bound_mm": 4.3592095380000915,
+        "minimum_witness": {
+          "arm_aabb_world_m": [
+            [
+              0.11291840389581845,
+              0.06029250793796644,
+              0.17850565514668978
+            ],
+            [
+              0.18549523406969776,
+              0.1537990140396628,
+              0.21416540754951494
+            ]
+          ],
+          "arm_geom": "robot_col_wrist_01",
+          "distance_mm": 4.3592095380000915,
+          "fraction_index": 5,
+          "interval_index": 0,
+          "sample_index": 5,
+          "target_aabb_world_m": [
+            [
+              0.1602189956299708,
+              0.1581582235776629,
+              0.1579154579377553
+            ],
+            [
+              0.16709010552119383,
+              0.1653990176975636,
+              0.2339154579377553
+            ]
+          ],
+          "target_geom": "dock_gripper_keeper_left_lower_collision",
+          "withdrawal_mm": 0.25
+        },
+        "passed": true,
+        "required_clearance_mm": 0.2,
+        "target_geom_count": 79
+      },
+      "floor_support_proxy": {
+        "continuous_clearance_lower_bound_mm": 16.201539960841686,
+        "distance_evaluation_count": 46354,
+        "minimum_sampled_outer_aabb_lower_bound_mm": 16.34024798273126,
+        "minimum_witness": {
+          "arm_aabb_world_m": [
+            [
+              0.11291820032534194,
+              0.06029232939283609,
+              0.17825570592048656
+            ],
+            [
+              0.18549503049922125,
+              0.15379883549453244,
+              0.2139154583233117
+            ]
+          ],
+          "arm_geom": "robot_col_wrist_01",
+          "distance_mm": 16.34024798273126,
+          "fraction_index": 0,
+          "interval_index": 0,
+          "sample_index": 0,
+          "target_aabb_world_m": [
+            [
+              0.1571348982459697,
+              0.10398334058960146,
+              0.1539154579377553
+            ],
+            [
+              0.22638808622943074,
+              0.17443800231626494,
+              0.1619154579377553
+            ]
+          ],
+          "target_geom": "dock_gripper_floor_support_head_collision",
+          "withdrawal_mm": 0.0
+        },
+        "passed": true,
+        "required_clearance_mm": 0.2,
+        "target_geom_count": 11
+      }
+    },
+    "topology_global_chain_radius_bound_m": 0.3987479600566484,
+    "topology_radius_records": [
+      {
+        "body": "base",
+        "geom": "robot_col_base_00",
+        "geom_body_radius_m": 0.07739392222953194,
+        "joint_radius_bounds_m": {}
+      },
+      {
+        "body": "base",
+        "geom": "robot_col_base_01",
+        "geom_body_radius_m": 0.07395266539079753,
+        "joint_radius_bounds_m": {}
+      },
+      {
+        "body": "base",
+        "geom": "robot_col_base_02",
+        "geom_body_radius_m": 0.07923791179625361,
+        "joint_radius_bounds_m": {}
+      },
+      {
+        "body": "base",
+        "geom": "robot_col_base_03",
+        "geom_body_radius_m": 0.07763132935459809,
+        "joint_radius_bounds_m": {}
+      },
+      {
+        "body": "lower_arm",
+        "geom": "robot_col_lower_arm_00",
+        "geom_body_radius_m": 0.12586794385183453,
+        "joint_radius_bounds_m": {
+          "elbow_flex": 0.12586794385183453,
+          "shoulder_lift": 0.24186796497252228,
+          "shoulder_pan": 0.306643186573687
+        }
+      },
+      {
+        "body": "lower_arm",
+        "geom": "robot_col_lower_arm_01",
+        "geom_body_radius_m": 0.12720172470274446,
+        "joint_radius_bounds_m": {
+          "elbow_flex": 0.12720172470274446,
+          "shoulder_lift": 0.24320174582343218,
+          "shoulder_pan": 0.3079769674245969
+        }
+      },
+      {
+        "body": "lower_arm",
+        "geom": "robot_col_lower_arm_02",
+        "geom_body_radius_m": 0.14954190096097003,
+        "joint_radius_bounds_m": {
+          "elbow_flex": 0.14954190096097003,
+          "shoulder_lift": 0.2655419220816578,
+          "shoulder_pan": 0.3303171436828225
+        }
+      },
+      {
+        "body": "shoulder",
+        "geom": "robot_col_shoulder_00",
+        "geom_body_radius_m": 0.07714295330970272,
+        "joint_radius_bounds_m": {
+          "shoulder_pan": 0.07714295330970272
+        }
+      },
+      {
+        "body": "shoulder",
+        "geom": "robot_col_shoulder_01",
+        "geom_body_radius_m": 0.06622050885532077,
+        "joint_radius_bounds_m": {
+          "shoulder_pan": 0.06622050885532077
+        }
+      },
+      {
+        "body": "shoulder",
+        "geom": "robot_col_shoulder_02",
+        "geom_body_radius_m": 0.06328665081842419,
+        "joint_radius_bounds_m": {
+          "shoulder_pan": 0.06328665081842419
+        }
+      },
+      {
+        "body": "upper_arm",
+        "geom": "robot_col_upper_arm_00",
+        "geom_body_radius_m": 0.13398563691792986,
+        "joint_radius_bounds_m": {
+          "shoulder_lift": 0.13398563691792986,
+          "shoulder_pan": 0.19876085851909459
+        }
+      },
+      {
+        "body": "upper_arm",
+        "geom": "robot_col_upper_arm_01",
+        "geom_body_radius_m": 0.13708462764715745,
+        "joint_radius_bounds_m": {
+          "shoulder_lift": 0.13708462764715745,
+          "shoulder_pan": 0.20185984924832218
+        }
+      },
+      {
+        "body": "wrist",
+        "geom": "robot_col_wrist_00",
+        "geom_body_radius_m": 0.07965218540927942,
+        "joint_radius_bounds_m": {
+          "elbow_flex": 0.21465237059433756,
+          "shoulder_lift": 0.3306523917150253,
+          "shoulder_pan": 0.39542761331619003,
+          "wrist_flex": 0.07965218540927942
+        }
+      },
+      {
+        "body": "wrist",
+        "geom": "robot_col_wrist_01",
+        "geom_body_radius_m": 0.08297253214973781,
+        "joint_radius_bounds_m": {
+          "elbow_flex": 0.21797271733479595,
+          "shoulder_lift": 0.3339727384554837,
+          "shoulder_pan": 0.3987479600566484,
+          "wrist_flex": 0.08297253214973781
+        }
+      }
+    ],
+    "topology_radius_records_sha256": "cb90b85ece50da441459d5e0820fbe133aebfedc67a2a73db9d6c133bcb72969"
+  },
+  "default_actions": {
+    "names": [
+      "gripper_capture_lateral_align",
+      "gripper_capture_axial_open_side",
+      "gripper_capture_coupled_recenter",
+      "gripper_capture_centered_final",
+      "gripper_physical_capture",
+      "gripper_lock_verify",
+      "gripper_dock_release_verify"
+    ],
+    "rack_exit_flag_rejected": true,
+    "rack_exit_rejection": "full rack exit is not yet a validated controller action",
+    "static_release_continuation_included": false
+  },
+  "failures": [],
+  "geometry_passed": true,
+  "gravity_feedforward": {
+    "capture_route_identity_sha256": "1db1e8a2325a4afdc451330c2b464ee9d85930a956ca22b8f073bdfa16105088",
+    "dynamics_authority": false,
+    "formula_sha256": "a84c10e16c890b5e1ee4e4479c0d15d7e07a75f2afae17c62e639e8adc55cc27",
+    "guard_thresholds_sha256": "a30d3c871580b36a8f18eca6f07b6d4e5eee34cbecf50093aaca7c4cb1d3ee40",
+    "identity_sha256": "a039042d0c32263fe9565000f8eee7e442d6be06f48b3834d77861f26b36c4e2",
+    "move_action_roster_sha256": "3a3301d0adf98e1e617766891ebf7be4129d94d0440d7f4fcb694f273313a3ba",
+    "passed": true,
+    "static_only": true
+  },
+  "inventory": {
+    "arm_by_body": {
+      "base": [
+        "robot_col_base_00",
+        "robot_col_base_01",
+        "robot_col_base_02",
+        "robot_col_base_03"
+      ],
+      "lower_arm": [
+        "robot_col_lower_arm_00",
+        "robot_col_lower_arm_01",
+        "robot_col_lower_arm_02"
+      ],
+      "shoulder": [
+        "robot_col_shoulder_00",
+        "robot_col_shoulder_01",
+        "robot_col_shoulder_02"
+      ],
+      "upper_arm": [
+        "robot_col_upper_arm_00",
+        "robot_col_upper_arm_01"
+      ],
+      "wrist": [
+        "robot_col_wrist_00",
+        "robot_col_wrist_01"
+      ]
+    },
+    "arm_compiled_geom_records": [
+      {
+        "body": "base",
+        "conaffinity": 249,
+        "contype": 2,
+        "data_id": 5,
+        "local_vertex_count": 18766,
+        "local_vertices_f8le_sha256": "e64a5cefed8b5dc6c691e4084ab994f98072223ab4d730b99ac239e125cbc938",
+        "name": "robot_col_base_00",
+        "pos_m": [
+          0.006159652265631868,
+          -9.729313934133153e-06,
+          0.048830866204306086
+        ],
+        "quat_wxyz": [
+          -0.0029835228060337005,
+          0.7404456604988399,
+          0.002708150194325097,
+          0.6721041499370681
+        ],
+        "size": [
+          0.01802445591028847,
+          0.025196153131748004,
+          0.04791981086570681
+        ],
+        "type": 7
+      },
+      {
+        "body": "base",
+        "conaffinity": 249,
+        "contype": 2,
+        "data_id": 12,
+        "local_vertex_count": 4577,
+        "local_vertices_f8le_sha256": "4ff8fda63044c32ff479656d6af490d903c777af407d84076be2ebd746ab505f",
+        "name": "robot_col_base_01",
+        "pos_m": [
+          0.012815967353550416,
+          -3.6060920673799013e-06,
+          0.016697767496321594
+        ],
+        "quat_wxyz": [
+          -0.6394743739043072,
+          0.6399597239894737,
+          0.30108474722059475,
+          0.3014499158767904
+        ],
+        "size": [
+          0.04801897384955261,
+          0.05981081679248743,
+          0.05548180799105141
+        ],
+        "type": 7
+      },
+      {
+        "body": "base",
+        "conaffinity": 249,
+        "contype": 2,
+        "data_id": 1,
+        "local_vertex_count": 9526,
+        "local_vertices_f8le_sha256": "0bab0b2fac2b70b9ec5a3654d16901d58a4bb21dbf41f0c26587aee635d37566",
+        "name": "robot_col_base_02",
+        "pos_m": [
+          0.02740716124416508,
+          -1.2224624367279612e-08,
+          0.04381764319472497
+        ],
+        "quat_wxyz": [
+          0.5063098304272821,
+          0.49360951734412245,
+          0.49360951734412334,
+          0.5063098304272825
+        ],
+        "size": [
+          0.012400003604192154,
+          0.019828796638968305,
+          0.024132920573452607
+        ],
+        "type": 7
+      },
+      {
+        "body": "base",
+        "conaffinity": 249,
+        "contype": 2,
+        "data_id": 0,
+        "local_vertex_count": 621,
+        "local_vertices_f8le_sha256": "b6dbd5bc5f5e245ed965406b46af1cb1e93b8f4b2fc3239e68f6f7ade22ede9a",
+        "name": "robot_col_base_03",
+        "pos_m": [
+          -0.028587654949819557,
+          -0.00019944099999999977,
+          0.04742030568514122
+        ],
+        "quat_wxyz": [
+          -0.7071067811865489,
+          0.7071067811865489,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0052049550779695655,
+          0.02102030540201924,
+          0.025499999523162942
+        ],
+        "type": 7
+      },
+      {
+        "body": "lower_arm",
+        "conaffinity": 199,
+        "contype": 16,
+        "data_id": 8,
+        "local_vertex_count": 19720,
+        "local_vertices_f8le_sha256": "4911149269a463c5bc92bb55e943d206769edb1fd6620bbc68939d48aec9ed5c",
+        "name": "robot_col_lower_arm_00",
+        "pos_m": [
+          -0.05235723321954828,
+          -0.00071271595637145,
+          0.017412905327696356
+        ],
+        "quat_wxyz": [
+          -0.49614247513493026,
+          0.5166960169746272,
+          -0.5030285424143983,
+          0.483559878325311
+        ],
+        "size": [
+          0.014381600792773879,
+          0.036596081449682245,
+          0.06741925235686803
+        ],
+        "type": 7
+      },
+      {
+        "body": "lower_arm",
+        "conaffinity": 199,
+        "contype": 16,
+        "data_id": 10,
+        "local_vertex_count": 10481,
+        "local_vertices_f8le_sha256": "2c415e3b9c1c3f39a43271044ab98046396835e743c935a19c11ec0b69f3c1f7",
+        "name": "robot_col_lower_arm_01",
+        "pos_m": [
+          -0.10462385896354541,
+          0.0027442818370171027,
+          0.018091818670233857
+        ],
+        "quat_wxyz": [
+          -0.003402641506642771,
+          -0.9999815710268254,
+          0.003844860626688816,
+          0.0032398586791229523
+        ],
+        "size": [
+          0.01436234219207449,
+          0.01912324631282768,
+          0.03007057808472469
+        ],
+        "type": 7
+      },
+      {
+        "body": "lower_arm",
+        "conaffinity": 199,
+        "contype": 16,
+        "data_id": 1,
+        "local_vertex_count": 9526,
+        "local_vertices_f8le_sha256": "0bab0b2fac2b70b9ec5a3654d16901d58a4bb21dbf41f0c26587aee635d37566",
+        "name": "robot_col_lower_arm_02",
+        "pos_m": [
+          -0.12347186124416508,
+          0.005199996751945634,
+          0.018582356805275032
+        ],
+        "quat_wxyz": [
+          -0.49360951734412317,
+          0.5063098304272835,
+          0.5063098304272817,
+          -0.49360951734412195
+        ],
+        "size": [
+          0.012400003604192154,
+          0.019828796638968305,
+          0.024132920573452607
+        ],
+        "type": 7
+      },
+      {
+        "body": "shoulder",
+        "conaffinity": 241,
+        "contype": 4,
+        "data_id": 1,
+        "local_vertex_count": 9526,
+        "local_vertices_f8le_sha256": "0bab0b2fac2b70b9ec5a3654d16901d58a4bb21dbf41f0c26587aee635d37566",
+        "name": "robot_col_shoulder_00",
+        "pos_m": [
+          -0.03039920324805437,
+          0.0003045978052750337,
+          -0.042771861244165085
+        ],
+        "quat_wxyz": [
+          0.012700313083159331,
+          0.9999193477714052,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.012400003604192154,
+          0.019828796638968305,
+          0.024132920573452607
+        ],
+        "type": 7
+      },
+      {
+        "body": "shoulder",
+        "conaffinity": 241,
+        "contype": 4,
+        "data_id": 2,
+        "local_vertex_count": 11253,
+        "local_vertices_f8le_sha256": "207a930b4751d3a140e613dd7fa06347078a2309439087def13a351d7a1c99aa",
+        "name": "robot_col_shoulder_01",
+        "pos_m": [
+          -0.032873897937927034,
+          -0.00030149591929160696,
+          -0.023911836555662036
+        ],
+        "quat_wxyz": [
+          0.5011009505516557,
+          0.5015249366397606,
+          -0.5026409619152175,
+          0.49469449025601286
+        ],
+        "size": [
+          0.01437152646126519,
+          0.020254416011654553,
+          0.029084788210740346
+        ],
+        "type": 7
+      },
+      {
+        "body": "shoulder",
+        "conaffinity": 241,
+        "contype": 4,
+        "data_id": 9,
+        "local_vertex_count": 8800,
+        "local_vertices_f8le_sha256": "c7f294462593d0307f8cbfccbdb15960b1f75805ed43a3fb34c4dd740aca26f3",
+        "name": "robot_col_shoulder_02",
+        "pos_m": [
+          -0.026894229026240245,
+          -2.0395803465733755e-05,
+          0.006690759293100083
+        ],
+        "quat_wxyz": [
+          0.6966044616844514,
+          0.12361824288144063,
+          0.12831415376534694,
+          0.6949793032398203
+        ],
+        "size": [
+          0.023329796782285084,
+          0.041594831382858924,
+          0.049845308319743264
+        ],
+        "type": 7
+      },
+      {
+        "body": "upper_arm",
+        "conaffinity": 227,
+        "contype": 8,
+        "data_id": 1,
+        "local_vertex_count": 9526,
+        "local_vertices_f8le_sha256": "0bab0b2fac2b70b9ec5a3654d16901d58a4bb21dbf41f0c26587aee635d37566",
+        "name": "robot_col_upper_arm_00",
+        "pos_m": [
+          -0.11256999675194564,
+          -0.01657186124416508,
+          0.018582356805275035
+        ],
+        "quat_wxyz": [
+          2.9160294683386663e-16,
+          2.898581402614915e-16,
+          0.7160302289530845,
+          -0.698069273944496
+        ],
+        "size": [
+          0.012400003604192154,
+          0.019828796638968305,
+          0.024132920573452607
+        ],
+        "type": 7
+      },
+      {
+        "body": "upper_arm",
+        "conaffinity": 227,
+        "contype": 8,
+        "data_id": 6,
+        "local_vertex_count": 12976,
+        "local_vertices_f8le_sha256": "b070488f87e525d01b96dcbade1475db60703d52c26d7572048c3b3d5ff34bb9",
+        "name": "robot_col_upper_arm_01",
+        "pos_m": [
+          -0.06094069326194158,
+          0.0006490477820884633,
+          0.018323402581102332
+        ],
+        "quat_wxyz": [
+          -0.4950043487221329,
+          0.49731448774543646,
+          -0.5042150813030514,
+          0.5034045558109611
+        ],
+        "size": [
+          0.014213864321436,
+          0.035619992624542775,
+          0.0730251169074991
+        ],
+        "type": 7
+      },
+      {
+        "body": "wrist",
+        "conaffinity": 143,
+        "contype": 32,
+        "data_id": 11,
+        "local_vertex_count": 8652,
+        "local_vertices_f8le_sha256": "8f78bbba8f154ac37f86e3e493f3d351a1559c2c105b8ec9c946b47df39dee21",
+        "name": "robot_col_wrist_00",
+        "pos_m": [
+          -1.5811260607942271e-09,
+          -0.043592423459359854,
+          0.030396472285620604
+        ],
+        "quat_wxyz": [
+          0.09073569210658067,
+          0.9958750093148951,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.012400001937263934,
+          0.021935884623074095,
+          0.025344306975875405
+        ],
+        "type": 7
+      },
+      {
+        "body": "wrist",
+        "conaffinity": 143,
+        "contype": 32,
+        "data_id": 7,
+        "local_vertex_count": 26967,
+        "local_vertices_f8le_sha256": "1890b3aec20bf4ff1aaa7a77b2eec28c91106d354c07d4eade91f5af09fa10d5",
+        "name": "robot_col_wrist_01",
+        "pos_m": [
+          -0.00015997421276396948,
+          -0.028996144281636486,
+          0.022491596494427515
+        ],
+        "quat_wxyz": [
+          0.4254122789481283,
+          -0.9049405220873787,
+          0.010206384892057052,
+          0.0016953205653249537
+        ],
+        "size": [
+          0.019639902957299463,
+          0.04159852684933767,
+          0.04961799998470115
+        ],
+        "type": 7
+      }
+    ],
+    "arm_compiled_geom_records_sha256": "ffd5c33711ec1322092267d6f2dda24011b7284909214319d407b85ce60269c7",
+    "arm_geom_count": 14,
+    "arm_geom_names": [
+      "robot_col_base_00",
+      "robot_col_base_01",
+      "robot_col_base_02",
+      "robot_col_base_03",
+      "robot_col_lower_arm_00",
+      "robot_col_lower_arm_01",
+      "robot_col_lower_arm_02",
+      "robot_col_shoulder_00",
+      "robot_col_shoulder_01",
+      "robot_col_shoulder_02",
+      "robot_col_upper_arm_00",
+      "robot_col_upper_arm_01",
+      "robot_col_wrist_00",
+      "robot_col_wrist_01"
+    ],
+    "arm_geom_names_sha256": "bdd87258161b28f976a6f5db11bccb4ad044ec656f5ef84f20dda066db12024b",
+    "dock_target_compiled_geom_records": [
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": 948,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "a245ecdca31019fc6f1617646bcab7545919bad533da9b24873298301f803178",
+        "name": "dock_gripper_cam_axial_lead_collision",
+        "pos_m": [
+          0.027197636016856496,
+          0.001000000047497451,
+          -0.007745273709906438
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.003147636824499433,
+          0.0010000000474974515,
+          0.0018547267460690946
+        ],
+        "type": 7
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": 947,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "190783c00a942f13fa8ed4408138caf23ef2fc446d8ed6374db9aefba33a63d7",
+        "name": "dock_gripper_cam_collision",
+        "pos_m": [
+          0.029930983123772573,
+          -0.007339603145561301,
+          -0.0030499999411404133
+        ],
+        "quat_wxyz": [
+          0.5000000000000007,
+          0.5000000000000007,
+          -0.5000000000000007,
+          0.5000000000000007
+        ],
+        "size": [
+          0.0010999999940395386,
+          0.005880983931415526,
+          0.008660397614397942
+        ],
+        "type": 7
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "dcdeaa56bdeeefc8a42f22184f847b2918fe90862f1347c5ebe32b1a1774b9bd",
+        "name": "dock_gripper_cam_hold_finger_collision",
+        "pos_m": [
+          0.026525,
+          0.001,
+          -0.005275
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.002475,
+          0.001,
+          0.001125
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "43b1c1dc0a6b00ec2d47bb5bfc93b815d4bfc1a9f15f859989a0f6080c451589",
+        "name": "dock_gripper_cam_outer_root_lower_collision",
+        "pos_m": [
+          0.0285,
+          -0.0005,
+          -0.0044
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0005,
+          0.0005,
+          0.00025
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "43b1c1dc0a6b00ec2d47bb5bfc93b815d4bfc1a9f15f859989a0f6080c451589",
+        "name": "dock_gripper_cam_outer_root_upper_collision",
+        "pos_m": [
+          0.0285,
+          0.0005,
+          -0.0039
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0005,
+          0.0005,
+          0.00025
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "209c72798c15d6155b3595e562deecd7eec54f912233efc7b4cc15f088bc41b0",
+        "name": "dock_gripper_floor_support_base_x_max_wall_collision",
+        "pos_m": [
+          0.03175,
+          0.189915457938,
+          0.00475
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.01625,
+          0.004,
+          0.04
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "209c72798c15d6155b3595e562deecd7eec54f912233efc7b4cc15f088bc41b0",
+        "name": "dock_gripper_floor_support_base_x_min_wall_collision",
+        "pos_m": [
+          -0.03575,
+          0.189915457938,
+          0.00475
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.01625,
+          0.004,
+          0.04
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "cac5978258c960510b57d8b8ebcc6af31da3c8caa40b840674dd6c8db29c4ab3",
+        "name": "dock_gripper_floor_support_base_z_max_wall_collision",
+        "pos_m": [
+          -0.002,
+          0.189915457938,
+          0.0335
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0175,
+          0.004,
+          0.01125
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "cac5978258c960510b57d8b8ebcc6af31da3c8caa40b840674dd6c8db29c4ab3",
+        "name": "dock_gripper_floor_support_base_z_min_wall_collision",
+        "pos_m": [
+          -0.002,
+          0.189915457938,
+          -0.024
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0175,
+          0.004,
+          0.01125
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "584a2f6d502bb2a17951de27642db5a814c695e5cbc93434b5ec9bd976e693ac",
+        "name": "dock_gripper_floor_support_head_collision",
+        "pos_m": [
+          -0.004,
+          0.036,
+          0.00475
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.028,
+          0.004,
+          0.0215
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "7a3de5121086ca37f0c6b13f126c435bee40094f158eeb67fafc7915638f909e",
+        "name": "dock_gripper_floor_support_neck_collision",
+        "pos_m": [
+          -0.002,
+          0.045,
+          0.00475
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0215,
+          0.005,
+          0.0215
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "9b3006d3dd9eb98424102fdbfb55f18f010694c64d9694cd30936e2915e980df",
+        "name": "dock_gripper_floor_support_post_x_max_wall_collision",
+        "pos_m": [
+          0.0175,
+          0.117957728969,
+          0.00475
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.002,
+          0.0679577289689,
+          0.0215
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "9b3006d3dd9eb98424102fdbfb55f18f010694c64d9694cd30936e2915e980df",
+        "name": "dock_gripper_floor_support_post_x_min_wall_collision",
+        "pos_m": [
+          -0.0215,
+          0.117957728969,
+          0.00475
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.002,
+          0.0679577289689,
+          0.0215
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "7585d374c3cae97dbc6b1b9909ee3c259eb47c8803b1cc62dde5d6dd448f07ba",
+        "name": "dock_gripper_floor_support_post_z_max_wall_collision",
+        "pos_m": [
+          -0.002,
+          0.117957728969,
+          0.02425
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0175,
+          0.0679577289689,
+          0.002
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "7585d374c3cae97dbc6b1b9909ee3c259eb47c8803b1cc62dde5d6dd448f07ba",
+        "name": "dock_gripper_floor_support_post_z_min_wall_collision",
+        "pos_m": [
+          -0.002,
+          0.117957728969,
+          -0.01475
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0175,
+          0.0679577289689,
+          0.002
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "79900eab0582ffbf77772ac2cf7cd8d77433e7e4f7789d7695e1e32d7df57852",
+        "name": "dock_gripper_floor_support_reinforcement_collision",
+        "pos_m": [
+          0.0255,
+          0.036,
+          0.00475
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0015,
+          0.004,
+          0.0215
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "9a5be3a17a3266cb2d18a692cb1cf3cc84f9cf13785a8c9155419ece874968d3",
+        "name": "dock_gripper_keeper_left_lower_collision",
+        "pos_m": [
+          -0.0395,
+          -0.002,
+          -0.0015
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0035,
+          0.038,
+          0.0015
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "7cfc41afcb9e734a4045db1cf0a911bbda83ada4f2e0055f7784f63d7dac86ef",
+        "name": "dock_gripper_keeper_left_upper_collision",
+        "pos_m": [
+          -0.037,
+          -0.002,
+          0.011
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.004,
+          0.038,
+          0.0015
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "9a5be3a17a3266cb2d18a692cb1cf3cc84f9cf13785a8c9155419ece874968d3",
+        "name": "dock_gripper_keeper_right_lower_collision",
+        "pos_m": [
+          0.0315,
+          -0.002,
+          -0.0015
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0035,
+          0.038,
+          0.0015
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "7cfc41afcb9e734a4045db1cf0a911bbda83ada4f2e0055f7784f63d7dac86ef",
+        "name": "dock_gripper_keeper_right_upper_collision",
+        "pos_m": [
+          0.029,
+          -0.002,
+          0.011
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.004,
+          0.038,
+          0.0015
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "8da0a872d0edebbeeaab6efc17eeecfbdff836e817e294773b0fe9132f731a86",
+        "name": "dock_gripper_qc_col_dock_stop_part_000__dock_stop_land",
+        "pos_m": [
+          -0.004,
+          0.029,
+          -0.000225
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.041,
+          0.003,
+          0.002775
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "856bd98eac387a072bbfe422bfc1063ea89d53e4f2a30c1025ec49c6cf52445b",
+        "name": "dock_gripper_qc_col_dock_stop_part_001__dock_stop_land",
+        "pos_m": [
+          -0.0354582575695,
+          0.029,
+          0.00265
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0095417424305,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "2fb2a9e23c8ba46f847f00f625593487f1f0d6ad18ba17631fa33d21fbfae796",
+        "name": "dock_gripper_qc_col_dock_stop_part_002__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00265
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.022083484861,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "652844daf55bfd73f7249ad1a365821004262e2ff758f3f7d7ff80748a25bf7e",
+        "name": "dock_gripper_qc_col_dock_stop_part_003__dock_stop_land",
+        "pos_m": [
+          0.0294582575695,
+          0.029,
+          0.00265
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0075417424305,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "fa2aad75ec46c597e453204a5dd693f00a69af7f2fd3e413fb83c57fe0897caa",
+        "name": "dock_gripper_qc_col_dock_stop_part_004__dock_stop_land",
+        "pos_m": [
+          -0.035632455532,
+          0.029,
+          0.00285
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00936754446797,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "922d4f53b8d977749fe534134aa3310e70eedd0f5c71a638fa3a0a411d532ae6",
+        "name": "dock_gripper_qc_col_dock_stop_part_005__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00285
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0217350889359,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "7122cdbd95f582eb6921b4278f55ab6540d84f36c5d4d4e156ff514a26ccbdfd",
+        "name": "dock_gripper_qc_col_dock_stop_part_006__dock_stop_land",
+        "pos_m": [
+          0.029632455532,
+          0.029,
+          0.00285
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00736754446797,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "30a689b39751bcc564aad1e18fe3a4b66ebc9337837a050b1dbf9db7dfc9e82e",
+        "name": "dock_gripper_qc_col_dock_stop_part_007__dock_stop_land",
+        "pos_m": [
+          -0.0357549834435,
+          0.029,
+          0.00305
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00924501655647,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "5e174bc0301424269c51951eb179c77a1ca215af3f69b831336b08c771ba334f",
+        "name": "dock_gripper_qc_col_dock_stop_part_008__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00305
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0214900331129,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "023728bae8efecace6720f73457420d3f8b94fe0ffd12b4ccf6f222cb4dad2ff",
+        "name": "dock_gripper_qc_col_dock_stop_part_009__dock_stop_land",
+        "pos_m": [
+          0.0297549834435,
+          0.029,
+          0.00305
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00724501655647,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "2a2f0c407ce50716dbc823caa49b730e8ba6c3a86c3b233e35c688ab7e30e39f",
+        "name": "dock_gripper_qc_col_dock_stop_part_010__dock_stop_land",
+        "pos_m": [
+          -0.0358485281374,
+          0.029,
+          0.00325
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00915147186258,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "cdfa646172357cfcbcc188575621d0540f2904ae9da1b28c1f01b14e9272179b",
+        "name": "dock_gripper_qc_col_dock_stop_part_011__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00325
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0213029437252,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "76265c30cbb7118c7216f577f0a71179be3ba68438adda7a993da498db6899c9",
+        "name": "dock_gripper_qc_col_dock_stop_part_012__dock_stop_land",
+        "pos_m": [
+          0.0298485281374,
+          0.029,
+          0.00325
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00715147186258,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "067163b0044c1090a488f871661c0c3179db45f5c194560afe7cad59c1149701",
+        "name": "dock_gripper_qc_col_dock_stop_part_013__dock_stop_land",
+        "pos_m": [
+          -0.0359219544457,
+          0.029,
+          0.00345
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00907804555427,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "1315ed2818b18e1d9d42a387649440affb5ab244089da6b938e16e8c7521bfbf",
+        "name": "dock_gripper_qc_col_dock_stop_part_014__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00345
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0211560911085,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "429e15b37b3064c5d2386fb3896e835ca6126bc8d94dc6a35913149a98d0e01a",
+        "name": "dock_gripper_qc_col_dock_stop_part_015__dock_stop_land",
+        "pos_m": [
+          0.0299219544457,
+          0.029,
+          0.00345
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00707804555427,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "545032c86dcd69e5e3d42eee4d43e17714356cad20446865fedb1a7d5a81e3c1",
+        "name": "dock_gripper_qc_col_dock_stop_part_016__dock_stop_land",
+        "pos_m": [
+          -0.0359797958971,
+          0.029,
+          0.00365
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00902020410289,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "40f2de014f0e95005fff1c5b0451ba097b13c9613e5d9ad61bf00a51e0a1218a",
+        "name": "dock_gripper_qc_col_dock_stop_part_017__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00365
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0210404082058,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "7c5446524aebfc9ab57cc8ed279b027885b5a7b4f0c9a7e9ae7b78a91529f9a3",
+        "name": "dock_gripper_qc_col_dock_stop_part_018__dock_stop_land",
+        "pos_m": [
+          0.0299797958971,
+          0.029,
+          0.00365
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00702020410289,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "0303c094dee05df1aecc119ce137bd6d002a56d9a0ce8c72969fd7165f271bbd",
+        "name": "dock_gripper_qc_col_dock_stop_part_019__dock_stop_land",
+        "pos_m": [
+          -0.0360246950766,
+          0.029,
+          0.00385
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0089753049234,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "0e9057fd09df6a3e3d91d449f6f35238cbcf3d690b3da884dc7dd9b23f7a7387",
+        "name": "dock_gripper_qc_col_dock_stop_part_020__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00385
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0209506098468,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "e5953b760e315fad269d98b0715b9fc41fb93200131b8ebd14129ee383367e70",
+        "name": "dock_gripper_qc_col_dock_stop_part_021__dock_stop_land",
+        "pos_m": [
+          0.0300246950766,
+          0.029,
+          0.00385
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0069753049234,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "715a2a1b25ba68730c3be8e26872ab5624163a01451a93f8f6fb1f40dd975b47",
+        "name": "dock_gripper_qc_col_dock_stop_part_022__dock_stop_land",
+        "pos_m": [
+          -0.0360583005244,
+          0.029,
+          0.00405
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00894169947557,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "52cdfe5818ba49965751c3f673015b2ec74ea33d1c78ae741e5486f6828ea52c",
+        "name": "dock_gripper_qc_col_dock_stop_part_023__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00405
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0208833989511,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "c3a558b1f299b8de40e8df9ea7cb7f483a93eecb6a8efd9563fd29940a31a464",
+        "name": "dock_gripper_qc_col_dock_stop_part_024__dock_stop_land",
+        "pos_m": [
+          0.0300583005244,
+          0.029,
+          0.00405
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00694169947557,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "8116187f9ff1f5a623b4ecee2c44faa2850c67ee28ea0b8ab6f8e87b5b29bcee",
+        "name": "dock_gripper_qc_col_dock_stop_part_025__dock_stop_land",
+        "pos_m": [
+          -0.0360816653826,
+          0.029,
+          0.00425
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00891833461736,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "9922d3b60dc6d8284aa2d3d8e80a0b7cdba9ac8089a167cffebf7e43b9c70709",
+        "name": "dock_gripper_qc_col_dock_stop_part_026__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00425
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0208366692347,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "6cf7b7e673d0c03a7077350607188fa9e2737fcc7bf4202b861080d08120d35d",
+        "name": "dock_gripper_qc_col_dock_stop_part_027__dock_stop_land",
+        "pos_m": [
+          0.0300816653826,
+          0.029,
+          0.00425
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00691833461736,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "5f774e47dd2184263a695fae01cfb3b92530504a26a402f197d378712bad1cf0",
+        "name": "dock_gripper_qc_col_dock_stop_part_028__dock_stop_land",
+        "pos_m": [
+          -0.036095445115,
+          0.029,
+          0.00445
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00890455488499,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "e4a06faf2805088d6b01cfd21ef25fb82cd0ba2620177686e45b0f6518f2affb",
+        "name": "dock_gripper_qc_col_dock_stop_part_029__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00445
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.02080910977,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "09964ec985c3ef0cf32a41e80ccc81e1791f739e10b349432e2579abcf5fb6db",
+        "name": "dock_gripper_qc_col_dock_stop_part_030__dock_stop_land",
+        "pos_m": [
+          0.030095445115,
+          0.029,
+          0.00445
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00690455488499,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "9e94d89b3cd52a54a5a38290c04a7bbf4cf289c12300bd97828752c85a298af3",
+        "name": "dock_gripper_qc_col_dock_stop_part_031__dock_stop_land",
+        "pos_m": [
+          -0.0361,
+          0.029,
+          0.00465
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0089,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "bd3712b70f8a9e1840ef21c2a17be5c2c1bcb520c5b9d2d702c64bdae5edcc0e",
+        "name": "dock_gripper_qc_col_dock_stop_part_032__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00465
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0208,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "8b9406fad7d22b5a321cd5a2c8b1f00f5ada6926ebe5624f608b378933fcefc1",
+        "name": "dock_gripper_qc_col_dock_stop_part_033__dock_stop_land",
+        "pos_m": [
+          0.0301,
+          0.029,
+          0.00465
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0069,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "9e94d89b3cd52a54a5a38290c04a7bbf4cf289c12300bd97828752c85a298af3",
+        "name": "dock_gripper_qc_col_dock_stop_part_034__dock_stop_land",
+        "pos_m": [
+          -0.0361,
+          0.029,
+          0.00485
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0089,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "bd3712b70f8a9e1840ef21c2a17be5c2c1bcb520c5b9d2d702c64bdae5edcc0e",
+        "name": "dock_gripper_qc_col_dock_stop_part_035__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00485
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0208,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "8b9406fad7d22b5a321cd5a2c8b1f00f5ada6926ebe5624f608b378933fcefc1",
+        "name": "dock_gripper_qc_col_dock_stop_part_036__dock_stop_land",
+        "pos_m": [
+          0.0301,
+          0.029,
+          0.00485
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0069,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "5f774e47dd2184263a695fae01cfb3b92530504a26a402f197d378712bad1cf0",
+        "name": "dock_gripper_qc_col_dock_stop_part_037__dock_stop_land",
+        "pos_m": [
+          -0.036095445115,
+          0.029,
+          0.00505
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00890455488499,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "e4a06faf2805088d6b01cfd21ef25fb82cd0ba2620177686e45b0f6518f2affb",
+        "name": "dock_gripper_qc_col_dock_stop_part_038__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00505
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.02080910977,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "09964ec985c3ef0cf32a41e80ccc81e1791f739e10b349432e2579abcf5fb6db",
+        "name": "dock_gripper_qc_col_dock_stop_part_039__dock_stop_land",
+        "pos_m": [
+          0.030095445115,
+          0.029,
+          0.00505
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00690455488499,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "8116187f9ff1f5a623b4ecee2c44faa2850c67ee28ea0b8ab6f8e87b5b29bcee",
+        "name": "dock_gripper_qc_col_dock_stop_part_040__dock_stop_land",
+        "pos_m": [
+          -0.0360816653826,
+          0.029,
+          0.00525
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00891833461736,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "9922d3b60dc6d8284aa2d3d8e80a0b7cdba9ac8089a167cffebf7e43b9c70709",
+        "name": "dock_gripper_qc_col_dock_stop_part_041__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00525
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0208366692347,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "6cf7b7e673d0c03a7077350607188fa9e2737fcc7bf4202b861080d08120d35d",
+        "name": "dock_gripper_qc_col_dock_stop_part_042__dock_stop_land",
+        "pos_m": [
+          0.0300816653826,
+          0.029,
+          0.00525
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00691833461736,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "715a2a1b25ba68730c3be8e26872ab5624163a01451a93f8f6fb1f40dd975b47",
+        "name": "dock_gripper_qc_col_dock_stop_part_043__dock_stop_land",
+        "pos_m": [
+          -0.0360583005244,
+          0.029,
+          0.00545
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00894169947557,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "52cdfe5818ba49965751c3f673015b2ec74ea33d1c78ae741e5486f6828ea52c",
+        "name": "dock_gripper_qc_col_dock_stop_part_044__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00545
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0208833989511,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "c3a558b1f299b8de40e8df9ea7cb7f483a93eecb6a8efd9563fd29940a31a464",
+        "name": "dock_gripper_qc_col_dock_stop_part_045__dock_stop_land",
+        "pos_m": [
+          0.0300583005244,
+          0.029,
+          0.00545
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00694169947557,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "0303c094dee05df1aecc119ce137bd6d002a56d9a0ce8c72969fd7165f271bbd",
+        "name": "dock_gripper_qc_col_dock_stop_part_046__dock_stop_land",
+        "pos_m": [
+          -0.0360246950766,
+          0.029,
+          0.00565
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0089753049234,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "0e9057fd09df6a3e3d91d449f6f35238cbcf3d690b3da884dc7dd9b23f7a7387",
+        "name": "dock_gripper_qc_col_dock_stop_part_047__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00565
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0209506098468,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "e5953b760e315fad269d98b0715b9fc41fb93200131b8ebd14129ee383367e70",
+        "name": "dock_gripper_qc_col_dock_stop_part_048__dock_stop_land",
+        "pos_m": [
+          0.0300246950766,
+          0.029,
+          0.00565
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0069753049234,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "545032c86dcd69e5e3d42eee4d43e17714356cad20446865fedb1a7d5a81e3c1",
+        "name": "dock_gripper_qc_col_dock_stop_part_049__dock_stop_land",
+        "pos_m": [
+          -0.0359797958971,
+          0.029,
+          0.00585
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00902020410289,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "40f2de014f0e95005fff1c5b0451ba097b13c9613e5d9ad61bf00a51e0a1218a",
+        "name": "dock_gripper_qc_col_dock_stop_part_050__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00585
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0210404082058,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "7c5446524aebfc9ab57cc8ed279b027885b5a7b4f0c9a7e9ae7b78a91529f9a3",
+        "name": "dock_gripper_qc_col_dock_stop_part_051__dock_stop_land",
+        "pos_m": [
+          0.0299797958971,
+          0.029,
+          0.00585
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00702020410289,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "067163b0044c1090a488f871661c0c3179db45f5c194560afe7cad59c1149701",
+        "name": "dock_gripper_qc_col_dock_stop_part_052__dock_stop_land",
+        "pos_m": [
+          -0.0359219544457,
+          0.029,
+          0.00605
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00907804555427,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "1315ed2818b18e1d9d42a387649440affb5ab244089da6b938e16e8c7521bfbf",
+        "name": "dock_gripper_qc_col_dock_stop_part_053__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00605
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0211560911085,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "429e15b37b3064c5d2386fb3896e835ca6126bc8d94dc6a35913149a98d0e01a",
+        "name": "dock_gripper_qc_col_dock_stop_part_054__dock_stop_land",
+        "pos_m": [
+          0.0299219544457,
+          0.029,
+          0.00605
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00707804555427,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "2a2f0c407ce50716dbc823caa49b730e8ba6c3a86c3b233e35c688ab7e30e39f",
+        "name": "dock_gripper_qc_col_dock_stop_part_055__dock_stop_land",
+        "pos_m": [
+          -0.0358485281374,
+          0.029,
+          0.00625
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00915147186258,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "cdfa646172357cfcbcc188575621d0540f2904ae9da1b28c1f01b14e9272179b",
+        "name": "dock_gripper_qc_col_dock_stop_part_056__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00625
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0213029437252,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "76265c30cbb7118c7216f577f0a71179be3ba68438adda7a993da498db6899c9",
+        "name": "dock_gripper_qc_col_dock_stop_part_057__dock_stop_land",
+        "pos_m": [
+          0.0298485281374,
+          0.029,
+          0.00625
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00715147186258,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "30a689b39751bcc564aad1e18fe3a4b66ebc9337837a050b1dbf9db7dfc9e82e",
+        "name": "dock_gripper_qc_col_dock_stop_part_058__dock_stop_land",
+        "pos_m": [
+          -0.0357549834435,
+          0.029,
+          0.00645
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00924501655647,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "5e174bc0301424269c51951eb179c77a1ca215af3f69b831336b08c771ba334f",
+        "name": "dock_gripper_qc_col_dock_stop_part_059__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00645
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0214900331129,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "023728bae8efecace6720f73457420d3f8b94fe0ffd12b4ccf6f222cb4dad2ff",
+        "name": "dock_gripper_qc_col_dock_stop_part_060__dock_stop_land",
+        "pos_m": [
+          0.0297549834435,
+          0.029,
+          0.00645
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00724501655647,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "fa2aad75ec46c597e453204a5dd693f00a69af7f2fd3e413fb83c57fe0897caa",
+        "name": "dock_gripper_qc_col_dock_stop_part_061__dock_stop_land",
+        "pos_m": [
+          -0.035632455532,
+          0.029,
+          0.00665
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00936754446797,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "922d4f53b8d977749fe534134aa3310e70eedd0f5c71a638fa3a0a411d532ae6",
+        "name": "dock_gripper_qc_col_dock_stop_part_062__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00665
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0217350889359,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "7122cdbd95f582eb6921b4278f55ab6540d84f36c5d4d4e156ff514a26ccbdfd",
+        "name": "dock_gripper_qc_col_dock_stop_part_063__dock_stop_land",
+        "pos_m": [
+          0.029632455532,
+          0.029,
+          0.00665
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.00736754446797,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "856bd98eac387a072bbfe422bfc1063ea89d53e4f2a30c1025ec49c6cf52445b",
+        "name": "dock_gripper_qc_col_dock_stop_part_064__dock_stop_land",
+        "pos_m": [
+          -0.0354582575695,
+          0.029,
+          0.00685
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0095417424305,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "2fb2a9e23c8ba46f847f00f625593487f1f0d6ad18ba17631fa33d21fbfae796",
+        "name": "dock_gripper_qc_col_dock_stop_part_065__dock_stop_land",
+        "pos_m": [
+          -0.002,
+          0.029,
+          0.00685
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.022083484861,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "652844daf55bfd73f7249ad1a365821004262e2ff758f3f7d7ff80748a25bf7e",
+        "name": "dock_gripper_qc_col_dock_stop_part_066__dock_stop_land",
+        "pos_m": [
+          0.0294582575695,
+          0.029,
+          0.00685
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.0075417424305,
+          0.003,
+          0.0001
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "8da0a872d0edebbeeaab6efc17eeecfbdff836e817e294773b0fe9132f731a86",
+        "name": "dock_gripper_qc_col_dock_stop_part_067__dock_stop_land",
+        "pos_m": [
+          -0.004,
+          0.029,
+          0.009725
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.041,
+          0.003,
+          0.002775
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "46e26d8808a0389735a95d82bce26d1252900ae72f0738cb7d8d91e3c5a59099",
+        "name": "dock_gripper_wall_left_collision",
+        "pos_m": [
+          -0.043,
+          -0.002,
+          0.00475
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.002,
+          0.038,
+          0.00775
+        ],
+        "type": 6
+      },
+      {
+        "body": "dock_gripper",
+        "conaffinity": 1,
+        "contype": 1,
+        "data_id": -1,
+        "local_vertex_count": 8,
+        "local_vertices_f8le_sha256": "46e26d8808a0389735a95d82bce26d1252900ae72f0738cb7d8d91e3c5a59099",
+        "name": "dock_gripper_wall_right_collision",
+        "pos_m": [
+          0.035,
+          -0.002,
+          0.00475
+        ],
+        "quat_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          0.002,
+          0.038,
+          0.00775
+        ],
+        "type": 6
+      }
+    ],
+    "dock_target_compiled_geom_records_sha256": "bc9f846cab565aaf4724364f7c03571f6e191415526e149c3ed5f03cc84abc24",
+    "dock_target_geom_count": 90,
+    "dock_target_geom_names": [
+      "dock_gripper_cam_axial_lead_collision",
+      "dock_gripper_cam_collision",
+      "dock_gripper_cam_hold_finger_collision",
+      "dock_gripper_cam_outer_root_lower_collision",
+      "dock_gripper_cam_outer_root_upper_collision",
+      "dock_gripper_floor_support_base_x_max_wall_collision",
+      "dock_gripper_floor_support_base_x_min_wall_collision",
+      "dock_gripper_floor_support_base_z_max_wall_collision",
+      "dock_gripper_floor_support_base_z_min_wall_collision",
+      "dock_gripper_floor_support_head_collision",
+      "dock_gripper_floor_support_neck_collision",
+      "dock_gripper_floor_support_post_x_max_wall_collision",
+      "dock_gripper_floor_support_post_x_min_wall_collision",
+      "dock_gripper_floor_support_post_z_max_wall_collision",
+      "dock_gripper_floor_support_post_z_min_wall_collision",
+      "dock_gripper_floor_support_reinforcement_collision",
+      "dock_gripper_keeper_left_lower_collision",
+      "dock_gripper_keeper_left_upper_collision",
+      "dock_gripper_keeper_right_lower_collision",
+      "dock_gripper_keeper_right_upper_collision",
+      "dock_gripper_qc_col_dock_stop_part_000__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_001__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_002__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_003__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_004__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_005__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_006__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_007__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_008__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_009__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_010__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_011__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_012__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_013__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_014__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_015__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_016__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_017__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_018__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_019__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_020__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_021__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_022__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_023__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_024__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_025__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_026__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_027__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_028__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_029__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_030__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_031__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_032__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_033__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_034__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_035__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_036__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_037__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_038__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_039__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_040__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_041__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_042__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_043__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_044__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_045__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_046__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_047__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_048__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_049__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_050__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_051__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_052__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_053__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_054__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_055__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_056__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_057__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_058__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_059__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_060__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_061__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_062__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_063__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_064__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_065__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_066__dock_stop_land",
+      "dock_gripper_qc_col_dock_stop_part_067__dock_stop_land",
+      "dock_gripper_wall_left_collision",
+      "dock_gripper_wall_right_collision"
+    ],
+    "dock_target_geom_names_sha256": "5177a7d663660482e3b21343ab244f301d2d443752289917c50609a9f53e6b55",
+    "support_geom_count": 11,
+    "support_geom_names": [
+      "dock_gripper_floor_support_head_collision",
+      "dock_gripper_floor_support_reinforcement_collision",
+      "dock_gripper_floor_support_neck_collision",
+      "dock_gripper_floor_support_post_x_min_wall_collision",
+      "dock_gripper_floor_support_post_x_max_wall_collision",
+      "dock_gripper_floor_support_post_z_min_wall_collision",
+      "dock_gripper_floor_support_post_z_max_wall_collision",
+      "dock_gripper_floor_support_base_x_min_wall_collision",
+      "dock_gripper_floor_support_base_x_max_wall_collision",
+      "dock_gripper_floor_support_base_z_min_wall_collision",
+      "dock_gripper_floor_support_base_z_max_wall_collision"
+    ],
+    "support_geom_names_sha256": "370894d7664ca36ea30914208ce074c0a86d44fee2547da12b41c85ed5a26277"
+  },
+  "method": "actual_compiled_mesh_outer_AABB_to_actual_compiled_static_dock_geom_outer_AABB_with_topology_joint_motion_bound",
+  "model_binding": {
+    "assembled_xml_sha256": "d919728e7108061f7ede7bd74991c2b5e42fa0985d5e731c30c95e0a660a953a",
+    "binary_asset_count": 13,
+    "binary_asset_records": [
+      {
+        "bytes": 62784,
+        "name": "so101_0_waveshare_mounting_plate_so101_v2.stl",
+        "sha256": "e197e24005a07d01bbc06a8c42311664eaeda415bf859f68fa247884d0f1a6e9"
+      },
+      {
+        "bytes": 1052184,
+        "name": "so101_10_motor_holder_so101_wrist_v1.stl",
+        "sha256": "887f92e6013cb64ea3a1ab8675e92da1e0beacfd5e001f972523540545e08011"
+      },
+      {
+        "bytes": 865884,
+        "name": "so101_11_sts3215_03a_no_horn_v1.stl",
+        "sha256": "75ef3781b752e4065891aea855e34dc161a38a549549cd0970cedd07eae6f887"
+      },
+      {
+        "bytes": 471584,
+        "name": "so101_12_base_so101_v2.stl",
+        "sha256": "bb12b7026575e1f70ccc7240051f9d943553bf34e5128537de6cd86fae33924d"
+      },
+      {
+        "bytes": 954084,
+        "name": "so101_1_sts3215_03a_v1.stl",
+        "sha256": "a37c871fb502483ab96c256baf457d36f2e97afc9205313d9c5ab275ef941cd0"
+      },
+      {
+        "bytes": 1129384,
+        "name": "so101_2_motor_holder_so101_base_v1.stl",
+        "sha256": "31242ae6fb59d8b15c66617b88ad8e9bded62d57c35d11c0c43a70d2f4caa95b"
+      },
+      {
+        "bytes": 1439884,
+        "name": "so101_3_wrist_roll_follower_so101_v1.stl",
+        "sha256": "4b17b410a12d64ec39554abc3e8054d8a97384b2dc4a8d95a5ecb2a93670f5f4"
+      },
+      {
+        "bytes": 1413584,
+        "name": "so101_4_moving_jaw_so101_v1.stl",
+        "sha256": "785a9dded2f474bc1d869e0d3dae398a3dcd9c0c345640040472210d2861fa9d"
+      },
+      {
+        "bytes": 1877084,
+        "name": "so101_5_base_motor_holder_so101_v1.stl",
+        "sha256": "8cd2f241037ea377af1191fffe0dd9d9006beea6dcc48543660ed41647072424"
+      },
+      {
+        "bytes": 1303484,
+        "name": "so101_6_upper_arm_so101_v1.stl",
+        "sha256": "475056e03a17e71919b82fd88ab9a0b898ab50164f2a7943652a6b2941bb2d4f"
+      },
+      {
+        "bytes": 2699784,
+        "name": "so101_7_wrist_roll_pitch_so101_v2.stl",
+        "sha256": "6c7ec5525b4d8b9e397a30ab4bb0037156a5d5f38a4adf2c7d943d6c56eda5ae"
+      },
+      {
+        "bytes": 1975884,
+        "name": "so101_8_under_arm_so101_v1.stl",
+        "sha256": "d01d1f2de365651dcad9d6669e94ff87ff7652b5bb2d10752a66a456a86dbc71"
+      },
+      {
+        "bytes": 883684,
+        "name": "so101_9_rotation_pitch_so101_v1.stl",
+        "sha256": "9be900cc2a2bf718102841ef82ef8d2873842427648092c8ed2ca1e2ef4ffa34"
+      }
+    ],
+    "binary_asset_records_canonical_sha256": "7beb0a1c6868c03385d91ebdcb3a4861d367f69485657882714069e1b8b8a0ee",
+    "compiled_model_xml_equivalent_sha256": "edfc58afb55d83901f3e35f7e3426d5ffeef696257ef55e28955b400249480d0",
+    "expected_counts": {
+      "nbody": 40,
+      "ncontact_pair": 15,
+      "ngeom": 1726,
+      "nmesh": 1318,
+      "nq": 37
+    },
+    "initialized_active_collision_geometry_sha256": "401cbab95925ec5688d54b875c7d9e2e3788ebaa717cc2eb92fe94b1600b2083",
+    "mujoco_version": "3.11.0",
+    "nbody": 40,
+    "ncontact_pair": 15,
+    "ngeom": 1726,
+    "nmesh": 1318,
+    "nq": 37,
+    "numpy_version": "2.5.2",
+    "nv": 34,
+    "physics_timestep_s": 0.00025,
+    "python_version": "3.12.13 (main, Aug  7 2026, 02:25:39) [Clang 22.1.3 ]"
+  },
+  "passed": true,
+  "release_ready": false,
+  "release_route": {
+    "canonical_sha256": "f30b0c178917945fcd45358710e5127302bc5240ca6cb4cdaa7f49d16c4f0293",
+    "f8le_sha256": "bd7e32c0197644d4277966e6eeb129603560c261aa9fa38d43fdb224d4acd492",
+    "f8le_shape": [
+      31,
+      6
+    ],
+    "included_in_default_controller_actions": false,
+    "maximum_row_fk_orientation_error_rad": 6.990106082579211e-16,
+    "maximum_row_fk_position_error_mm": 1.3645432973688894e-13,
+    "maximum_subsample_path_orientation_error_rad": 8.822740135163567e-16,
+    "maximum_subsample_path_position_error_mm": 0.0002754946114421094,
+    "maximum_subsample_world_axis_error_mm": 0.0002754946114421374,
+    "physical_release_action_implemented": false,
+    "physical_release_authority": false,
+    "q_roster_canonical_sha256": "030ed1acc312636cf85a1bdf580e2a9a17c7b5e0e7acbc9f0f482cc077ff8652",
+    "roster": [
+      {
+        "q_rad": [
+          -0.72,
+          -0.5,
+          0.8,
+          -0.3,
+          -1.522116811941435
+        ],
+        "withdrawal_mm": 0.0
+      },
+      {
+        "q_rad": [
+          -0.7200000000000001,
+          -0.5012713525907627,
+          0.7971523199971643,
+          -0.29588096740640185,
+          -1.5221168119414348
+        ],
+        "withdrawal_mm": 0.5
+      },
+      {
+        "q_rad": [
+          -0.7199999999999999,
+          -0.5025209619924711,
+          0.7942909079367223,
+          -0.29176994594425143,
+          -1.522116811941435
+        ],
+        "withdrawal_mm": 1.0
+      },
+      {
+        "q_rad": [
+          -0.72,
+          -0.5037489159236884,
+          0.7914158067505378,
+          -0.2876668908268499,
+          -1.5221168119414346
+        ],
+        "withdrawal_mm": 1.5
+      },
+      {
+        "q_rad": [
+          -0.7199999999999999,
+          -0.5049553020734726,
+          0.7885270586980251,
+          -0.28357175662455236,
+          -1.5221168119414348
+        ],
+        "withdrawal_mm": 2.0
+      },
+      {
+        "q_rad": [
+          -0.7199999999999998,
+          -0.5061402080808916,
+          0.785624705362152,
+          -0.27948449728126057,
+          -1.5221168119414346
+        ],
+        "withdrawal_mm": 2.5
+      },
+      {
+        "q_rad": [
+          -0.7199999999999999,
+          -0.5073037215149596,
+          0.7827087876455384,
+          -0.2754050661305792,
+          -1.5221168119414348
+        ],
+        "withdrawal_mm": 3.0
+      },
+      {
+        "q_rad": [
+          -0.72,
+          -0.5084459298549687,
+          0.7797793457666375,
+          -0.271333415911669,
+          -1.5221168119414348
+        ],
+        "withdrawal_mm": 3.5
+      },
+      {
+        "q_rad": [
+          -0.7200000000000001,
+          -0.5095669204712283,
+          0.7768364192560011,
+          -0.26726949878477324,
+          -1.522116811941435
+        ],
+        "withdrawal_mm": 4.0
+      },
+      {
+        "q_rad": [
+          -0.7199999999999999,
+          -0.5106667806061898,
+          0.7738800469526174,
+          -0.2632132663464279,
+          -1.5221168119414348
+        ],
+        "withdrawal_mm": 4.5
+      },
+      {
+        "q_rad": [
+          -0.72,
+          -0.5117455973559675,
+          0.7709102670003262,
+          -0.2591646696443586,
+          -1.5221168119414346
+        ],
+        "withdrawal_mm": 5.0
+      },
+      {
+        "q_rad": [
+          -0.7200000000000001,
+          -0.5128034576522418,
+          0.7679271168443034,
+          -0.25512365919206204,
+          -1.5221168119414348
+        ],
+        "withdrawal_mm": 5.5
+      },
+      {
+        "q_rad": [
+          -0.7200000000000001,
+          -0.5138404482445372,
+          0.7649306332276101,
+          -0.2510901849830732,
+          -1.5221168119414348
+        ],
+        "withdrawal_mm": 6.0
+      },
+      {
+        "q_rad": [
+          -0.7199999999999999,
+          -0.5148566556828839,
+          0.7619208521878057,
+          -0.24706419650492184,
+          -1.5221168119414343
+        ],
+        "withdrawal_mm": 6.5
+      },
+      {
+        "q_rad": [
+          -0.7199999999999998,
+          -0.5158521663008359,
+          0.7588978090536203,
+          -0.24304564275278437,
+          -1.5221168119414348
+        ],
+        "withdrawal_mm": 7.0
+      },
+      {
+        "q_rad": [
+          -0.72,
+          -0.5168270661988639,
+          0.7558615384416828,
+          -0.2390344722428192,
+          -1.5221168119414348
+        ],
+        "withdrawal_mm": 7.5
+      },
+      {
+        "q_rad": [
+          -0.72,
+          -0.5177814412280972,
+          0.7528120742532991,
+          -0.23503063302520222,
+          -1.5221168119414348
+        ],
+        "withdrawal_mm": 8.0
+      },
+      {
+        "q_rad": [
+          -0.7200000000000005,
+          -0.5187153769744209,
+          0.7497494496712797,
+          -0.23103407269685902,
+          -1.5221168119414346
+        ],
+        "withdrawal_mm": 8.5
+      },
+      {
+        "q_rad": [
+          -0.7199999999999999,
+          -0.519628958742918,
+          0.7466736971568104,
+          -0.22704473841389222,
+          -1.5221168119414343
+        ],
+        "withdrawal_mm": 9.0
+      },
+      {
+        "q_rad": [
+          -0.7199999999999999,
+          -0.5205222715426575,
+          0.7435848484463662,
+          -0.22306257690370881,
+          -1.5221168119414343
+        ],
+        "withdrawal_mm": 9.5
+      },
+      {
+        "q_rad": [
+          -0.7199999999999999,
+          -0.5213954000718088,
+          0.7404829345486624,
+          -0.2190875344768539,
+          -1.5221168119414348
+        ],
+        "withdrawal_mm": 10.0
+      },
+      {
+        "q_rad": [
+          -0.7200000000000001,
+          -0.5222484287030923,
+          0.7373679857416372,
+          -0.21511955703854524,
+          -1.5221168119414343
+        ],
+        "withdrawal_mm": 10.5
+      },
+      {
+        "q_rad": [
+          -0.72,
+          -0.5230814414695496,
+          0.7342400315694654,
+          -0.21115859009991603,
+          -1.5221168119414346
+        ],
+        "withdrawal_mm": 11.0
+      },
+      {
+        "q_rad": [
+          -0.7200000000000001,
+          -0.5238945220506328,
+          0.7310991008396011,
+          -0.20720457878896845,
+          -1.5221168119414348
+        ],
+        "withdrawal_mm": 11.5
+      },
+      {
+        "q_rad": [
+          -0.7200000000000001,
+          -0.5246877537586018,
+          0.7279452216198397,
+          -0.20325746786123822,
+          -1.5221168119414348
+        ],
+        "withdrawal_mm": 12.0
+      },
+      {
+        "q_rad": [
+          -0.7199999999999999,
+          -0.5254612195252387,
+          0.7247784212354064,
+          -0.19931720171016784,
+          -1.522116811941435
+        ],
+        "withdrawal_mm": 12.5
+      },
+      {
+        "q_rad": [
+          -0.7199999999999998,
+          -0.5262150018888452,
+          0.7215987262660535,
+          -0.19538372437720883,
+          -1.5221168119414346
+        ],
+        "withdrawal_mm": 13.0
+      },
+      {
+        "q_rad": [
+          -0.7200000000000001,
+          -0.526949182981541,
+          0.7184061625431684,
+          -0.19145697956162747,
+          -1.522116811941435
+        ],
+        "withdrawal_mm": 13.5
+      },
+      {
+        "q_rad": [
+          -0.7200000000000001,
+          -0.5276638445168658,
+          0.7152007551469122,
+          -0.18753691063004685,
+          -1.5221168119414343
+        ],
+        "withdrawal_mm": 14.0
+      },
+      {
+        "q_rad": [
+          -0.7199999999999998,
+          -0.5283590677776248,
+          0.7119825284033249,
+          -0.18362346062570054,
+          -1.522116811941435
+        ],
+        "withdrawal_mm": 14.5
+      },
+      {
+        "q_rad": [
+          -0.7200000000000001,
+          -0.5290349336040562,
+          0.708751505881477,
+          -0.17971657227742088,
+          -1.5221168119414346
+        ],
+        "withdrawal_mm": 15.0
+      }
+    ],
+    "row_count": 31,
+    "row_fk_records_sha256": "d65bb2b78a6d02f2edb20d9ab439c9bbefb4cdb7d57dd8b8cb47e40530ab37f4",
+    "seated_frame_orientation_error_rad": 2.6770689944102335e-16,
+    "seated_frame_position_error_mm": 0.0,
+    "slider_q_law": "0.05 if s<=2 else min(3,0.05+0.246875*(s-2))",
+    "slider_rows": [
+      {
+        "slider_q_mm": 0.05,
+        "withdrawal_mm": 0.0
+      },
+      {
+        "slider_q_mm": 0.05,
+        "withdrawal_mm": 0.5
+      },
+      {
+        "slider_q_mm": 0.05,
+        "withdrawal_mm": 1.0
+      },
+      {
+        "slider_q_mm": 0.05,
+        "withdrawal_mm": 1.5
+      },
+      {
+        "slider_q_mm": 0.05,
+        "withdrawal_mm": 2.0
+      },
+      {
+        "slider_q_mm": 0.17343750000000002,
+        "withdrawal_mm": 2.5
+      },
+      {
+        "slider_q_mm": 0.296875,
+        "withdrawal_mm": 3.0
+      },
+      {
+        "slider_q_mm": 0.42031250000000003,
+        "withdrawal_mm": 3.5
+      },
+      {
+        "slider_q_mm": 0.5437500000000001,
+        "withdrawal_mm": 4.0
+      },
+      {
+        "slider_q_mm": 0.6671875,
+        "withdrawal_mm": 4.5
+      },
+      {
+        "slider_q_mm": 0.7906250000000001,
+        "withdrawal_mm": 5.0
+      },
+      {
+        "slider_q_mm": 0.9140625000000001,
+        "withdrawal_mm": 5.5
+      },
+      {
+        "slider_q_mm": 1.0375,
+        "withdrawal_mm": 6.0
+      },
+      {
+        "slider_q_mm": 1.1609375000000002,
+        "withdrawal_mm": 6.5
+      },
+      {
+        "slider_q_mm": 1.284375,
+        "withdrawal_mm": 7.0
+      },
+      {
+        "slider_q_mm": 1.4078125000000001,
+        "withdrawal_mm": 7.5
+      },
+      {
+        "slider_q_mm": 1.5312500000000002,
+        "withdrawal_mm": 8.0
+      },
+      {
+        "slider_q_mm": 1.6546875,
+        "withdrawal_mm": 8.5
+      },
+      {
+        "slider_q_mm": 1.7781250000000002,
+        "withdrawal_mm": 9.0
+      },
+      {
+        "slider_q_mm": 1.9015625,
+        "withdrawal_mm": 9.5
+      },
+      {
+        "slider_q_mm": 2.025,
+        "withdrawal_mm": 10.0
+      },
+      {
+        "slider_q_mm": 2.1484375,
+        "withdrawal_mm": 10.5
+      },
+      {
+        "slider_q_mm": 2.271875,
+        "withdrawal_mm": 11.0
+      },
+      {
+        "slider_q_mm": 2.3953124999999997,
+        "withdrawal_mm": 11.5
+      },
+      {
+        "slider_q_mm": 2.51875,
+        "withdrawal_mm": 12.0
+      },
+      {
+        "slider_q_mm": 2.6421875,
+        "withdrawal_mm": 12.5
+      },
+      {
+        "slider_q_mm": 2.765625,
+        "withdrawal_mm": 13.0
+      },
+      {
+        "slider_q_mm": 2.8890625,
+        "withdrawal_mm": 13.5
+      },
+      {
+        "slider_q_mm": 3.0,
+        "withdrawal_mm": 14.0
+      },
+      {
+        "slider_q_mm": 3.0,
+        "withdrawal_mm": 14.5
+      },
+      {
+        "slider_q_mm": 3.0,
+        "withdrawal_mm": 15.0
+      }
+    ],
+    "slider_rows_canonical_sha256": "690179a9a521d4a37cb9ec7ee8de4c501160e9ea1a741953b1c1e908726e2bf1",
+    "static_release_contract_sha256": "765d7ce132cef99774d23c6887ca2fe834a0bd7491ebf1d88ea776bc3672ab47",
+    "step_mm": 0.5,
+    "subsample_fk_stream_sha256": "578291420b2cc64baf40389cb18b48527b441dfa2e73ff3277eb29f30808b760",
+    "subsample_path_orientation_tolerance_rad": 0.0017453292519943296,
+    "subsample_path_position_tolerance_mm": 0.001,
+    "withdrawal_bounds_mm": [
+      0.0,
+      15.0
+    ]
+  },
+  "rolled_frame": {
+    "dock_local_axes_world_columns": [
+      [
+        0.6593846719714732,
+        -0.751805729140895,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      [
+        0.751805729140895,
+        0.6593846719714733,
+        0.0
+      ]
+    ],
+    "position_m": [
+      0.19082795371216685,
+      0.1330713713445051,
+      0.1939154579377553
+    ],
+    "quat_wxyz": [
+      0.6440855284765126,
+      -0.6440855284765125,
+      0.2918112952014223,
+      -0.2918112952014225
+    ],
+    "release_axis": "dock_local_negative_y",
+    "release_axis_world": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "tool_view_roll_deg": -87.21086925015224
+  },
+  "sampling": {
+    "distance_evaluation_count": 379260,
+    "distance_stream_sha256": "75b6a8ad31dcbd390e3434f9dde6c16c9a47e551d364eceba3a6bb966ead93db",
+    "expected_unique_state_count": 301,
+    "interval_count": 30,
+    "joint_linear_substeps_per_interval": 10,
+    "sample_q_sha256": "9a7752fd420b897c74fdc6fc159fd6644a7914bb2eec78a2e8717a742bd0667a",
+    "unique_state_count": 301
+  },
+  "schema_version": "1.0-rolled-core-dock-runtime-authority",
+  "source_binding": {
+    "audit_script": {
+      "bytes": 93804,
+      "path": "QuickChange/SO101_Magnetic/sim/validate_rolled_core_dock_runtime.py",
+      "sha256": "c1c95b0d43182ffc2502410da8956ce1373e59f9618264bdeb12caf5bd332969"
+    },
+    "directly_consumed_runtime_files": [
+      {
+        "bytes": 119264,
+        "path": "QuickChange/SO101_Magnetic/sim/qc_collision_geometry.py",
+        "role": "runtime_qc_implementation",
+        "sha256": "0739de8ba54af81b576596360dfa7b9eb34618d0d71182fe31662644e562c0ba"
+      },
+      {
+        "bytes": 462659,
+        "path": "QuickChange/SO101_Magnetic/sim/matcha_workflow_demo.py",
+        "role": "runtime_workflow_implementation",
+        "sha256": "42414b1acdffe39c2affef94f6dd1df28f125670851036e54e6b4910d208ca7c"
+      },
+      {
+        "bytes": 6359,
+        "path": "QuickChange/SO101_Magnetic/sim/matcha_tool_geometry.json",
+        "role": "runtime_geometry_source",
+        "sha256": "ee411b37e867d93a7fa21b00aeda47172579bd9db48d6ea963ec2345d013a065"
+      },
+      {
+        "bytes": 1994,
+        "path": "QuickChange/SO101_Magnetic/sim/matcha_workflow_scene.xml",
+        "role": "runtime_scene_source",
+        "sha256": "756fc91d01ec5ed2bacda41035b3494f637d9dc6241189cfdb1d1540cd10749d"
+      },
+      {
+        "bytes": 13921,
+        "path": "Simulation/SO101/so101_new_calib.xml",
+        "role": "upstream_robot_source",
+        "sha256": "d75253eb568e8a7214db9c631ab7bed4217f608a26f7276ebe9a7636cac82580"
+      }
+    ],
+    "directly_consumed_runtime_files_canonical_sha256": "28a9119f1a4531a6efc00c2a0cbaa97de81808fdf32c9adf13ab78de1e5edac1",
+    "files": [
+      {
+        "bytes": 140090,
+        "matches": true,
+        "observed_bytes": 140090,
+        "observed_sha256": "f16352a11128bb93599b83cb51fabdf47520d379f14cdfdb5ae4d5f404e90818",
+        "path": "QuickChange/SO101_Magnetic/generate_cad.py",
+        "role": "generator",
+        "sha256": "f16352a11128bb93599b83cb51fabdf47520d379f14cdfdb5ae4d5f404e90818"
+      },
+      {
+        "bytes": 58919,
+        "matches": true,
+        "observed_bytes": 58919,
+        "observed_sha256": "74da4648a0115746efb6e1db26faf722c70bfa298049d4db9c064e226de9c05b",
+        "path": "QuickChange/SO101_Magnetic/exports/design_parameters.json",
+        "role": "design_parameters",
+        "sha256": "74da4648a0115746efb6e1db26faf722c70bfa298049d4db9c064e226de9c05b"
+      },
+      {
+        "bytes": 61171,
+        "matches": true,
+        "observed_bytes": 61171,
+        "observed_sha256": "0f0138a95977f43379990b0eb07d83cf316ae0e3631f47328e856ac43c960454",
+        "path": "QuickChange/SO101_Magnetic/exports/core_cad_manifest.json",
+        "role": "core_cad_manifest",
+        "sha256": "0f0138a95977f43379990b0eb07d83cf316ae0e3631f47328e856ac43c960454"
+      },
+      {
+        "bytes": 193283,
+        "matches": true,
+        "observed_bytes": 193283,
+        "observed_sha256": "a581bc046b934d168ba4c45b3ccd2fec892d93be68b02b46bff5fe54d7f655bf",
+        "path": "QuickChange/SO101_Magnetic/sim/cad_clearance_report.json",
+        "role": "cad_clearance_report",
+        "sha256": "a581bc046b934d168ba4c45b3ccd2fec892d93be68b02b46bff5fe54d7f655bf"
+      },
+      {
+        "bytes": 180034,
+        "matches": true,
+        "observed_bytes": 180034,
+        "observed_sha256": "90aaf1b3c887b4d182358ee1e9037f4159d5959d5822263830dd14854749c389",
+        "path": "QuickChange/SO101_Magnetic/exports/so101_passive_tool_dock.step",
+        "role": "core_passive_tool_dock_step",
+        "sha256": "90aaf1b3c887b4d182358ee1e9037f4159d5959d5822263830dd14854749c389"
+      },
+      {
+        "bytes": 104084,
+        "matches": true,
+        "observed_bytes": 104084,
+        "observed_sha256": "6337352213b600efcd7d1b8fc02fc4834b04ea12976898399c889950eece84eb",
+        "path": "QuickChange/SO101_Magnetic/exports/so101_passive_tool_dock.stl",
+        "role": "core_passive_tool_dock_stl",
+        "sha256": "6337352213b600efcd7d1b8fc02fc4834b04ea12976898399c889950eece84eb"
+      },
+      {
+        "bytes": 170428,
+        "matches": true,
+        "observed_bytes": 170428,
+        "observed_sha256": "239134fb6933cfd63e50117ec61b1a73873f7e396dbcf6da3c94916dc949b4de",
+        "path": "QuickChange/SO101_Magnetic/exports/so101_core_dock_support_bracket.step",
+        "role": "core_dock_floor_support_step",
+        "sha256": "239134fb6933cfd63e50117ec61b1a73873f7e396dbcf6da3c94916dc949b4de"
+      },
+      {
+        "bytes": 281884,
+        "matches": true,
+        "observed_bytes": 281884,
+        "observed_sha256": "c4928349dbaba21da41e584eab25eee08cb0b82243080800469efb10a5be0c7b",
+        "path": "QuickChange/SO101_Magnetic/exports/so101_core_dock_support_bracket.stl",
+        "role": "core_dock_floor_support_stl",
+        "sha256": "c4928349dbaba21da41e584eab25eee08cb0b82243080800469efb10a5be0c7b"
+      }
+    ],
+    "qc_source_files_canonical_sha256": "d59f906102c74512a08d22928737c37a0987276f9719d062120ec80e9340c157",
+    "release_roster_canonical_sha256": "f30b0c178917945fcd45358710e5127302bc5240ca6cb4cdaa7f49d16c4f0293",
+    "runtime_contract_canonical_sha256": "addb9021b2420ebd6314d656c68923e12632b5ae1df9b80995e4934b4cec991c",
+    "runtime_contract_schema": "1.0-rolled-runtime-checkpoint",
+    "source_contract_canonical_sha256": "1befdd739c9eea2645408178317b93c720d61d11c4fd31802761626ac1b456ee",
+    "triple_contract_equal": true,
+    "triple_contract_locations": [
+      "design_parameters.collision_geometry_contract.core_dock_floor_support",
+      "core_cad_manifest.contracts.core_dock_floor_support",
+      "cad_clearance_report.core_dock_floor_support.contract"
+    ],
+    "triple_contract_locations_canonical_sha256": "f4379718a4c2d08165366108805952d65fbca62c66b8891449a2f9a5b0a0e60d"
+  },
+  "startup": {
+    "contact_count": 65,
+    "contact_records": [
+      {
+        "geom_a": "dock_gripper_keeper_left_upper_collision",
+        "geom_b": "matcha_col_gripper_plate_electrical_wing_edge__mating_land__keeper_land",
+        "signed_distance_m": -1.4268967951647227e-13
+      },
+      {
+        "geom_a": "dock_gripper_keeper_left_upper_collision",
+        "geom_b": "matcha_col_gripper_plate_electrical_wing_edge__mating_land__keeper_land",
+        "signed_distance_m": -1.4268268511141712e-13
+      },
+      {
+        "geom_a": "dock_gripper_keeper_left_upper_collision",
+        "geom_b": "matcha_col_gripper_plate_electrical_wing_edge__mating_land__keeper_land",
+        "signed_distance_m": -1.412397004907362e-13
+      },
+      {
+        "geom_a": "dock_gripper_keeper_left_upper_collision",
+        "geom_b": "matcha_col_gripper_plate_electrical_wing_edge__mating_land__keeper_land",
+        "signed_distance_m": -1.4123270608568105e-13
+      },
+      {
+        "geom_a": "dock_gripper_keeper_right_upper_collision",
+        "geom_b": "matcha_col_gripper_plate_xpos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": 3.1092417714513295e-10
+      },
+      {
+        "geom_a": "dock_gripper_keeper_right_upper_collision",
+        "geom_b": "matcha_col_gripper_plate_xpos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": 3.1092417714513295e-10
+      },
+      {
+        "geom_a": "dock_gripper_keeper_right_upper_collision",
+        "geom_b": "matcha_col_gripper_plate_xpos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": 3.1092417714513295e-10
+      },
+      {
+        "geom_a": "dock_gripper_keeper_right_upper_collision",
+        "geom_b": "matcha_col_gripper_plate_xpos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": 3.1092417714513295e-10
+      },
+      {
+        "geom_a": "dock_gripper_keeper_right_upper_collision",
+        "geom_b": "matcha_col_gripper_plate_xpos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": 3.1092417714513295e-10
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_center_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874467499131804e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_center_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874467499131804e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_center_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874467499131804e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_center_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874467499131804e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_left_lock_inner__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874476172749183e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_left_lock_inner__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874476172749183e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_left_lock_inner__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874476172749183e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_left_lock_inner__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874476172749183e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_left_lock_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874476172749183e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_left_lock_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874476172749183e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_left_lock_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874476172749183e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_left_lock_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874476172749183e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_right_lock_inner__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874476172749183e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_right_lock_inner__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874476172749183e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_right_lock_inner__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874476172749183e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_right_lock_inner__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874476172749183e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_right_lock_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874476172749183e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_right_lock_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874476172749183e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_right_lock_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874476172749183e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_right_lock_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874476172749183e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_xneg__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874441478279664e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_xneg__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874441478279664e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_xneg__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874441478279664e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_xneg__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874441478279664e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_xpos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874441478279664e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_xpos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874441478279664e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_xpos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874441478279664e-12
+      },
+      {
+        "geom_a": "dock_spoon_qc_col_dock_stop",
+        "geom_b": "matcha_col_spoon_plate_xpos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -2.5874441478279664e-12
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_center_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006342614608e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_center_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006342614608e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_center_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006336535043e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_center_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006336535043e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_left_lock_inner__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.28800636863546e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_left_lock_inner__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.28800636863546e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_left_lock_inner__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006362555895e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_left_lock_inner__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006362555895e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_left_lock_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006403329929e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_left_lock_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006403329929e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_left_lock_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006397250365e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_left_lock_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006397250365e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_right_lock_inner__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006403329929e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_right_lock_inner__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006403329929e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_right_lock_inner__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006397250365e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_right_lock_inner__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006397250365e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_right_lock_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.28800636863546e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_right_lock_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.28800636863546e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_right_lock_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006362555895e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_right_lock_ypos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006362555895e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_xneg__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006195163112e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_xneg__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006195163112e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_xneg__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006189083548e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_xneg__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006189083548e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_xpos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006160468643e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_xpos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006160468643e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_xpos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006154389078e-10
+      },
+      {
+        "geom_a": "dock_whisk_qc_col_dock_stop",
+        "geom_b": "matcha_col_whisk_plate_xpos__mating_land__locator_land__dock_stop_land",
+        "signed_distance_m": -6.288006154389078e-10
+      }
+    ],
+    "contact_records_sha256": "55b39fe064803cfd99938c8fd9ed37b2b84304051d106efbe5a39fe2b3af90a1",
+    "max_penetration_m": 0.0,
+    "passed": true,
+    "penetration_count": 0,
+    "penetrations": []
+  },
+  "support_proxy": {
+    "analytic_box_union_volume_mm3": 177797.24575315934,
+    "analytic_excess_volume_mm3": 15381.827700519032,
+    "component_count": 11,
+    "components": [
+      {
+        "bounds_m": [
+          [
+            -0.032,
+            0.024
+          ],
+          [
+            0.032,
+            0.04
+          ],
+          [
+            -0.01675,
+            0.02625
+          ]
+        ],
+        "geom_type": "box",
+        "local_pos_m": [
+          -0.004,
+          0.036000000000000004,
+          0.004749999999999999
+        ],
+        "mass_kg": 0.0,
+        "name": "dock_gripper_floor_support_head_collision",
+        "role": "head",
+        "size_m": [
+          0.028,
+          0.004,
+          0.0215
+        ]
+      },
+      {
+        "bounds_m": [
+          [
+            0.024,
+            0.027
+          ],
+          [
+            0.032,
+            0.04
+          ],
+          [
+            -0.01675,
+            0.02625
+          ]
+        ],
+        "geom_type": "box",
+        "local_pos_m": [
+          0.025500000000000002,
+          0.036000000000000004,
+          0.004749999999999999
+        ],
+        "mass_kg": 0.0,
+        "name": "dock_gripper_floor_support_reinforcement_collision",
+        "role": "reinforcement",
+        "size_m": [
+          0.0014999999999999996,
+          0.004,
+          0.0215
+        ]
+      },
+      {
+        "bounds_m": [
+          [
+            -0.0235,
+            0.0195
+          ],
+          [
+            0.04,
+            0.05
+          ],
+          [
+            -0.01675,
+            0.02625
+          ]
+        ],
+        "geom_type": "box",
+        "local_pos_m": [
+          -0.002,
+          0.045,
+          0.004749999999999999
+        ],
+        "mass_kg": 0.0,
+        "name": "dock_gripper_floor_support_neck_collision",
+        "role": "neck",
+        "size_m": [
+          0.0215,
+          0.005000000000000001,
+          0.0215
+        ]
+      },
+      {
+        "bounds_m": [
+          [
+            -0.0235,
+            -0.0195
+          ],
+          [
+            0.05,
+            0.1859154579377553
+          ],
+          [
+            -0.01675,
+            0.02625
+          ]
+        ],
+        "geom_type": "box",
+        "local_pos_m": [
+          -0.0215,
+          0.11795772896887766,
+          0.004749999999999999
+        ],
+        "mass_kg": 0.0,
+        "name": "dock_gripper_floor_support_post_x_min_wall_collision",
+        "role": "post_x_min_wall",
+        "size_m": [
+          0.002,
+          0.06795772896887764,
+          0.0215
+        ]
+      },
+      {
+        "bounds_m": [
+          [
+            0.0155,
+            0.0195
+          ],
+          [
+            0.05,
+            0.1859154579377553
+          ],
+          [
+            -0.01675,
+            0.02625
+          ]
+        ],
+        "geom_type": "box",
+        "local_pos_m": [
+          0.0175,
+          0.11795772896887766,
+          0.004749999999999999
+        ],
+        "mass_kg": 0.0,
+        "name": "dock_gripper_floor_support_post_x_max_wall_collision",
+        "role": "post_x_max_wall",
+        "size_m": [
+          0.002,
+          0.06795772896887764,
+          0.0215
+        ]
+      },
+      {
+        "bounds_m": [
+          [
+            -0.0195,
+            0.0155
+          ],
+          [
+            0.05,
+            0.1859154579377553
+          ],
+          [
+            -0.01675,
+            -0.01275
+          ]
+        ],
+        "geom_type": "box",
+        "local_pos_m": [
+          -0.002,
+          0.11795772896887766,
+          -0.01475
+        ],
+        "mass_kg": 0.0,
+        "name": "dock_gripper_floor_support_post_z_min_wall_collision",
+        "role": "post_z_min_wall",
+        "size_m": [
+          0.0175,
+          0.06795772896887764,
+          0.002000000000000001
+        ]
+      },
+      {
+        "bounds_m": [
+          [
+            -0.0195,
+            0.0155
+          ],
+          [
+            0.05,
+            0.1859154579377553
+          ],
+          [
+            0.02225,
+            0.02625
+          ]
+        ],
+        "geom_type": "box",
+        "local_pos_m": [
+          -0.002,
+          0.11795772896887766,
+          0.02425
+        ],
+        "mass_kg": 0.0,
+        "name": "dock_gripper_floor_support_post_z_max_wall_collision",
+        "role": "post_z_max_wall",
+        "size_m": [
+          0.0175,
+          0.06795772896887764,
+          0.002
+        ]
+      },
+      {
+        "bounds_m": [
+          [
+            -0.052,
+            -0.0195
+          ],
+          [
+            0.1859154579377553,
+            0.1939154579377553
+          ],
+          [
+            -0.03525,
+            0.04475
+          ]
+        ],
+        "geom_type": "box",
+        "local_pos_m": [
+          -0.03575,
+          0.1899154579377553,
+          0.004750000000000001
+        ],
+        "mass_kg": 0.0,
+        "name": "dock_gripper_floor_support_base_x_min_wall_collision",
+        "role": "base_x_min_wall",
+        "size_m": [
+          0.01625,
+          0.0040000000000000036,
+          0.039999999999999994
+        ]
+      },
+      {
+        "bounds_m": [
+          [
+            0.0155,
+            0.048
+          ],
+          [
+            0.1859154579377553,
+            0.1939154579377553
+          ],
+          [
+            -0.03525,
+            0.04475
+          ]
+        ],
+        "geom_type": "box",
+        "local_pos_m": [
+          0.03175,
+          0.1899154579377553,
+          0.004750000000000001
+        ],
+        "mass_kg": 0.0,
+        "name": "dock_gripper_floor_support_base_x_max_wall_collision",
+        "role": "base_x_max_wall",
+        "size_m": [
+          0.01625,
+          0.0040000000000000036,
+          0.039999999999999994
+        ]
+      },
+      {
+        "bounds_m": [
+          [
+            -0.0195,
+            0.0155
+          ],
+          [
+            0.1859154579377553,
+            0.1939154579377553
+          ],
+          [
+            -0.03525,
+            -0.01275
+          ]
+        ],
+        "geom_type": "box",
+        "local_pos_m": [
+          -0.002,
+          0.1899154579377553,
+          -0.023999999999999997
+        ],
+        "mass_kg": 0.0,
+        "name": "dock_gripper_floor_support_base_z_min_wall_collision",
+        "role": "base_z_min_wall",
+        "size_m": [
+          0.0175,
+          0.0040000000000000036,
+          0.01125
+        ]
+      },
+      {
+        "bounds_m": [
+          [
+            -0.0195,
+            0.0155
+          ],
+          [
+            0.1859154579377553,
+            0.1939154579377553
+          ],
+          [
+            0.02225,
+            0.04475
+          ]
+        ],
+        "geom_type": "box",
+        "local_pos_m": [
+          -0.002,
+          0.1899154579377553,
+          0.0335
+        ],
+        "mass_kg": 0.0,
+        "name": "dock_gripper_floor_support_base_z_max_wall_collision",
+        "role": "base_z_max_wall",
+        "size_m": [
+          0.0175,
+          0.0040000000000000036,
+          0.01125
+        ]
+      }
+    ],
+    "components_canonical_sha256": "146f1b40c3fe304ce873f6fe7e20a1605e98f46707abaf477cc60115055dfc3d",
+    "conservative_hole_fill": true,
+    "covers_positive_source_primitives": true,
+    "exact_source_brep_boundary_authority": false,
+    "fastener_authority": false,
+    "filled_hole_witnesses_inside_proxy": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "filled_hole_witnesses_m": [
+      [
+        -0.025,
+        0.036,
+        0.00475
+      ],
+      [
+        0.021,
+        0.036,
+        0.00475
+      ],
+      [
+        -0.04,
+        0.19,
+        -0.02325
+      ],
+      [
+        -0.04,
+        0.19,
+        0.03275
+      ],
+      [
+        0.036,
+        0.19,
+        -0.02325
+      ],
+      [
+        0.036,
+        0.19,
+        0.03275
+      ]
+    ],
+    "frame": "dock_gripper",
+    "load_path_authority": false,
+    "mass_authority": false,
+    "pairwise_positive_overlap_count": 0,
+    "passage_witness_inside_proxy": false,
+    "passage_witness_m": [
+      -0.002,
+      0.1,
+      0.00475
+    ],
+    "physical_geometry_authority": false,
+    "removed_legacy_body_names": [
+      "dock_gripper_support"
+    ],
+    "removed_legacy_geom_names": [
+      "dock_gripper_support_collision",
+      "dock_gripper_support_anchor_collision"
+    ],
+    "source_missing_volume_mm3": 0.0,
+    "source_volume_mm3": 162415.4180526403,
+    "substrate_authority": false,
+    "tolerance_authority": false
+  },
+  "support_topology": {
+    "passed": true,
+    "tangencies": [
+      {
+        "distance_m": 0.0,
+        "first": "dock_gripper_floor_support_head_collision",
+        "second": "dock_gripper_floor_support_reinforcement_collision"
+      },
+      {
+        "distance_m": 0.0,
+        "first": "dock_gripper_floor_support_head_collision",
+        "second": "dock_gripper_floor_support_neck_collision"
+      },
+      {
+        "distance_m": 0.0,
+        "first": "dock_gripper_floor_support_neck_collision",
+        "second": "dock_gripper_floor_support_post_x_min_wall_collision"
+      },
+      {
+        "distance_m": 0.0,
+        "first": "dock_gripper_floor_support_neck_collision",
+        "second": "dock_gripper_floor_support_post_x_max_wall_collision"
+      },
+      {
+        "distance_m": -9.99918233319513e-14,
+        "first": "dock_gripper_floor_support_neck_collision",
+        "second": "dock_gripper_floor_support_post_z_min_wall_collision"
+      },
+      {
+        "distance_m": 0.0,
+        "first": "dock_gripper_floor_support_neck_collision",
+        "second": "dock_gripper_floor_support_post_z_max_wall_collision"
+      },
+      {
+        "distance_m": 0.0,
+        "first": "dock_gripper_floor_support_post_x_min_wall_collision",
+        "second": "dock_gripper_floor_support_base_x_min_wall_collision"
+      },
+      {
+        "distance_m": 0.0,
+        "first": "dock_gripper_floor_support_post_x_max_wall_collision",
+        "second": "dock_gripper_floor_support_base_x_max_wall_collision"
+      },
+      {
+        "distance_m": 0.0,
+        "first": "dock_gripper_floor_support_post_z_min_wall_collision",
+        "second": "dock_gripper_floor_support_base_z_min_wall_collision"
+      },
+      {
+        "distance_m": 0.0,
+        "first": "dock_gripper_floor_support_post_z_max_wall_collision",
+        "second": "dock_gripper_floor_support_base_z_max_wall_collision"
+      },
+      {
+        "distance_m": -2.447608088429476e-13,
+        "first": "dock_gripper_floor_support_base_x_min_wall_collision",
+        "second": "matcha_floor_collision"
+      },
+      {
+        "distance_m": -2.447608088429476e-13,
+        "first": "dock_gripper_floor_support_base_x_max_wall_collision",
+        "second": "matcha_floor_collision"
+      },
+      {
+        "distance_m": -2.447530025873057e-13,
+        "first": "dock_gripper_floor_support_base_z_min_wall_collision",
+        "second": "matcha_floor_collision"
+      },
+      {
+        "distance_m": -2.447530025873057e-13,
+        "first": "dock_gripper_floor_support_base_z_max_wall_collision",
+        "second": "matcha_floor_collision"
+      },
+      {
+        "distance_m": 0.0,
+        "first": "dock_gripper_qc_col_dock_stop_part_000__dock_stop_land",
+        "second": "dock_gripper_floor_support_head_collision"
+      }
+    ],
+    "tangency_count": 15
+  },
+  "unchanged_matcha_docks": {
+    "spoon": {
+      "compiled_position_m": [
+        0.240849476,
+        -0.000177808977,
+        0.193915458
+      ],
+      "compiled_quat_wxyz": [
+        -0.017209108230590044,
+        0.7068973380865909,
+        -0.017209108230590044,
+        0.7068973380865909
+      ],
+      "declared_position_m": [
+        0.24084947630993864,
+        -0.0001778089765695206,
+        0.1939154579377552
+      ],
+      "declared_quat_wxyz": [
+        -0.017209108230571146,
+        0.7068973380865915,
+        -0.01720910823057085,
+        0.706897338086591
+      ],
+      "expected_serialized_position_m": [
+        0.240849476,
+        -0.000177808977,
+        0.193915458
+      ]
+    },
+    "whisk": {
+      "compiled_position_m": [
+        0.190593477,
+        -0.133338731,
+        0.193915458
+      ],
+      "compiled_quat_wxyz": [
+        0.23291576804705558,
+        0.6555206479741564,
+        -0.2651276675100633,
+        0.6676452987891593
+      ],
+      "declared_position_m": [
+        0.19059347652281455,
+        -0.13333873141492703,
+        0.19391545793775508
+      ],
+      "declared_quat_wxyz": [
+        0.23291576804733463,
+        0.6555206479743557,
+        -0.26512766750997674,
+        0.6676452987889
+      ],
+      "expected_serialized_position_m": [
+        0.190593477,
+        -0.133338731,
+        0.193915458
+      ]
+    }
+  }
+}

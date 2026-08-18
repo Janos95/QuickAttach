@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<!-- Runtime overlay assembled with the calibrated SO-101 by matcha_workflow_demo.py. -->
+<mujoco model="SO-101 collision-complete matcha workflow recovery">
+  <compiler angle="radian" autolimits="true"/>
+  <option timestep="0.00025" integrator="implicitfast" cone="elliptic"
+          gravity="0 0 -9.81" iterations="80" ls_iterations="20"/>
+  <statistic center="0.0 0.0 0.22" extent="0.78"/>
+  <visual>
+    <global azimuth="90" elevation="-25" offwidth="720" offheight="540"/>
+    <headlight diffuse="0.72 0.72 0.72" ambient="0.34 0.34 0.34" specular="0.12 0.12 0.12"/>
+    <rgba haze="0.12 0.15 0.19 1"/>
+  </visual>
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.25 0.34 0.45" rgb2="0.025 0.03 0.045"
+             width="512" height="3072"/>
+    <texture type="2d" name="matcha_floor_grid" builtin="checker" mark="edge"
+             rgb1="0.15 0.17 0.19" rgb2="0.08 0.09 0.11" markrgb="0.28 0.30 0.33"
+             width="300" height="300"/>
+    <material name="matcha_floor_grid" texture="matcha_floor_grid" texuniform="true"
+              texrepeat="10 10" reflectance="0.08"/>
+  </asset>
+  <worldbody>
+    <light pos="0.1 -0.3 1.0" dir="0.1 0.2 -1" directional="true"/>
+    <light pos="0.6 0.4 0.6" dir="-0.7 -0.3 -0.7" directional="true"
+           diffuse="0.32 0.32 0.32"/>
+    <!-- The only scene camera.  Owner-surface visibility is stage-gated in Python. -->
+    <camera name="matcha_scene_camera" pos="0.70 0 0.55"
+            xyaxes="-0.04281784 0.99908290 0 -0.46654398 -0.01999474 0.88427197"
+            fovy="58"/>
+    <geom name="matcha_floor_collision" type="plane" pos="0 0 0" size="0.9 0.9 0.04"
+          material="matcha_floor_grid" contype="1" conaffinity="1" group="3"/>
+  </worldbody>
+  <equality/>
+  <contact/>
+  <custom>
+    <numeric name="tool_bus_id" data="7"/>
+    <numeric name="gripper_tool_id" data="6"/>
+    <numeric name="spoon_tool_id" data="21"/>
+    <numeric name="whisk_tool_id" data="22"/>
+  </custom>
+</mujoco>

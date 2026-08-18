@@ -1,0 +1,763 @@
+{
+  "balance_acceptance": {
+    "passed": true,
+    "x_abs_max_mm": 0.05,
+    "y_abs_max_mm": 0.05
+  },
+  "bus_address": null,
+  "com_mm": [
+    -2.82328075718162e-16,
+    0.0003201225028323716,
+    16.435847408828472
+  ],
+  "components": [
+    {
+      "com_mm": [
+        -1.6141929146437428,
+        3.7027712578958163e-16,
+        4.86932463931482
+      ],
+      "density_kg_m3": 1010.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          5.245750075253036e-06,
+          -3.6242430212861844e-23,
+          1.760418800096689e-08
+        ],
+        [
+          -3.6242430212861844e-23,
+          8.092530299964892e-06,
+          1.3566948733303405e-22
+        ],
+        [
+          1.760418800096689e-08,
+          1.3566948733303405e-22,
+          1.297614123534944e-05
+        ]
+      ],
+      "mass_kg": 0.02480816623041054,
+      "mass_override": false,
+      "material": "pa12_sls_assumption",
+      "name": "common_tool_plate",
+      "role": "printed_structure",
+      "source": "../generate_cad.py:tool_plate(stock_gripper=False)",
+      "volume_mm3": 24562.540822188654
+    },
+    {
+      "com_mm": [
+        3.283845299988815e-16,
+        -16.0,
+        1.7417161736452136
+      ],
+      "density_kg_m3": 7850.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          3.401469902147312e-08,
+          -7.808864666003501e-24,
+          1.1869327037730788e-24
+        ],
+        [
+          -7.808864666003501e-24,
+          3.4014699021473454e-08,
+          -1.4279066817834975e-23
+        ],
+        [
+          1.1869327037730788e-24,
+          -1.4279066817834975e-23,
+          6.539208091766858e-08
+        ]
+      ],
+      "mass_kg": 0.001953327261517512,
+      "mass_override": false,
+      "material": "steel",
+      "name": "target_1_MC-12-12-03",
+      "role": "interface_hardware",
+      "source": "reconstructed_catalog_envelope",
+      "volume_mm3": 248.8314982824856
+    },
+    {
+      "com_mm": [
+        -4.789541167380356e-16,
+        -16.0,
+        3.899816176470589
+      ],
+      "density_kg_m3": 7850.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          2.5893950563196158e-08,
+          1.7848833522293715e-24,
+          2.3316884371006502e-24
+        ],
+        [
+          1.7848833522293715e-24,
+          2.5893950563195695e-08,
+          0.0
+        ],
+        [
+          2.3316884371006502e-24,
+          0.0,
+          1.1579346016202187e-08
+        ]
+      ],
+      "mass_kg": 0.002096227698107789,
+      "mass_override": false,
+      "material": "steel",
+      "name": "target_screw_1_ISO10642_M5x10",
+      "role": "interface_hardware",
+      "source": "reconstructed_catalog_envelope",
+      "volume_mm3": 267.03537555513236
+    },
+    {
+      "com_mm": [
+        -7.165596679149575e-16,
+        -16.0,
+        7.5
+      ],
+      "density_kg_m3": 7850.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          8.270050195868504e-09,
+          -1.6733281427150356e-25,
+          -6.850187084239678e-25
+        ],
+        [
+          -1.6733281427150356e-25,
+          8.270050195868582e-09,
+          0.0
+        ],
+        [
+          -6.850187084239678e-25,
+          0.0,
+          1.3543228143261843e-08
+        ]
+      ],
+      "mass_kg": 0.0011238270931782112,
+      "mass_override": false,
+      "material": "steel",
+      "name": "target_nut_1_DIN934_M5",
+      "role": "interface_hardware",
+      "source": "reconstructed_catalog_envelope",
+      "volume_mm3": 143.1626870290715
+    },
+    {
+      "com_mm": [
+        3.283845299988815e-16,
+        16.0,
+        1.7417161736452136
+      ],
+      "density_kg_m3": 7850.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          3.401469902147289e-08,
+          6.916422989888816e-24,
+          1.159043901394495e-24
+        ],
+        [
+          6.916422989888816e-24,
+          3.4014699021473454e-08,
+          0.0
+        ],
+        [
+          1.159043901394495e-24,
+          0.0,
+          6.539208091766846e-08
+        ]
+      ],
+      "mass_kg": 0.001953327261517512,
+      "mass_override": false,
+      "material": "steel",
+      "name": "target_2_MC-12-12-03",
+      "role": "interface_hardware",
+      "source": "reconstructed_catalog_envelope",
+      "volume_mm3": 248.8314982824856
+    },
+    {
+      "com_mm": [
+        -4.789541167380356e-16,
+        16.0,
+        3.899816176470589
+      ],
+      "density_kg_m3": 7850.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          2.5893950563196158e-08,
+          -1.7848833522293715e-24,
+          2.777909275157993e-24
+        ],
+        [
+          -1.7848833522293715e-24,
+          2.5893950563195695e-08,
+          0.0
+        ],
+        [
+          2.777909275157993e-24,
+          0.0,
+          1.1579346016202187e-08
+        ]
+      ],
+      "mass_kg": 0.002096227698107789,
+      "mass_override": false,
+      "material": "steel",
+      "name": "target_screw_2_ISO10642_M5x10",
+      "role": "interface_hardware",
+      "source": "reconstructed_catalog_envelope",
+      "volume_mm3": 267.03537555513236
+    },
+    {
+      "com_mm": [
+        -2.3885322263831915e-16,
+        16.000000000000007,
+        7.5
+      ],
+      "density_kg_m3": 7850.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          8.270050195868276e-09,
+          -2.621547423586891e-24,
+          -5.351163956390791e-25
+        ],
+        [
+          -2.621547423586891e-24,
+          8.270050195868582e-09,
+          5.711626727133989e-23
+        ],
+        [
+          -5.351163956390791e-25,
+          5.711626727133989e-23,
+          1.3543228143261673e-08
+        ]
+      ],
+      "mass_kg": 0.0011238270931782112,
+      "mass_override": false,
+      "material": "steel",
+      "name": "target_nut_2_DIN934_M5",
+      "role": "interface_hardware",
+      "source": "reconstructed_catalog_envelope",
+      "volume_mm3": 143.1626870290715
+    },
+    {
+      "com_mm": [
+        -11.999999999999998,
+        -3.856030291686039e-17,
+        -2.410442260442261
+      ],
+      "density_kg_m3": 7850.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          9.980971871252313e-09,
+          2.772536597522013e-25,
+          0.0
+        ],
+        [
+          2.772536597522013e-25,
+          9.98097187125234e-09,
+          -9.776535953352357e-26
+        ],
+        [
+          0.0,
+          -9.776535953352357e-26,
+          2.5345859020356807e-09
+        ]
+      ],
+      "mass_kg": 0.0010037231448586708,
+      "mass_override": false,
+      "material": "steel",
+      "name": "shoulder_lock_stud_1_McMaster_90318A720",
+      "role": "interface_hardware",
+      "source": "reconstructed_catalog_envelope",
+      "volume_mm3": 127.86282100110455
+    },
+    {
+      "com_mm": [
+        -11.999999999999996,
+        -7.448194003278076e-17,
+        2.6999999999999993
+      ],
+      "density_kg_m3": 7850.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          1.1040159124612838e-09,
+          -5.464072246560777e-25,
+          3.569766704458744e-24
+        ],
+        [
+          -5.464072246560777e-25,
+          1.1040159124612991e-09,
+          8.349218342042323e-26
+        ],
+        [
+          3.569766704458744e-24,
+          8.349218342042323e-26,
+          1.87967700809057e-09
+        ]
+      ],
+      "mass_kg": 0.0003420362675333553,
+      "mass_override": false,
+      "material": "steel",
+      "name": "lock_stud_nut_1_DIN934_M3",
+      "role": "interface_hardware",
+      "source": "reconstructed_catalog_envelope",
+      "volume_mm3": 43.571499048835065
+    },
+    {
+      "com_mm": [
+        12.000000000000002,
+        -3.856030291686039e-17,
+        -2.410442260442261
+      ],
+      "density_kg_m3": 7850.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          9.980971871252313e-09,
+          2.7725365975220094e-25,
+          -7.139533408917487e-24
+        ],
+        [
+          2.7725365975220094e-25,
+          9.980971871252255e-09,
+          -9.776535953352357e-26
+        ],
+        [
+          -7.139533408917487e-24,
+          -9.776535953352357e-26,
+          2.534585902035595e-09
+        ]
+      ],
+      "mass_kg": 0.0010037231448586708,
+      "mass_override": false,
+      "material": "steel",
+      "name": "shoulder_lock_stud_2_McMaster_90318A720",
+      "role": "interface_hardware",
+      "source": "reconstructed_catalog_envelope",
+      "volume_mm3": 127.86282100110455
+    },
+    {
+      "com_mm": [
+        12.000000000000002,
+        -1.2929370296632181e-16,
+        2.6999999999999997
+      ],
+      "density_kg_m3": 7850.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          1.1040159124612842e-09,
+          -6.302870473026354e-25,
+          -1.784883352229372e-24
+        ],
+        [
+          -6.302870473026354e-25,
+          1.1040159124612776e-09,
+          -2.251127382023036e-27
+        ],
+        [
+          -1.784883352229372e-24,
+          -2.251127382023036e-27,
+          1.8796770080905276e-09
+        ]
+      ],
+      "mass_kg": 0.0003420362675333551,
+      "mass_override": false,
+      "material": "steel",
+      "name": "lock_stud_nut_2_DIN934_M3",
+      "role": "interface_hardware",
+      "source": "reconstructed_catalog_envelope",
+      "volume_mm3": 43.571499048835044
+    },
+    {
+      "com_mm": [
+        -30.050703933604012,
+        1.2286981591836737e-17,
+        0.5000000000000001
+      ],
+      "density_kg_m3": 1850.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          1.626711243252967e-08,
+          9.608840983774887e-27,
+          -8.412825991399586e-25
+        ],
+        [
+          9.608840983774887e-27,
+          3.3525080043963957e-09,
+          3.286260152890463e-27
+        ],
+        [
+          -8.412825991399586e-25,
+          3.286260152890463e-27,
+          1.95527557613276e-08
+        ]
+      ],
+      "mass_kg": 0.00040118805359085904,
+      "mass_override": false,
+      "material": "fr4",
+      "name": "tool_contact_board_FR4",
+      "role": "interface_hardware",
+      "source": "reconstructed_catalog_envelope",
+      "volume_mm3": 216.85840734641027
+    },
+    {
+      "com_mm": [
+        -30.999999999999993,
+        -7.499999999999998,
+        -0.024999999999999998
+      ],
+      "density_kg_m3": 8960.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          5.630906896490414e-12,
+          -5.0931703299283985e-25,
+          -4.973799150320702e-28
+        ],
+        [
+          -5.0931703299283985e-25,
+          5.6309068964919425e-12,
+          -3.7303493627405258e-28
+        ],
+        [
+          -4.973799150320702e-28,
+          -3.7303493627405258e-28,
+          1.125946807046741e-11
+        ]
+      ],
+      "mass_kg": 5.62973403523291e-06,
+      "mass_override": false,
+      "material": "copper",
+      "name": "target_pad_P1_GND",
+      "role": "interface_hardware",
+      "source": "reconstructed_catalog_envelope",
+      "volume_mm3": 0.6283185307179586
+    },
+    {
+      "com_mm": [
+        -31.0,
+        -2.4999999999999996,
+        -0.024999999999999998
+      ],
+      "density_kg_m3": 8960.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          5.630906896490347e-12,
+          -6.366462912410498e-26,
+          4.973799150320702e-28
+        ],
+        [
+          -6.366462912410498e-26,
+          5.630906896489905e-12,
+          0.0
+        ],
+        [
+          4.973799150320702e-28,
+          0.0,
+          1.1259468070465374e-11
+        ]
+      ],
+      "mass_kg": 5.62973403523291e-06,
+      "mass_override": false,
+      "material": "copper",
+      "name": "target_pad_P2_+12V",
+      "role": "interface_hardware",
+      "source": "reconstructed_catalog_envelope",
+      "volume_mm3": 0.6283185307179586
+    },
+    {
+      "com_mm": [
+        -30.999999999999993,
+        2.499999999999999,
+        -0.024999999999999998
+      ],
+      "density_kg_m3": 8960.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          5.63090689649035e-12,
+          1.9099388737231492e-25,
+          -4.973799150320702e-28
+        ],
+        [
+          1.9099388737231492e-25,
+          5.6309068964919425e-12,
+          1.2434497875801754e-28
+        ],
+        [
+          -4.973799150320702e-28,
+          1.2434497875801754e-28,
+          1.125946807046741e-11
+        ]
+      ],
+      "mass_kg": 5.62973403523291e-06,
+      "mass_override": false,
+      "material": "copper",
+      "name": "target_pad_P3_TTL_DATA",
+      "role": "interface_hardware",
+      "source": "reconstructed_catalog_envelope",
+      "volume_mm3": 0.6283185307179586
+    },
+    {
+      "com_mm": [
+        -30.999999999999993,
+        7.499999999999998,
+        -0.024999999999999998
+      ],
+      "density_kg_m3": 8960.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          5.630906896490414e-12,
+          5.0931703299283985e-25,
+          -4.973799150320702e-28
+        ],
+        [
+          5.0931703299283985e-25,
+          5.6309068964919425e-12,
+          3.7303493627405258e-28
+        ],
+        [
+          -4.973799150320702e-28,
+          3.7303493627405258e-28,
+          1.125946807046741e-11
+        ]
+      ],
+      "mass_kg": 5.62973403523291e-06,
+      "mass_override": false,
+      "material": "copper",
+      "name": "target_pad_P4_TOOL_ID_SPARE",
+      "role": "interface_hardware",
+      "source": "reconstructed_catalog_envelope",
+      "volume_mm3": 0.6283185307179586
+    },
+    {
+      "com_mm": [
+        -0.8964674789146425,
+        6.495689736953145e-08,
+        14.32089051998399
+      ],
+      "density_kg_m3": 1010.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          1.638401353089656e-06,
+          -2.721241648729726e-16,
+          -7.937546365128225e-09
+        ],
+        [
+          -2.721241648729726e-16,
+          2.2416792333194725e-06,
+          -4.963503476407087e-15
+        ],
+        [
+          -7.937546365128225e-09,
+          -4.963503476407087e-15,
+          3.6120701090602694e-06
+        ]
+      ],
+      "mass_kg": 0.010786173379783352,
+      "mass_override": false,
+      "material": "pa12_sls_assumption",
+      "name": "spoon_printed_carrier",
+      "role": "printed_structure",
+      "source": "reconstructed_dimensioned_geometry",
+      "volume_mm3": 10679.379583943912
+    },
+    {
+      "com_mm": [
+        -0.28075015343432996,
+        1.0495615361675773e-06,
+        74.86059958912048
+      ],
+      "density_kg_m3": 8000.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          9.739813760373511e-06,
+          -2.930338131261511e-15,
+          8.944654595199802e-08
+        ],
+        [
+          -2.930338131261511e-15,
+          9.697754623964437e-06,
+          -3.4074834334850084e-13
+        ],
+        [
+          8.944654595199802e-08,
+          -3.4074834334850084e-13,
+          6.515813256842745e-08
+        ]
+      ],
+      "mass_kg": 0.00857844728185323,
+      "mass_override": false,
+      "material": "stainless_304",
+      "name": "spoon_stainless_insert",
+      "role": "food_contact_hardware",
+      "source": "reconstructed_dimensioned_geometry",
+      "volume_mm3": 1072.3059102316536
+    },
+    {
+      "com_mm": [
+        -3.5000000000000004,
+        4.1505065307469844e-17,
+        21.500000000000004
+      ],
+      "density_kg_m3": 8000.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          4.453207586462959e-10,
+          1.7439342490039946e-28,
+          -1.0913936421275141e-23
+        ],
+        [
+          1.7439342490039946e-28,
+          1.8390097995950494e-09,
+          -4.63723016399305e-26
+        ],
+        [
+          -1.0913936421275141e-23,
+          -4.63723016399305e-26,
+          1.8390097995951286e-09
+        ]
+      ],
+      "mass_kg": 0.000395840674352314,
+      "mass_override": false,
+      "material": "stainless_304",
+      "name": "spoon_set_screw_x_minus_M3x6",
+      "role": "food_contact_hardware",
+      "source": "reconstructed_dimensioned_geometry",
+      "volume_mm3": 49.480084294039244
+    },
+    {
+      "com_mm": [
+        3.5,
+        3.538534637832964e-17,
+        21.5
+      ],
+      "density_kg_m3": 8000.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          4.4532075864638323e-10,
+          -9.70063426008658e-28,
+          -3.6379788070917136e-24
+        ],
+        [
+          -9.70063426008658e-28,
+          1.8390097995951366e-09,
+          4.558071898471806e-26
+        ],
+        [
+          -3.6379788070917136e-24,
+          4.558071898471806e-26,
+          1.8390097995951286e-09
+        ]
+      ],
+      "mass_kg": 0.0003958406743523139,
+      "mass_override": false,
+      "material": "stainless_304",
+      "name": "spoon_set_screw_x_plus_M3x6",
+      "role": "food_contact_hardware",
+      "source": "reconstructed_dimensioned_geometry",
+      "volume_mm3": 49.48008429403923
+    },
+    {
+      "com_mm": [
+        -32.4,
+        8.800000000000002,
+        1.2750000000000001
+      ],
+      "density_kg_m3": 3200.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          1.7693866666663783e-13,
+          -9.094947017729283e-26,
+          0.0
+        ],
+        [
+          -9.094947017729283e-26,
+          5.37386666666498e-13,
+          5.684341886080802e-27
+        ],
+        [
+          0.0,
+          5.684341886080802e-27,
+          6.007466666662368e-13
+        ]
+      ],
+      "mass_kg": 2.252799999999999e-06,
+      "mass_override": false,
+      "material": "smd_effective",
+      "name": "tool_id_21_resistor_0603",
+      "role": "identity_electronics",
+      "source": "reconstructed_0603_envelope",
+      "volume_mm3": 0.7039999999999996
+    },
+    {
+      "com_mm": [
+        18.4,
+        -1.5327260642906492e-16,
+        13.214034793761218
+      ],
+      "density_kg_m3": 7850.0,
+      "fabrication": true,
+      "inertia_about_com_kg_m2": [
+        [
+          3.2843470594926206e-08,
+          1.559282441374143e-24,
+          -2.284650690853596e-22
+        ],
+        [
+          1.559282441374143e-24,
+          3.284347059492632e-08,
+          2.126975590605285e-25
+        ],
+        [
+          -2.284650690853596e-22,
+          2.126975590605285e-25,
+          3.495038005925269e-08
+        ]
+      ],
+      "mass_kg": 0.003529895726221669,
+      "mass_override": false,
+      "material": "steel",
+      "name": "spoon_balance_slug_steel",
+      "role": "mass_balance_hardware",
+      "source": "computed_from_component_mass_ledger",
+      "volume_mm3": 449.66824537855655
+    }
+  ],
+  "density_contract": "declared design assumptions; weigh completed hardware before control use",
+  "inertia_about_com_kg_m2": [
+    [
+      5.4820839123922643e-05,
+      6.423182893998039e-10,
+      -2.3927344594946634e-07
+    ],
+    [
+      6.423182893998039e-10,
+      5.762170127098549e-05,
+      2.9968807836003524e-10
+    ],
+    [
+      -2.3927344594946634e-07,
+      2.9968807836003524e-10,
+      2.1603743707964647e-05
+    ]
+  ],
+  "schema_version": "1.0",
+  "tool": "spoon",
+  "tool_id": 21,
+  "total_mass_kg": 0.06195860668709629
+}
