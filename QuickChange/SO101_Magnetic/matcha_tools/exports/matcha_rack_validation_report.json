@@ -8,9 +8,9 @@
     },
     "occt_role": "STEP import/tessellation and six critical B-rep tangency diagnostics",
     "quick_change_interface_generator": {
-      "bytes": 134981,
+      "bytes": 140090,
       "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-      "sha256": "136790d8e6efa455b8f6ff6275699807fb8f4c9f4e6bf299831c0b236068e0bc"
+      "sha256": "f16352a11128bb93599b83cb51fabdf47520d379f14cdfdb5ae4d5f404e90818"
     },
     "rack_validator": {
       "bytes": 31131,
@@ -96,7 +96,7 @@
     "manifest": {
       "bytes": 8901,
       "path": "QuickChange/SO101_Magnetic/matcha_tools/exports/matcha_tool_manifest.json",
-      "sha256": "8fe174fa01373ee098fd4ac895525d6532975aec315d539debecdcaf73bf0460"
+      "sha256": "00ee089eb5d65981f47c8ec9d89d0ae22743e14b41f4c4c338c7a167ce1db7b5"
     },
     "manifest_schema": {
       "files": [
@@ -168,7 +168,7 @@
       "interface_authority": {
         "construction": "unmodified tool_plate(stock_gripper=False)",
         "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-        "sha256": "136790d8e6efa455b8f6ff6275699807fb8f4c9f4e6bf299831c0b236068e0bc"
+        "sha256": "f16352a11128bb93599b83cb51fabdf47520d379f14cdfdb5ae4d5f404e90818"
       },
       "rack": {
         "bay_names": [
@@ -40375,9 +40375,9 @@
     "normal_gripper_authority": "separate_core_stock_adapter_and_passive_dock_package",
     "normal_gripper_authority_files": [
       {
-        "bytes": 134981,
+        "bytes": 140090,
         "path": "QuickChange/SO101_Magnetic/generate_cad.py",
-        "sha256": "136790d8e6efa455b8f6ff6275699807fb8f4c9f4e6bf299831c0b236068e0bc"
+        "sha256": "f16352a11128bb93599b83cb51fabdf47520d379f14cdfdb5ae4d5f404e90818"
       },
       {
         "bytes": 248872,

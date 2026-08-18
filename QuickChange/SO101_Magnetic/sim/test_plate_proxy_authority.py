@@ -19,7 +19,7 @@ class PlateProxySourceAuthorityTests(unittest.TestCase):
 
     def test_released_step_hashes_and_absolute_meshes_are_closed(self) -> None:
         expected = {
-            "robot_plate": (10_570, 10),
+            "robot_plate": (13_282, 10),
             "generic_tool_plate": (5_482, 8),
         }
         for component_id, (triangle_count, void_count) in expected.items():

@@ -41,9 +41,9 @@ POGO_SOURCE_SIGNAL_BY_RUNTIME = {
 }
 POGO_CAD_SOURCE_PATH = Path(__file__).resolve().parent.parent / "generate_cad.py"
 POGO_CAD_SOURCE_SHA256 = (
-    "136790d8e6efa455b8f6ff6275699807fb8f4c9f4e6bf299831c0b236068e0bc"
+    "f16352a11128bb93599b83cb51fabdf47520d379f14cdfdb5ae4d5f404e90818"
 )
-POGO_CAD_SOURCE_BYTES = 134_981
+POGO_CAD_SOURCE_BYTES = 140_090
 POGO_AUTHORITY_LEDGER_PATH = (
     Path(__file__).resolve().parent.parent
     / "source_authority"
@@ -219,26 +219,26 @@ CORE_DOCK_RUNTIME_SOURCE_FILES = (
     (
         "generator",
         POGO_CAD_SOURCE_PATH,
-        134_981,
-        "136790d8e6efa455b8f6ff6275699807fb8f4c9f4e6bf299831c0b236068e0bc",
+        140_090,
+        "f16352a11128bb93599b83cb51fabdf47520d379f14cdfdb5ae4d5f404e90818",
     ),
     (
         "design_parameters",
         CORE_DOCK_DESIGN_PARAMETERS_PATH,
-        57_210,
-        "a8cc37620e4dddf761e6e64e68ad4c150a0ca7cfe8b659b260c6357368fcb9ac",
+        58_919,
+        "74da4648a0115746efb6e1db26faf722c70bfa298049d4db9c064e226de9c05b",
     ),
     (
         "core_cad_manifest",
         CORE_DOCK_CAD_MANIFEST_PATH,
-        59_462,
-        "69b5465b4c8c98190ff6777c251fdcbd0b9c7f85e5c7e6481853b2503bdddb28",
+        61_171,
+        "0f0138a95977f43379990b0eb07d83cf316ae0e3631f47328e856ac43c960454",
     ),
     (
         "cad_clearance_report",
         CORE_DOCK_CLEARANCE_REPORT_PATH,
-        188_602,
-        "2e13613b4fcce5270ce70ad2310f6cd5d9f2a553bdb61dd94d6f0b85af551f53",
+        193_283,
+        "a581bc046b934d168ba4c45b3ccd2fec892d93be68b02b46bff5fe54d7f655bf",
     ),
     (
         "core_passive_tool_dock_step",
@@ -266,7 +266,7 @@ CORE_DOCK_RUNTIME_SOURCE_FILES = (
     ),
 )
 CORE_DOCK_FLOOR_SUPPORT_SOURCE_CONTRACT_CANONICAL_SHA256 = (
-    "4dac674e5e88870dad9b1f873305736123ad57cf526011b8ac783e34aea3e70f"
+    "1befdd739c9eea2645408178317b93c720d61d11c4fd31802761626ac1b456ee"
 )
 CORE_DOCK_WORLD_POS_M = (
     0.19082795371216685,
@@ -331,13 +331,11 @@ CORE_DOCK_RELEASE_SLIDER_LIMIT_MM = 3.0
 CORE_DOCK_RELEASE_SLIDER_LIMIT_WITHDRAWAL_MM = 13.949367088607595
 CORE_DOCK_FULL_CAM_CLEARANCE_AT_15_MM = 0.251814779
 CORE_DOCK_FLOOR_SUPPORT_SOURCE_BLOCKERS = (
-    "runtime_placements_and_matcha_base_authority_are_stale",
     "vendor_or_normative_source_missing_for_selected_M4_and_M6_fasteners",
     "floor_fixture_substrate_and_M6_thread_authority_missing",
     "PA12_modulus_strength_creep_and_process_allowables_unqualified",
     "printed_dimensional_tolerance_and_anchor_strength_unqualified",
     "cam_contact_friction_reverse_insertion_and_capture_dynamics_unvalidated",
-    "full_compiled_arm_collision_screen_not_yet_regenerated_from_this_source",
 )
 
 # The runtime support is a deterministic, pairwise-nonoverlapping box union in
@@ -636,10 +634,10 @@ def _require_core_dock_runtime_sources() -> None:
         separators=(",", ":"),
         allow_nan=False,
     ).encode("utf-8")
-    if len(canonical) != 10_779:
+    if len(canonical) != 12_107:
         raise RuntimeError(
             "rolled core dock source contract canonical byte-count mismatch: "
-            f"expected 10779, got {len(canonical)}"
+            f"expected 12107, got {len(canonical)}"
         )
     observed_contract_digest = hashlib.sha256(canonical).hexdigest()
     if (

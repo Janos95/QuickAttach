@@ -15,11 +15,13 @@ containment is not part of this fast authority.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import importlib.metadata
 import json
 import math
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Iterable
 
 import fcpw
@@ -580,5 +582,157 @@ def certify_bidirectional_runtime_collision(
 __all__ = [
     "AbsoluteStepMeshAuthority",
     "_FcpwTriangleUpperBoundIndex",
+    "build_runtime_payload_report",
     "certify_bidirectional_runtime_collision",
 ]
+
+
+HERE = Path(__file__).resolve().parent
+REPOSITORY_ROOT = HERE.parents[2]
+DEFAULT_REPORT_PATH = HERE / "matcha_payload_proxy_report.json"
+PAYLOAD_TOOLS = ("gripper", "spoon", "whisk")
+
+
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _file_record(path: Path, role: str) -> dict[str, Any]:
+    resolved = path.resolve()
+    return {
+        "path": resolved.relative_to(REPOSITORY_ROOT).as_posix(),
+        "role": role,
+        "bytes": resolved.stat().st_size,
+        "sha256": _sha256_file(resolved),
+    }
+
+
+def _canonical_sha256(value: Any) -> str:
+    return hashlib.sha256(
+        json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def _tool_active_geom_names(model: Any, tool: str) -> list[str]:
+    root_id = int(model.body(f"tool_{tool}").id)
+    names: list[str] = []
+    for geom_id in range(model.ngeom):
+        body_id = int(model.geom_bodyid[geom_id])
+        ancestor = body_id
+        while ancestor not in (0, root_id):
+            ancestor = int(model.body_parentid[ancestor])
+        if ancestor != root_id:
+            continue
+        if not (
+            int(model.geom_contype[geom_id])
+            or int(model.geom_conaffinity[geom_id])
+        ):
+            continue
+        name = str(model.geom(geom_id).name)
+        if not name:
+            raise RuntimeError(f"active payload geom {geom_id} has no name")
+        names.append(name)
+    if not names or len(names) != len(set(names)):
+        raise RuntimeError(f"invalid active collision inventory for {tool}")
+    return sorted(names)
+
+
+def build_runtime_payload_report() -> dict[str, Any]:
+    """Build the hash-pinned active payload collision inventory.
+
+    The report deliberately remains a development authority.  It proves that
+    every declared payload collision geom is active in the compiled model and
+    uniquely assigned to one tool.  The bidirectional FCPW certificate kernel
+    above remains the source-vs-proxy fidelity primitive; neither artifact is
+    promoted to continuous swept-clearance or fabrication authority.
+    """
+
+    import matcha_workflow_demo as demo
+
+    model = demo.build_model()
+    groups = [
+        {
+            "name": tool,
+            "tool_id": int(demo.ALL_TOOL_IDS[tool]),
+            "root_body": f"tool_{tool}",
+            "active_geom_names": _tool_active_geom_names(model, tool),
+        }
+        for tool in PAYLOAD_TOOLS
+    ]
+    all_names = [
+        name for group in groups for name in group["active_geom_names"]
+    ]
+    if len(all_names) != len(set(all_names)):
+        raise RuntimeError("payload collision groups overlap")
+    sources = [
+        _file_record(HERE / "matcha_workflow_demo.py", "compiled_model_builder"),
+        _file_record(
+            HERE.parent / "matcha_tools" / "exports" / "matcha_tool_manifest.json",
+            "matcha_CAD_manifest",
+        ),
+        _file_record(Path(__file__), "payload_certificate_generator"),
+        _file_record(
+            HERE / "validate_matcha_payload_proxy_report.py",
+            "independent_report_validator",
+        ),
+    ]
+    report: dict[str, Any] = {
+        "schema_version": "1.0.0-matcha-payload-runtime-inventory",
+        "method": "compiled_active_geom_inventory_plus_fcpw_certificate_kernel",
+        "groups": groups,
+        "active_geom_count": len(all_names),
+        "active_geom_inventory_sha256": _canonical_sha256(all_names),
+        "sources": sources,
+        "source_records_sha256": _canonical_sha256(sources),
+        "fcpw_required_version": FCPW_REQUIRED_VERSION,
+        "runtime_proxy_is_release_clearance_authority": False,
+        "continuous_swept_clearance_authority": False,
+        "passed": True,
+        "release_ready": False,
+    }
+    report["canonical_sha256_without_this_field"] = _canonical_sha256(report)
+    return report
+
+
+def _write_report(path: Path, report: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(
+        json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+    temporary.replace(path)
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=DEFAULT_REPORT_PATH)
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = _parse_args()
+    report = build_runtime_payload_report()
+    _write_report(args.output, report)
+    print(
+        json.dumps(
+            {
+                "output": str(args.output),
+                "active_geom_count": report["active_geom_count"],
+                "group_count": len(report["groups"]),
+                "passed": report["passed"],
+                "release_ready": report["release_ready"],
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

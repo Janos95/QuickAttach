@@ -38,6 +38,18 @@
     "occt_boolean_in_fidelity_hot_path": false,
     "occt_release_role": "optional critical-interface B-rep diagnostic only"
   },
+  "hash_pinned_authorities": {
+    "matcha_cad_manifest": {
+      "path": "QuickChange/SO101_Magnetic/matcha_tools/exports/matcha_tool_manifest.json",
+      "bytes": 8901,
+      "sha256": "00ee089eb5d65981f47c8ec9d89d0ae22743e14b41f4c4c338c7a167ce1db7b5"
+    },
+    "payload_collision_report": {
+      "path": "QuickChange/SO101_Magnetic/sim/matcha_payload_proxy_report.json",
+      "bytes": 39254,
+      "sha256": "b6a02f659971df4647169ab273ba822a992475302d06f3328a8c230b575200f1"
+    }
+  },
   "sieve_mesh_proxy": {
     "physical_mesh": {
       "nominal_pitch_mm": 0.6,
@@ -100,6 +112,6 @@
     "Exact purchased sieve, bellows, tubing, nozzle, and latch hardware geometry remains pending fabrication selection.",
     "Fluid particles are not simulated; water and milk are deterministic external pump state handoffs guarded by physical outlet geometry.",
     "Runtime collision proxies are dynamics guards, not the release clearance authority.",
-    "A release-ready report, nominal trace, video, and publication manifest have not yet been regenerated after workspace recovery."
+    "A nominal full-workflow trace and final video have not yet been regenerated after workspace recovery."
   ]
 }

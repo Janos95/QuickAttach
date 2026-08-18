@@ -38,20 +38,20 @@ EXPECTED_DIRECT_SOURCE_RECORDS = (
     (
         "runtime_qc_implementation",
         "QuickChange/SO101_Magnetic/sim/qc_collision_geometry.py",
-        119_405,
-        "0115b3e221b9124533ca1c09fe1b0e3f0a707e945e113c542593a2959aa35ac4",
+        119_264,
+        "0739de8ba54af81b576596360dfa7b9eb34618d0d71182fe31662644e562c0ba",
     ),
     (
         "runtime_workflow_implementation",
         "QuickChange/SO101_Magnetic/sim/matcha_workflow_demo.py",
         462_659,
-        "512aad1d1787fd820b5a1e8919eb39124716bb1f45cc25eedf6c106a90b40f99",
+        "42414b1acdffe39c2affef94f6dd1df28f125670851036e54e6b4910d208ca7c",
     ),
     (
         "runtime_geometry_source",
         "QuickChange/SO101_Magnetic/sim/matcha_tool_geometry.json",
-        5_891,
-        "f84578dd492fc94a67064a12ca991645f1ee68141909ce513c74d29cef9dacd6",
+        6_359,
+        "ee411b37e867d93a7fa21b00aeda47172579bd9db48d6ea963ec2345d013a065",
     ),
     (
         "runtime_scene_source",
@@ -67,7 +67,7 @@ EXPECTED_DIRECT_SOURCE_RECORDS = (
     ),
 )
 EXPECTED_QC_SOURCE_FILES_CANONICAL_SHA256 = (
-    "b42800f510e37816856dd3871899072d4af4f52eb70cac4a7cd7c53c7b019dd0"
+    "d59f906102c74512a08d22928737c37a0987276f9719d062120ec80e9340c157"
 )
 EXPECTED_TRIPLE_CONTRACT_LOCATIONS_CANONICAL_SHA256 = (
     "f4379718a4c2d08165366108805952d65fbca62c66b8891449a2f9a5b0a0e60d"
@@ -79,10 +79,10 @@ EXPECTED_RUNTIME_FRAME_CANONICAL_SHA256 = (
     "c22819ccda90572adf075db35f54692d91be8f2201f87c0329ec05a21c3308a1"
 )
 EXPECTED_RUNTIME_SUPPORT_CONTRACT_SHA256 = (
-    "5e2e97c7a9358eb56e46db9905838592b71a640752a0ca20f6baaa33993e5348"
+    "addb9021b2420ebd6314d656c68923e12632b5ae1df9b80995e4934b4cec991c"
 )
 EXPECTED_SOURCE_CONTRACT_SHA256 = (
-    "4dac674e5e88870dad9b1f873305736123ad57cf526011b8ac783e34aea3e70f"
+    "1befdd739c9eea2645408178317b93c720d61d11c4fd31802761626ac1b456ee"
 )
 EXPECTED_SUPPORT_SOURCE_VOLUME_MM3 = 162_415.4180526403
 EXPECTED_SUPPORT_PROXY_VOLUME_MM3 = 177_797.24575315934
@@ -101,13 +101,13 @@ EXPECTED_CAPTURE_ROUTE = {
     "wrist_roll_f8le_sha256": "1aa8b9c2d5348864b0b7ad4ee3e1d999e4778572289fcfd3aa461a5862a1aff4",
     "phase_contract_sha256": "eda9370110ed58ac4d625fa6d5015398c8c71f1501b2498cf274e0510e7cad77",
     "alignment_q_sha256": "692cc966e266841bbe864d180a90083410089bd85f327c3f579276625a66e22c",
-    "contract_identity_sha256": "a8111a9931ebe770198de0397978cdaef06a67705219a9453a0d22abe1edbe4e",
+    "contract_identity_sha256": "1db1e8a2325a4afdc451330c2b464ee9d85930a956ca22b8f073bdfa16105088",
     "endpoint_fk_sha256": "f209f29fb26d24e3acd32e198340fcfb96d97022b1b2d5f681f90fdfda654b75",
     "endpoint_fk_maxima_sha256": "4d6672e5955d670e2a608bbfc41f01542877d3aebade080204cd83751a65066b",
     "dense_fk_sha256": "703f7fc4b77b1fa3c97fd499b99b4c7911660429e762ce359adad021be4a804b",
 }
 EXPECTED_GRAVITY_FF = {
-    "identity_sha256": "51d3dda6f1653796a6ba371f3eb5acf8d466627c245b507c68ecc34f89629b9b",
+    "identity_sha256": "a039042d0c32263fe9565000f8eee7e442d6be06f48b3834d77861f26b36c4e2",
     "formula_sha256": "a84c10e16c890b5e1ee4e4479c0d15d7e07a75f2afae17c62e639e8adc55cc27",
     "guard_thresholds_sha256": "a30d3c871580b36a8f18eca6f07b6d4e5eee34cbecf50093aaca7c4cb1d3ee40",
     "move_action_roster_sha256": "3a3301d0adf98e1e617766891ebf7be4129d94d0440d7f4fcb694f273313a3ba",
@@ -187,7 +187,7 @@ EXPECTED_RELEASE_SLIDER_ROWS_SHA256 = (
     "690179a9a521d4a37cb9ec7ee8de4c501160e9ea1a741953b1c1e908726e2bf1"
 )
 EXPECTED_STATIC_RELEASE_CONTRACT_SHA256 = (
-    "dd41e0a54a4e6f59a2520a04d4c5466a3d1475cb0f1554c1157ec832c72262ba"
+    "765d7ce132cef99774d23c6887ca2fe834a0bd7491ebf1d88ea776bc3672ab47"
 )
 EXPECTED_CORE_DOCK_POSITION_M = (
     0.19082795371216685,
@@ -209,13 +209,11 @@ EXPECTED_WHISK_POSE = (
     (0.23291576804733463, 0.6555206479743557, -0.26512766750997674, 0.6676452987889),
 )
 EXPECTED_RUNTIME_BLOCKERS = (
-    "runtime_placements_and_matcha_base_authority_are_stale",
     "vendor_or_normative_source_missing_for_selected_M4_and_M6_fasteners",
     "floor_fixture_substrate_and_M6_thread_authority_missing",
     "PA12_modulus_strength_creep_and_process_allowables_unqualified",
     "printed_dimensional_tolerance_and_anchor_strength_unqualified",
     "cam_contact_friction_reverse_insertion_and_capture_dynamics_unvalidated",
-    "full_compiled_arm_collision_screen_not_yet_regenerated_from_this_source",
     "runtime_support_proxy_fills_M4_M6_clearances_and_countersinks",
     "runtime_support_proxy_head_envelope_overcovers_source_for_nonoverlap",
     "runtime_support_proxy_is_not_physical_or_load_path_authority",

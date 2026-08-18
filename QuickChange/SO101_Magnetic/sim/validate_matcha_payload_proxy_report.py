@@ -9,6 +9,9 @@ canonical recomputation exactly matches every evidence record.
 
 from __future__ import annotations
 
+import argparse
+import hashlib
+import json
 import importlib.util
 import math
 import sys
@@ -123,3 +126,78 @@ def validate(*args: Any, **kwargs: Any) -> dict[str, Any]:
 
 
 __all__ = ["validate", "validate_bidirectional_runtime_collision_certificate"]
+
+
+def _canonical_sha256(value: Any) -> str:
+    return hashlib.sha256(
+        json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def validate_runtime_payload_report(report: Any) -> list[str]:
+    errors: list[str] = []
+    if not isinstance(report, dict):
+        return ["report_not_mapping"]
+    observed = dict(report)
+    advertised = observed.pop("canonical_sha256_without_this_field", None)
+    if advertised != _canonical_sha256(observed):
+        errors.append("canonical_sha256")
+    if report.get("release_ready") is not False:
+        errors.append("release_ready")
+    if report.get("passed") is not True:
+        errors.append("passed")
+    try:
+        expected = authority.build_runtime_payload_report()
+    except Exception as exc:
+        return [*errors, f"recompute:{type(exc).__name__}:{exc}"]
+    if report != expected:
+        errors.append("canonical_recomputation")
+    groups = report.get("groups")
+    if not isinstance(groups, list) or not groups:
+        errors.append("groups")
+    else:
+        names = [
+            str(name)
+            for group in groups
+            if isinstance(group, dict)
+            for name in group.get("active_geom_names", [])
+        ]
+        if names != [
+            name
+            for group in groups
+            for name in sorted(group.get("active_geom_names", []))
+        ]:
+            errors.append("group_name_order")
+        if len(names) != len(set(names)):
+            errors.append("duplicate_active_geom")
+        if report.get("active_geom_count") != len(names):
+            errors.append("active_geom_count")
+        if report.get("active_geom_inventory_sha256") != _canonical_sha256(names):
+            errors.append("active_geom_inventory_sha256")
+    return errors
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("report", type=Path)
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = _parse_args()
+    report = json.loads(args.report.read_text(encoding="utf-8"))
+    errors = validate_runtime_payload_report(report)
+    print(json.dumps({"report": str(args.report), "errors": errors, "passed": not errors}, sort_keys=True))
+    return 0 if not errors else 1
+
+
+__all__.extend(["validate_runtime_payload_report"])
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

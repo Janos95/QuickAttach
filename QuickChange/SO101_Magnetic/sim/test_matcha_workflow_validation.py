@@ -4037,13 +4037,13 @@ CORE_CAPTURE_GRAVITY_BIAS_FORMULA_SHA256 = (
     "a84c10e16c890b5e1ee4e4479c0d15d7e07a75f2afae17c62e639e8adc55cc27"
 )
 CORE_CAPTURE_GRAVITY_BIAS_IDENTITY_SHA256 = (
-    "51d3dda6f1653796a6ba371f3eb5acf8d466627c245b507c68ecc34f89629b9b"
+    "a039042d0c32263fe9565000f8eee7e442d6be06f48b3834d77861f26b36c4e2"
 )
 CORE_CAPTURE_GRAVITY_BIAS_DESIRED_START_SHA256 = (
     "7216752cb39dc68608396f33d09eadc018c4d936b510a50f456e978e94df0618"
 )
 CORE_CAPTURE_GRAVITY_BIAS_ROUTE_IDENTITY_SHA256 = (
-    "a8111a9931ebe770198de0397978cdaef06a67705219a9453a0d22abe1edbe4e"
+    "1db1e8a2325a4afdc451330c2b464ee9d85930a956ca22b8f073bdfa16105088"
 )
 CORE_CAPTURE_GRAVITY_BIAS_NON_ARM_QPOS_SHA256 = (
     "c28ea3a6c2ff43eeab74db3ab36dc6bc37987d64d3ed94dc33808ddf977b8001"
@@ -4061,7 +4061,7 @@ CORE_CAPTURE_GRAVITY_BIAS_GUARDS_SHA256 = (
     "a30d3c871580b36a8f18eca6f07b6d4e5eee34cbecf50093aaca7c4cb1d3ee40"
 )
 CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_SHA256 = (
-    "97f89d116792946901acaa654b6931cc4e9517a7bd3a5bbdec6b358e2bbcf141"
+    "679180aabfd17ee70c1f88ac40444cfdc24ca92f0709121bb3048333d7bd25ad"
 )
 CORE_CAPTURE_GRAVITY_BIAS_ACTION_ROSTER_SHA256 = (
     "3a3301d0adf98e1e617766891ebf7be4129d94d0440d7f4fcb694f273313a3ba"
@@ -9819,7 +9819,7 @@ class CoreCaptureGravityBiasFeedforwardTests(unittest.TestCase):
         demo = self.demo
         self.assertEqual(
             sha256_file(MATCHA_DEMO),
-            "512aad1d1787fd820b5a1e8919eb39124716bb1f45cc25eedf6c106a90b40f99",
+            "42414b1acdffe39c2affef94f6dd1df28f125670851036e54e6b4910d208ca7c",
         )
         self.assertEqual(
             _evidence_mismatches(self.contract, self.expected_contract), []
@@ -13856,9 +13856,7 @@ class SimCadPlacementContractTests(unittest.TestCase):
                 "core_dock_floor_support:PA12_modulus_strength_creep_and_process_allowables_unqualified",
                 "core_dock_floor_support:cam_contact_friction_reverse_insertion_and_capture_dynamics_unvalidated",
                 "core_dock_floor_support:floor_fixture_substrate_and_M6_thread_authority_missing",
-                "core_dock_floor_support:full_compiled_arm_collision_screen_not_yet_regenerated_from_this_source",
                 "core_dock_floor_support:printed_dimensional_tolerance_and_anchor_strength_unqualified",
-                "core_dock_floor_support:runtime_placements_and_matcha_base_authority_are_stale",
                 "core_dock_floor_support:vendor_or_normative_source_missing_for_selected_M4_and_M6_fasteners",
                 "interface_hardware_fit_authority",
             ],

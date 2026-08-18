@@ -812,16 +812,10 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
                 hashlib.sha256(path.read_bytes()).hexdigest(),
             )
 
-    def test_core_manifest_is_stale_only_for_the_source_semantic_update(self) -> None:
-        self.assertEqual(
-            clearance.validate_core_manifest(),
-            [
-                "core_manifest_generator_record_mismatch",
-                "core_manifest_contract_mismatch",
-            ],
-        )
+    def test_core_manifest_is_current_after_source_semantic_update(self) -> None:
+        self.assertEqual(clearance.validate_core_manifest(), [])
         manifest = json.loads(clearance.CORE_MANIFEST_PATH.read_text())
-        self.assertNotEqual(
+        self.assertEqual(
             manifest["contracts"], clearance._expected_core_manifest_contracts()
         )
         inventory_payload = [
