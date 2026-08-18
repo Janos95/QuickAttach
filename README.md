@@ -109,6 +109,17 @@ The recorder produces a split-screen view of the complete arm and a tracked
 coupler close-up. It renders MuJoCo's compiled geometry and live body poses; it
 does not reuse the discarded conceptual animation.
 
+For the complete single-camera Matcha story (stock gripper handles both
+pitchers, spoon doses, powered whisk mixes, and every tool returns to its
+rack), run:
+
+```bash
+.venv/bin/python QuickChange/SO101_Magnetic/sim/render_matcha_workflow_video.py
+```
+
+The associated report identifies this as visualization evidence and keeps all
+physical-release authority false.
+
 The XML file beside the controller is a scene overlay. The controller merges it
 with the upstream robot in memory so there is no duplicated SO-101 description
 to fall out of sync. `--save-preview PATH.png` is optional and requires a

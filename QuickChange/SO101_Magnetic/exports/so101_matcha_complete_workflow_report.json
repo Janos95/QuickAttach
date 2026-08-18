@@ -1,0 +1,70 @@
+{
+  "all_tools_returned": true,
+  "camera": "matcha_scene_camera",
+  "camera_count": 1,
+  "duration_s": 48.2,
+  "errors": [],
+  "events": [
+    "gripper_capture",
+    "gripper_lock",
+    "hot_water_added",
+    "gripper_unlock",
+    "gripper_release",
+    "spoon_capture",
+    "spoon_lock",
+    "matcha_dosed",
+    "spoon_release",
+    "whisk_capture",
+    "whisk_lock",
+    "matcha_whisked",
+    "whisk_release",
+    "gripper_recapture",
+    "milk_added",
+    "workflow_complete"
+  ],
+  "final_recipe_stage": "complete",
+  "gripper_pitchers": [
+    "hot_water",
+    "milk"
+  ],
+  "passed": true,
+  "physical_release_authority": false,
+  "release_ready": false,
+  "schema_version": "1.0-matcha-single-camera-showcase",
+  "segment_count": 36,
+  "spoon_task": "dose_matcha_through_sieve",
+  "tools": [
+    "gripper",
+    "spoon",
+    "whisk"
+  ],
+  "video": {
+    "bytes": 2539000,
+    "ffprobe": {
+      "format": {
+        "duration": "48.250000",
+        "size": "2539000"
+      },
+      "programs": [],
+      "streams": [
+        {
+          "avg_frame_rate": "20/1",
+          "codec_name": "h264",
+          "duration": "48.250000",
+          "height": 720,
+          "nb_frames": "965",
+          "width": 1280
+        }
+      ]
+    },
+    "fps": 20,
+    "frame_count_requested": 965,
+    "height": 720,
+    "mesh_cell_mm": 4.0,
+    "path": "QuickChange/SO101_Magnetic/exports/so101_matcha_complete_workflow.mp4",
+    "sha256": "848427c3501fcc751d7da99ab5e228e272a88bf5fe7084d86924aedfc1867890",
+    "width": 1280
+  },
+  "visualization_only": true,
+  "whisk_task": "powered_mix_in_bowl"
+}

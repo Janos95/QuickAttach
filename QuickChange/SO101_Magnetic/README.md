@@ -172,6 +172,21 @@ The recorder produces a split-screen view of the complete arm and a tracked
 coupler close-up. It renders MuJoCo's compiled geometry and live body poses; it
 does not reuse the discarded conceptual animation.
 
+The complete Matcha showcase uses the collision-complete three-tool workcell
+and one fixed scene camera. It acquires and returns the stock gripper, spoon,
+and powered whisk; the gripper handles the hot-water and milk pitchers, the
+spoon doses through the sieve, and the whisk mixes in the bowl:
+
+```bash
+XDG_CACHE_HOME=/tmp/cq-cache .venv/bin/python \
+  QuickChange/SO101_Magnetic/sim/render_matcha_workflow_video.py
+```
+
+The emitted JSON report binds the H.264 file to the ordered visual story. This
+is a presentation proof over compiled MuJoCo geometry, not physical release
+evidence; material, fastener, friction, reverse-insertion, and durability
+blockers remain fail-closed.
+
 The XML file beside the controller is a scene overlay. The controller merges it
 with the upstream robot in memory so there is no duplicated SO-101 description
 to fall out of sync. `--save-preview PATH.png` is optional and requires a
