@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+from collections import Counter
 from dataclasses import dataclass
 import hashlib
 import importlib.metadata
@@ -51,6 +52,312 @@ FIXED_GRIPPER_STL_PATH = (
 )
 MOVING_JAW_STL_PATH = REPO_ROOT / "Simulation/SO101/assets/moving_jaw_so101_v1.stl"
 REPORT_PATH = HERE / "cad_clearance_report.json"
+ROLLED_CORE_DOCK_RUNTIME_REPORT_PATH = (
+    HERE / "rolled_core_dock_runtime_report.json"
+)
+ROLLED_CORE_DOCK_RUNTIME_REPORT_REPOSITORY_PATH = (
+    "QuickChange/SO101_Magnetic/sim/rolled_core_dock_runtime_report.json"
+)
+ROLLED_CORE_DOCK_RUNTIME_REPORT_SCHEMA_VERSION = (
+    "1.0-rolled-core-dock-runtime-authority"
+)
+ROLLED_CORE_DOCK_RUNTIME_GEOMETRIC_METHOD = (
+    "actual_compiled_mesh_outer_AABB_to_actual_compiled_static_dock_geom_"
+    "outer_AABB_with_topology_joint_motion_bound"
+)
+ROLLED_CORE_DOCK_RUNTIME_EXPECTED = {
+    "release_roster": {
+        "row_count": 31,
+        "maximum_row_fk_position_error_mm": 1.3645432973688894e-13,
+        "maximum_row_fk_orientation_error_rad": 6.990106082579211e-16,
+    },
+    "compiled_collision_sweep": {
+        "compiled_arm_mesh_count": 14,
+        "dock_target_geom_count": 90,
+        "support_geom_count": 11,
+        "release_interval_count": 30,
+        "joint_linear_substeps_per_interval": 10,
+        "evaluated_state_count": 301,
+        "distance_evaluation_count": 379_260,
+        "minimum_sampled_outer_aabb_lower_bound_mm": 4.3592095380000915,
+        "maximum_pair_specific_topology_motion_bound_mm": (
+            0.13870802188957512
+        ),
+        "continuous_clearance_lower_bound_mm": 4.220501516110517,
+        "required_clearance_mm": 0.20,
+        "support_minimum_sampled_outer_aabb_lower_bound_mm": (
+            16.34024798273126
+        ),
+        "support_continuous_clearance_lower_bound_mm": 16.201539960841686,
+        "maximum_substep_sum_abs_dq_rad": 0.0008238065187196941,
+        "topology_global_chain_radius_bound_m": 0.3987479600566484,
+        "startup_contact_count": 65,
+        "startup_penetration_count": 0,
+        "support_tangency_count": 15,
+    },
+}
+ROLLED_CORE_DOCK_RUNTIME_AUTHORITY_FLAGS = {
+    "capture_dynamics_authority": False,
+    "contact_dynamics_authority": False,
+    "contact_force_authority": False,
+    "continuous_geometric_clearance_authority": True,
+    "default_action_roster_identity_authority": True,
+    "default_runtime_action_authority": False,
+    "exact_source_brep_boundary_authority": False,
+    "fastener_authority": False,
+    "friction_coefficient_authority": False,
+    "load_path_authority": False,
+    "mass_authority": False,
+    "material_authority": False,
+    "physical_lock_authority": False,
+    "physical_release_authority": False,
+    "substrate_authority": False,
+    "tolerance_authority": False,
+}
+ROLLED_CORE_DOCK_RUNTIME_SUPPORT_PROXY_FALSE_AUTHORITIES = (
+    "exact_source_brep_boundary_authority",
+    "fastener_authority",
+    "load_path_authority",
+    "mass_authority",
+    "physical_geometry_authority",
+    "substrate_authority",
+    "tolerance_authority",
+)
+ROLLED_CORE_DOCK_RUNTIME_STARTUP_TANGENCY_TOLERANCE_M = 1.0e-9
+ROLLED_CORE_DOCK_RUNTIME_SUPPORT_TANGENCY_TOLERANCE_M = 1.0e-12
+ROLLED_CORE_DOCK_RUNTIME_STARTUP_CONTACT_PAIR_COUNTS = {
+    (
+        "dock_gripper_keeper_left_upper_collision",
+        "matcha_col_gripper_plate_electrical_wing_edge__mating_land__keeper_land",
+    ): 4,
+    (
+        "dock_gripper_keeper_right_upper_collision",
+        "matcha_col_gripper_plate_xpos__mating_land__locator_land__dock_stop_land",
+    ): 5,
+    (
+        "dock_spoon_qc_col_dock_stop",
+        "matcha_col_spoon_plate_center_ypos__mating_land__locator_land__dock_stop_land",
+    ): 4,
+    (
+        "dock_spoon_qc_col_dock_stop",
+        "matcha_col_spoon_plate_left_lock_inner__mating_land__locator_land__dock_stop_land",
+    ): 4,
+    (
+        "dock_spoon_qc_col_dock_stop",
+        "matcha_col_spoon_plate_left_lock_ypos__mating_land__locator_land__dock_stop_land",
+    ): 4,
+    (
+        "dock_spoon_qc_col_dock_stop",
+        "matcha_col_spoon_plate_right_lock_inner__mating_land__locator_land__dock_stop_land",
+    ): 4,
+    (
+        "dock_spoon_qc_col_dock_stop",
+        "matcha_col_spoon_plate_right_lock_ypos__mating_land__locator_land__dock_stop_land",
+    ): 4,
+    (
+        "dock_spoon_qc_col_dock_stop",
+        "matcha_col_spoon_plate_xneg__mating_land__locator_land__dock_stop_land",
+    ): 4,
+    (
+        "dock_spoon_qc_col_dock_stop",
+        "matcha_col_spoon_plate_xpos__mating_land__locator_land__dock_stop_land",
+    ): 4,
+    (
+        "dock_whisk_qc_col_dock_stop",
+        "matcha_col_whisk_plate_center_ypos__mating_land__locator_land__dock_stop_land",
+    ): 4,
+    (
+        "dock_whisk_qc_col_dock_stop",
+        "matcha_col_whisk_plate_left_lock_inner__mating_land__locator_land__dock_stop_land",
+    ): 4,
+    (
+        "dock_whisk_qc_col_dock_stop",
+        "matcha_col_whisk_plate_left_lock_ypos__mating_land__locator_land__dock_stop_land",
+    ): 4,
+    (
+        "dock_whisk_qc_col_dock_stop",
+        "matcha_col_whisk_plate_right_lock_inner__mating_land__locator_land__dock_stop_land",
+    ): 4,
+    (
+        "dock_whisk_qc_col_dock_stop",
+        "matcha_col_whisk_plate_right_lock_ypos__mating_land__locator_land__dock_stop_land",
+    ): 4,
+    (
+        "dock_whisk_qc_col_dock_stop",
+        "matcha_col_whisk_plate_xneg__mating_land__locator_land__dock_stop_land",
+    ): 4,
+    (
+        "dock_whisk_qc_col_dock_stop",
+        "matcha_col_whisk_plate_xpos__mating_land__locator_land__dock_stop_land",
+    ): 4,
+}
+ROLLED_CORE_DOCK_RUNTIME_SUPPORT_TANGENCY_PAIRS = frozenset(
+    {
+        (
+            "dock_gripper_floor_support_base_x_max_wall_collision",
+            "dock_gripper_floor_support_post_x_max_wall_collision",
+        ),
+        (
+            "dock_gripper_floor_support_base_x_max_wall_collision",
+            "matcha_floor_collision",
+        ),
+        (
+            "dock_gripper_floor_support_base_x_min_wall_collision",
+            "dock_gripper_floor_support_post_x_min_wall_collision",
+        ),
+        (
+            "dock_gripper_floor_support_base_x_min_wall_collision",
+            "matcha_floor_collision",
+        ),
+        (
+            "dock_gripper_floor_support_base_z_max_wall_collision",
+            "dock_gripper_floor_support_post_z_max_wall_collision",
+        ),
+        (
+            "dock_gripper_floor_support_base_z_max_wall_collision",
+            "matcha_floor_collision",
+        ),
+        (
+            "dock_gripper_floor_support_base_z_min_wall_collision",
+            "dock_gripper_floor_support_post_z_min_wall_collision",
+        ),
+        (
+            "dock_gripper_floor_support_base_z_min_wall_collision",
+            "matcha_floor_collision",
+        ),
+        (
+            "dock_gripper_floor_support_head_collision",
+            "dock_gripper_floor_support_neck_collision",
+        ),
+        (
+            "dock_gripper_floor_support_head_collision",
+            "dock_gripper_floor_support_reinforcement_collision",
+        ),
+        (
+            "dock_gripper_floor_support_head_collision",
+            "dock_gripper_qc_col_dock_stop_part_000__dock_stop_land",
+        ),
+        (
+            "dock_gripper_floor_support_neck_collision",
+            "dock_gripper_floor_support_post_x_max_wall_collision",
+        ),
+        (
+            "dock_gripper_floor_support_neck_collision",
+            "dock_gripper_floor_support_post_x_min_wall_collision",
+        ),
+        (
+            "dock_gripper_floor_support_neck_collision",
+            "dock_gripper_floor_support_post_z_max_wall_collision",
+        ),
+        (
+            "dock_gripper_floor_support_neck_collision",
+            "dock_gripper_floor_support_post_z_min_wall_collision",
+        ),
+    }
+)
+ROLLED_CORE_DOCK_RUNTIME_TYPE_SCHEMA = {
+    "schema_version": str,
+    "method": str,
+    "release_route": {
+        "row_count": int,
+        "maximum_row_fk_position_error_mm": float,
+        "maximum_row_fk_orientation_error_rad": float,
+        "included_in_default_controller_actions": bool,
+        "physical_release_action_implemented": bool,
+        "physical_release_authority": bool,
+    },
+    "inventory": {
+        "arm_geom_count": int,
+        "dock_target_geom_count": int,
+        "support_geom_count": int,
+    },
+    "sampling": {
+        "interval_count": int,
+        "joint_linear_substeps_per_interval": int,
+        "unique_state_count": int,
+        "expected_unique_state_count": int,
+        "distance_evaluation_count": int,
+    },
+    "continuous_clearance": {
+        "minimum_sampled_outer_aabb_lower_bound_mm": float,
+        "maximum_pair_specific_topology_motion_bound_mm": float,
+        "continuous_clearance_lower_bound_mm": float,
+        "required_clearance_mm": float,
+        "topology_global_chain_radius_bound_m": float,
+        "maximum_substep_sum_abs_dq_rad": float,
+        "coarse_global_motion_bound_mm": float,
+        "passed": bool,
+        "target_family_clearance": {
+            "core_dock_fixture": {
+                "target_geom_count": int,
+                "distance_evaluation_count": int,
+                "minimum_sampled_outer_aabb_lower_bound_mm": float,
+                "continuous_clearance_lower_bound_mm": float,
+                "required_clearance_mm": float,
+                "passed": bool,
+            },
+            "floor_support_proxy": {
+                "target_geom_count": int,
+                "distance_evaluation_count": int,
+                "minimum_sampled_outer_aabb_lower_bound_mm": float,
+                "continuous_clearance_lower_bound_mm": float,
+                "required_clearance_mm": float,
+                "passed": bool,
+            },
+        },
+    },
+    "startup": {
+        "contact_count": int,
+        "contact_records": [
+            {
+                "geom_a": str,
+                "geom_b": str,
+                "signed_distance_m": float,
+            }
+        ],
+        "penetration_count": int,
+        "penetrations": list,
+        "max_penetration_m": float,
+        "passed": bool,
+    },
+    "support_topology": {
+        "tangency_count": int,
+        "tangencies": [
+            {
+                "distance_m": float,
+                "first": str,
+                "second": str,
+            }
+        ],
+        "passed": bool,
+    },
+    "authority_scope": {
+        **{
+            field: bool
+            for field in ROLLED_CORE_DOCK_RUNTIME_AUTHORITY_FLAGS
+        },
+        "release_ready": bool,
+    },
+    "support_proxy": {
+        **{
+            field: bool
+            for field in (
+                ROLLED_CORE_DOCK_RUNTIME_SUPPORT_PROXY_FALSE_AUTHORITIES
+            )
+        },
+        "passage_witness_inside_proxy": bool,
+    },
+    "default_actions": {
+        "static_release_continuation_included": bool,
+        "rack_exit_flag_rejected": bool,
+    },
+    "gravity_feedforward": {
+        "dynamics_authority": bool,
+    },
+    "geometry_passed": bool,
+    "passed": bool,
+    "release_ready": bool,
+}
 
 SCHEMA_VERSION = "1.2"
 SWEEP_START_MM = 0.0
@@ -153,6 +460,15 @@ def _canonical_sha256(value: Any) -> str:
     return hashlib.sha256(_canonical_bytes(value)).hexdigest()
 
 
+def _canonical_exact_equal(observed: Any, expected: Any) -> bool:
+    """Compare JSON semantics without Python's bool/int/float coercion."""
+
+    try:
+        return _canonical_bytes(observed) == _canonical_bytes(expected)
+    except (TypeError, ValueError, OverflowError, RecursionError):
+        return False
+
+
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -164,6 +480,543 @@ def _file_record(path: Path) -> dict[str, Any]:
         "bytes": resolved.stat().st_size,
         "sha256": _sha256(resolved),
     }
+
+
+def _json_matches_exact_whitelist_schema(
+    value: Any,
+    schema: Any,
+) -> bool:
+    """Recursively require exact JSON container and scalar types.
+
+    Python considers ``False == 0`` and ``31.0 == 31``.  Those coercive
+    equalities are never acceptable for runtime authority evidence.  A schema
+    list contains exactly one element schema and applies it to every observed
+    list element; a bare ``list`` requires only the exact container type.
+    Floating-point evidence must additionally be finite.
+    """
+
+    if isinstance(schema, type):
+        if type(value) is not schema:
+            return False
+        return schema is not float or math.isfinite(value)
+    if type(schema) is dict:
+        if type(value) is not dict:
+            return False
+        return all(
+            key in value
+            and _json_matches_exact_whitelist_schema(value[key], child)
+            for key, child in schema.items()
+        )
+    if type(schema) is list and len(schema) == 1:
+        return type(value) is list and all(
+            _json_matches_exact_whitelist_schema(item, schema[0])
+            for item in value
+        )
+    raise TypeError("invalid rolled runtime JSON type schema")
+
+
+def _rolled_runtime_authority_scope_is_exact(
+    authority: dict[str, Any],
+) -> bool:
+    """Require the complete known authority roster and its exact truth values."""
+
+    observed = {
+        key: value
+        for key, value in authority.items()
+        if key.endswith("_authority")
+    }
+    return (
+        set(observed) == set(ROLLED_CORE_DOCK_RUNTIME_AUTHORITY_FLAGS)
+        and all(
+            observed[field] is expected
+            for field, expected in (
+                ROLLED_CORE_DOCK_RUNTIME_AUTHORITY_FLAGS.items()
+            )
+        )
+        and authority.get("release_ready") is False
+    )
+
+
+def _rolled_runtime_support_proxy_authorities_are_exact(
+    support_proxy: dict[str, Any],
+) -> bool:
+    """Reject missing, promoted, or invented support-proxy authorities."""
+
+    observed = {
+        key: value
+        for key, value in support_proxy.items()
+        if key.endswith("_authority")
+    }
+    return (
+        set(observed)
+        == set(ROLLED_CORE_DOCK_RUNTIME_SUPPORT_PROXY_FALSE_AUTHORITIES)
+        and all(
+            observed[field] is False
+            for field in (
+                ROLLED_CORE_DOCK_RUNTIME_SUPPORT_PROXY_FALSE_AUTHORITIES
+            )
+        )
+    )
+
+
+def _canonical_unordered_pair(first: str, second: str) -> tuple[str, str]:
+    return tuple(sorted((first, second)))
+
+
+def _rolled_runtime_startup_contacts_are_exact(
+    records: list[dict[str, Any]],
+) -> bool:
+    """Bind the startup contact pair multiset and tangent distances."""
+
+    pair_counts = Counter(
+        _canonical_unordered_pair(record["geom_a"], record["geom_b"])
+        for record in records
+    )
+    return (
+        pair_counts == ROLLED_CORE_DOCK_RUNTIME_STARTUP_CONTACT_PAIR_COUNTS
+        and len(records)
+        == sum(ROLLED_CORE_DOCK_RUNTIME_STARTUP_CONTACT_PAIR_COUNTS.values())
+        and all(
+            math.isfinite(record["signed_distance_m"])
+            and abs(record["signed_distance_m"])
+            <= ROLLED_CORE_DOCK_RUNTIME_STARTUP_TANGENCY_TOLERANCE_M
+            for record in records
+        )
+    )
+
+
+def _rolled_runtime_support_tangencies_are_exact(
+    records: list[dict[str, Any]],
+) -> bool:
+    """Bind 15 unique unordered support pairs and near-zero distances."""
+
+    pairs = [
+        _canonical_unordered_pair(record["first"], record["second"])
+        for record in records
+    ]
+    return (
+        len(pairs) == len(set(pairs))
+        == len(ROLLED_CORE_DOCK_RUNTIME_SUPPORT_TANGENCY_PAIRS)
+        and frozenset(pairs)
+        == ROLLED_CORE_DOCK_RUNTIME_SUPPORT_TANGENCY_PAIRS
+        and all(
+            math.isfinite(record["distance_m"])
+            and abs(record["distance_m"])
+            <= ROLLED_CORE_DOCK_RUNTIME_SUPPORT_TANGENCY_TOLERANCE_M
+            for record in records
+        )
+    )
+
+
+def _rolled_core_dock_runtime_projection_from_report(
+    report: dict[str, Any],
+) -> dict[str, Any]:
+    """Extract only the non-circular geometric source projection."""
+
+    release = report["release_route"]
+    inventory = report["inventory"]
+    sampling = report["sampling"]
+    clearance = report["continuous_clearance"]
+    support_clearance = clearance["target_family_clearance"][
+        "floor_support_proxy"
+    ]
+    startup = report["startup"]
+    topology = report["support_topology"]
+    return {
+        "release_roster": {
+            "row_count": release["row_count"],
+            "maximum_row_fk_position_error_mm": release[
+                "maximum_row_fk_position_error_mm"
+            ],
+            "maximum_row_fk_orientation_error_rad": release[
+                "maximum_row_fk_orientation_error_rad"
+            ],
+        },
+        "compiled_collision_sweep": {
+            "compiled_arm_mesh_count": inventory["arm_geom_count"],
+            "dock_target_geom_count": inventory["dock_target_geom_count"],
+            "support_geom_count": inventory["support_geom_count"],
+            "release_interval_count": sampling["interval_count"],
+            "joint_linear_substeps_per_interval": sampling[
+                "joint_linear_substeps_per_interval"
+            ],
+            "evaluated_state_count": sampling["unique_state_count"],
+            "distance_evaluation_count": sampling[
+                "distance_evaluation_count"
+            ],
+            "minimum_sampled_outer_aabb_lower_bound_mm": clearance[
+                "minimum_sampled_outer_aabb_lower_bound_mm"
+            ],
+            "maximum_pair_specific_topology_motion_bound_mm": clearance[
+                "maximum_pair_specific_topology_motion_bound_mm"
+            ],
+            "continuous_clearance_lower_bound_mm": clearance[
+                "continuous_clearance_lower_bound_mm"
+            ],
+            "required_clearance_mm": clearance["required_clearance_mm"],
+            "support_minimum_sampled_outer_aabb_lower_bound_mm": (
+                support_clearance[
+                    "minimum_sampled_outer_aabb_lower_bound_mm"
+                ]
+            ),
+            "support_continuous_clearance_lower_bound_mm": support_clearance[
+                "continuous_clearance_lower_bound_mm"
+            ],
+            "maximum_substep_sum_abs_dq_rad": clearance[
+                "maximum_substep_sum_abs_dq_rad"
+            ],
+            "topology_global_chain_radius_bound_m": clearance[
+                "topology_global_chain_radius_bound_m"
+            ],
+            "startup_contact_count": startup["contact_count"],
+            "startup_penetration_count": startup["penetration_count"],
+            "support_tangency_count": topology["tangency_count"],
+        },
+    }
+
+
+def _rolled_core_dock_source_projection() -> dict[str, Any]:
+    """Rebuild the generator's runtime-evidence projection independently."""
+
+    contract = CAD.core_dock_support_contract()
+    solver = contract["release_roster"]["solver_audit"]
+    screen = contract["geometry_audit"]["full_arm_screen"]
+    screen_keys = ROLLED_CORE_DOCK_RUNTIME_EXPECTED[
+        "compiled_collision_sweep"
+    ]
+    return {
+        "release_roster": {
+            "row_count": contract["release_roster"]["row_count"],
+            "maximum_row_fk_position_error_mm": solver[
+                "maximum_row_fk_position_error_mm"
+            ],
+            "maximum_row_fk_orientation_error_rad": solver[
+                "maximum_row_fk_orientation_error_rad"
+            ],
+        },
+        "compiled_collision_sweep": {
+            key: screen[key] for key in screen_keys
+        },
+    }
+
+
+def _rolled_core_dock_runtime_geometric_evidence_unchecked() -> dict[str, Any]:
+    """Validate the committed runtime report's geometric projection.
+
+    No report, model, QC, workflow, generator, manifest, or artifact hash is
+    consumed or emitted here.  The source/report dependency remains acyclic:
+    only the stable path, schema, method, counts and numeric geometry evidence
+    are compared.  Any missing/malformed/mismatched evidence fails the source
+    engineering check without promoting physical release authority.
+    """
+
+    expected_binding = {
+        "path": ROLLED_CORE_DOCK_RUNTIME_REPORT_REPOSITORY_PATH,
+        "required_schema_version": (
+            ROLLED_CORE_DOCK_RUNTIME_REPORT_SCHEMA_VERSION
+        ),
+        "method": ROLLED_CORE_DOCK_RUNTIME_GEOMETRIC_METHOD,
+    }
+    contract = CAD.core_dock_support_contract()
+    solver = contract["release_roster"]["solver_audit"]
+    screen = contract["geometry_audit"]["full_arm_screen"]
+    source_projection = _rolled_core_dock_source_projection()
+    try:
+        loaded = json.loads(
+            ROLLED_CORE_DOCK_RUNTIME_REPORT_PATH.read_text(encoding="utf-8")
+        )
+        if not isinstance(loaded, dict):
+            raise TypeError("rolled runtime report must be an object")
+        scalar_types_exact = _json_matches_exact_whitelist_schema(
+            loaded,
+            ROLLED_CORE_DOCK_RUNTIME_TYPE_SCHEMA,
+        )
+        observed_projection = _rolled_core_dock_runtime_projection_from_report(
+            loaded
+        )
+        available = True
+    except (
+        OSError,
+        json.JSONDecodeError,
+        AttributeError,
+        IndexError,
+        KeyError,
+        RecursionError,
+        TypeError,
+    ):
+        loaded = {}
+        observed_projection = None
+        scalar_types_exact = False
+        available = False
+
+    checks = {
+        "report_available_and_well_formed": available,
+        "runtime_semantic_projection_scalar_types_are_exact": (
+            scalar_types_exact
+        ),
+        "source_schema_is_runtime_geometric_closure": (
+            contract.get("schema_version")
+            == "1.1-source-runtime-geometric-closure"
+        ),
+        "source_report_bindings_are_exact": (
+            solver.get("runtime_report") == expected_binding
+            and screen.get("runtime_report") == expected_binding
+        ),
+        "source_projection_matches_independent_expected_values": (
+            _canonical_exact_equal(
+                source_projection,
+                ROLLED_CORE_DOCK_RUNTIME_EXPECTED,
+            )
+        ),
+        "source_runtime_recomputation_is_closed": (
+            solver.get("runtime_recomputation_pending") is False
+            and solver.get("passed") is True
+            and screen.get("runtime_recomputation_pending") is False
+            and screen.get("passed") is True
+            and screen.get("geometric_clearance_authority") is True
+            and screen.get("physical_release_authority") is False
+        ),
+    }
+    if available and scalar_types_exact:
+        clearance = loaded["continuous_clearance"]
+        family = clearance["target_family_clearance"]
+        core_family = family["core_dock_fixture"]
+        support_family = family["floor_support_proxy"]
+        sampling = loaded["sampling"]
+        startup = loaded["startup"]
+        topology = loaded["support_topology"]
+        authority = loaded["authority_scope"]
+        release = loaded["release_route"]
+        support_proxy = loaded["support_proxy"]
+        default_actions = loaded["default_actions"]
+        gravity_feedforward = loaded["gravity_feedforward"]
+        expected_sweep = ROLLED_CORE_DOCK_RUNTIME_EXPECTED[
+            "compiled_collision_sweep"
+        ]
+        expected_states = (
+            expected_sweep["release_interval_count"]
+            * expected_sweep["joint_linear_substeps_per_interval"]
+            + 1
+        )
+        expected_evaluations = (
+            expected_sweep["compiled_arm_mesh_count"]
+            * expected_sweep["dock_target_geom_count"]
+            * expected_states
+        )
+        sampled = clearance["minimum_sampled_outer_aabb_lower_bound_mm"]
+        motion = clearance[
+            "maximum_pair_specific_topology_motion_bound_mm"
+        ]
+        support_sampled = (
+            support_family["minimum_sampled_outer_aabb_lower_bound_mm"]
+        )
+        chain_radius = clearance["topology_global_chain_radius_bound_m"]
+        maximum_dq = clearance["maximum_substep_sum_abs_dq_rad"]
+        checks.update(
+            {
+                "report_schema_and_method_are_exact": (
+                    loaded.get("schema_version")
+                    == ROLLED_CORE_DOCK_RUNTIME_REPORT_SCHEMA_VERSION
+                    and loaded.get("method")
+                    == ROLLED_CORE_DOCK_RUNTIME_GEOMETRIC_METHOD
+                ),
+                "report_projection_matches_independent_expected_values": (
+                    _canonical_exact_equal(
+                        observed_projection,
+                        ROLLED_CORE_DOCK_RUNTIME_EXPECTED,
+                    )
+                ),
+                "release_roster_count_and_runtime_fk_metrics_are_exact": (
+                    release.get("row_count")
+                    == ROLLED_CORE_DOCK_RUNTIME_EXPECTED[
+                        "release_roster"
+                    ]["row_count"]
+                    and release.get("maximum_row_fk_position_error_mm")
+                    == ROLLED_CORE_DOCK_RUNTIME_EXPECTED[
+                        "release_roster"
+                    ]["maximum_row_fk_position_error_mm"]
+                    and release.get("maximum_row_fk_orientation_error_rad")
+                    == ROLLED_CORE_DOCK_RUNTIME_EXPECTED[
+                        "release_roster"
+                    ]["maximum_row_fk_orientation_error_rad"]
+                ),
+                "joint_linear_state_count_arithmetic_closes": (
+                    expected_states
+                    == expected_sweep["evaluated_state_count"]
+                    == sampling.get("unique_state_count")
+                    == sampling.get("expected_unique_state_count")
+                ),
+                "distance_evaluation_count_arithmetic_closes": (
+                    expected_evaluations
+                    == expected_sweep["distance_evaluation_count"]
+                    == sampling.get("distance_evaluation_count")
+                    == core_family.get("distance_evaluation_count")
+                    + support_family.get("distance_evaluation_count")
+                ),
+                "target_family_partition_arithmetic_closes": (
+                    core_family.get("target_geom_count")
+                    + support_family.get("target_geom_count")
+                    == expected_sweep["dock_target_geom_count"]
+                    and support_family.get("target_geom_count")
+                    == expected_sweep["support_geom_count"]
+                ),
+                "continuous_clearance_arithmetic_closes": math.isclose(
+                    sampled - motion,
+                    clearance["continuous_clearance_lower_bound_mm"],
+                    rel_tol=0.0,
+                    abs_tol=1.0e-12,
+                ),
+                "support_clearance_arithmetic_closes": math.isclose(
+                    support_sampled - motion,
+                    support_family["continuous_clearance_lower_bound_mm"],
+                    rel_tol=0.0,
+                    abs_tol=1.0e-12,
+                ),
+                "topology_motion_bound_is_conservative": (
+                    motion
+                    <= chain_radius * maximum_dq * 1000.0 + 1.0e-12
+                    and math.isclose(
+                        chain_radius * maximum_dq * 1000.0,
+                        clearance["coarse_global_motion_bound_mm"],
+                        rel_tol=0.0,
+                        abs_tol=1.0e-12,
+                    )
+                ),
+                "family_clearance_fields_mirror_global_evidence": (
+                    _canonical_exact_equal(
+                        core_family[
+                            "minimum_sampled_outer_aabb_lower_bound_mm"
+                        ],
+                        sampled,
+                    )
+                    and _canonical_exact_equal(
+                        core_family[
+                            "continuous_clearance_lower_bound_mm"
+                        ],
+                        clearance["continuous_clearance_lower_bound_mm"],
+                    )
+                    and _canonical_exact_equal(
+                        core_family["required_clearance_mm"],
+                        clearance["required_clearance_mm"],
+                    )
+                    and _canonical_exact_equal(
+                        support_family["required_clearance_mm"],
+                        clearance["required_clearance_mm"],
+                    )
+                    and _canonical_exact_equal(
+                        clearance["required_clearance_mm"],
+                        expected_sweep["required_clearance_mm"],
+                    )
+                ),
+                "global_and_support_clearance_exceed_requirement": (
+                    clearance["continuous_clearance_lower_bound_mm"]
+                    >= clearance["required_clearance_mm"]
+                    and support_family[
+                        "continuous_clearance_lower_bound_mm"
+                    ]
+                    >= support_family["required_clearance_mm"]
+                    and core_family.get("passed") is True
+                    and support_family.get("passed") is True
+                    and clearance.get("passed") is True
+                ),
+                "startup_contact_pair_multiset_and_tangencies_are_exact": (
+                    startup.get("contact_count")
+                    == len(startup.get("contact_records", []))
+                    == expected_sweep["startup_contact_count"]
+                    and _rolled_runtime_startup_contacts_are_exact(
+                        startup["contact_records"]
+                    )
+                ),
+                "startup_has_no_penetrations": (
+                    startup.get("penetration_count")
+                    == len(startup.get("penetrations", []))
+                    == expected_sweep["startup_penetration_count"]
+                    and startup.get("max_penetration_m") == 0.0
+                    and startup.get("passed") is True
+                ),
+                "support_topology_unique_pair_roster_is_exact": (
+                    topology.get("tangency_count")
+                    == len(topology.get("tangencies", []))
+                    == expected_sweep["support_tangency_count"]
+                    and _rolled_runtime_support_tangencies_are_exact(
+                        topology["tangencies"]
+                    )
+                    and topology.get("passed") is True
+                ),
+                "runtime_authority_scope_is_exact": (
+                    _rolled_runtime_authority_scope_is_exact(authority)
+                ),
+                "support_proxy_authorities_and_passage_are_red": (
+                    _rolled_runtime_support_proxy_authorities_are_exact(
+                        support_proxy
+                    )
+                    and support_proxy.get("passage_witness_inside_proxy")
+                    is False
+                ),
+                "release_is_excluded_from_default_runtime_actions": (
+                    release.get("included_in_default_controller_actions")
+                    is False
+                    and default_actions.get(
+                        "static_release_continuation_included"
+                    )
+                    is False
+                    and default_actions.get("rack_exit_flag_rejected") is True
+                ),
+                "gravity_feedforward_remains_identity_only": (
+                    gravity_feedforward.get("dynamics_authority") is False
+                ),
+                "runtime_report_is_geometrically_green_and_release_red": (
+                    loaded.get("geometry_passed") is True
+                    and loaded.get("passed") is True
+                    and loaded.get("release_ready") is False
+                    and release.get("physical_release_action_implemented")
+                    is False
+                    and release.get("physical_release_authority") is False
+                ),
+            }
+        )
+
+    return {
+        "report": expected_binding,
+        "available": available,
+        "observed_projection": observed_projection,
+        "checks": checks,
+        "passed": all(checks.values()),
+        "release_ready": False,
+    }
+
+
+def _rolled_core_dock_runtime_geometric_evidence() -> dict[str, Any]:
+    """Return a fail-closed runtime projection, including malformed inputs."""
+
+    try:
+        return _rolled_core_dock_runtime_geometric_evidence_unchecked()
+    except (
+        AttributeError,
+        IndexError,
+        KeyError,
+        RecursionError,
+        TypeError,
+        ValueError,
+        OverflowError,
+    ):
+        return {
+            "report": {
+                "path": ROLLED_CORE_DOCK_RUNTIME_REPORT_REPOSITORY_PATH,
+                "required_schema_version": (
+                    ROLLED_CORE_DOCK_RUNTIME_REPORT_SCHEMA_VERSION
+                ),
+                "method": ROLLED_CORE_DOCK_RUNTIME_GEOMETRIC_METHOD,
+            },
+            "available": False,
+            "observed_projection": None,
+            "checks": {
+                "report_available_and_well_formed": False,
+                "runtime_semantic_projection_is_well_typed": False,
+            },
+            "passed": False,
+            "release_ready": False,
+        }
 
 
 def _shape_volume_mm3(shape: cq.Shape) -> float:
@@ -2275,6 +3128,9 @@ def _core_dock_support_record() -> dict[str, Any]:
     """Independently rebuild and audit the rolled dock floor support."""
 
     contract = CAD.core_dock_support_contract()
+    runtime_geometric_evidence = (
+        _rolled_core_dock_runtime_geometric_evidence()
+    )
     support = CAD.core_dock_support_bracket().val()
     dock = CAD.tool_dock().val()
     stop = CAD.core_dock_stop().val()
@@ -2753,6 +3609,9 @@ def _core_dock_support_record() -> dict[str, Any]:
         ),
         "floor_plane_closes_at_world_z_zero": abs(world_bounds["z_m"][0]) <= 1.0e-12,
         "all_anchor_axes_land_on_floor": all(point[2] == 0.0 for point in anchors_world),
+        "rolled_runtime_geometric_evidence_closes": (
+            runtime_geometric_evidence["passed"] is True
+        ),
     }
     return {
         "contract": contract,
@@ -2807,6 +3666,7 @@ def _core_dock_support_record() -> dict[str, Any]:
             "base_world_bounds": world_bounds,
             "anchor_centres_world_m": anchors_world,
         },
+        "runtime_geometric_evidence": runtime_geometric_evidence,
         "checks": checks,
         "engineering_checks_passed": all(checks.values()),
         "blockers": list(contract["blockers"]),

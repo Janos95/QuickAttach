@@ -330,7 +330,7 @@ Official references: [SO-101 assembly and motor IDs](https://huggingface.co/docs
   endpoints the spring is 9.4 mm locked and 6.4 mm unlocked: 3.6 mm maximum
   compression, leaving 0.4 mm margin to the catalog deflection limit.
 
-## Rolled core-dock floor-support source checkpoint
+## Rolled core-dock source and runtime geometric checkpoint
 
 The core interface now has a source-only installation contract for a
 `-87.21086925015224 deg` tool-view roll about the mating normal. Its published
@@ -364,13 +364,28 @@ screening-only 1.5 GPa load proxy gives 4.25271213611 N.m combined moment,
 0.5720 MPa bending stress, and 0.1940 mm tip deflection; these are not material
 or joint allowables.
 
-The deterministic core STEP/STL, manifest, and clearance-report checkpoint has
-now been regenerated from these sources. Runtime placements and the Matcha
-base-authority manifest still require explicit propagation. `release_ready`
-remains false pending sourced M4/M6 hardware, an authoritative tapped floor substrate, PA12
-modulus/strength/creep and tolerance evidence, anchor-strength tests, runtime
-full-arm regeneration, and physical cam/contact/friction and reverse-insertion
-validation.
+The committed `sim/rolled_core_dock_runtime_report.json` replays the exact
+31-row roster in the compiled rolled frame. Its maximum row FK errors are
+`1.3645432973688894e-13 mm` and `6.990106082579211e-16 rad`. The bounded
+screen evaluates 14 upstream arm meshes against 90 static core-dock targets
+over 301 joint-linear states (`30 * 10 + 1`), or 379260 pair evaluations. The
+`4.3592095380000915 mm` sampled lower bound minus the
+`0.13870802188957512 mm` pair-specific topology motion bound gives a
+`4.220501516110517 mm` continuous lower bound, above the required `0.20 mm`.
+The 11-piece support proxy retains a separate
+`16.201539960841686 mm` continuous lower bound. Startup has 65 intended
+tangent contacts and zero penetrations, and the support chain has 15 verified
+tangencies.
+
+That evidence closes only the exact hash-bound runtime geometric
+recomputation for this roster and compiled inventory. It does not authorize
+robot self-collision, controller execution/tracking, the physical Matcha base
+or floor fixture, contact forces, friction, materials, fasteners, load paths,
+reverse insertion, or physical release. `release_ready` remains false pending
+normative M4/M6 hardware authority, an authoritative tapped floor substrate,
+PA12 material/process/creep allowables, printed dimensional and anchor-strength
+qualification, cam contact/friction/reverse-insertion/capture-dynamics
+validation, and the existing interface-hardware blockers.
 
 ## Generate, inspect, and simulate
 

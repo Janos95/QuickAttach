@@ -320,6 +320,48 @@ CORE_DOCK_RELEASE_ROSTER_SHA256 = (
     "f30b0c178917945fcd45358710e5127302bc5240ca6cb4cdaa7f49d16c4f0293"
 )
 
+# Exact geometric projection from the committed rolled-runtime authority
+# report.  The source contract deliberately binds the report's stable
+# path/schema/method and numeric evidence, never the report or runtime file
+# hashes: the runtime report already binds this generator and the generated
+# contracts, so a reverse hash pin here would create a circular dependency.
+CORE_DOCK_RUNTIME_REPORT_REPOSITORY_PATH = (
+    "QuickChange/SO101_Magnetic/sim/rolled_core_dock_runtime_report.json"
+)
+CORE_DOCK_RUNTIME_REPORT_SCHEMA_VERSION = (
+    "1.0-rolled-core-dock-runtime-authority"
+)
+CORE_DOCK_RUNTIME_GEOMETRIC_METHOD = (
+    "actual_compiled_mesh_outer_AABB_to_actual_compiled_static_dock_geom_"
+    "outer_AABB_with_topology_joint_motion_bound"
+)
+CORE_DOCK_RUNTIME_MAXIMUM_ROW_FK_POSITION_ERROR_MM = (
+    1.3645432973688894e-13
+)
+CORE_DOCK_RUNTIME_MAXIMUM_ROW_FK_ORIENTATION_ERROR_RAD = (
+    6.990106082579211e-16
+)
+CORE_DOCK_RUNTIME_COMPILED_ARM_MESH_COUNT = 14
+CORE_DOCK_RUNTIME_DOCK_TARGET_GEOM_COUNT = 90
+CORE_DOCK_RUNTIME_SUPPORT_GEOM_COUNT = 11
+CORE_DOCK_RUNTIME_RELEASE_INTERVAL_COUNT = 30
+CORE_DOCK_RUNTIME_SUBSTEPS_PER_INTERVAL = 10
+CORE_DOCK_RUNTIME_EVALUATED_STATE_COUNT = 301
+CORE_DOCK_RUNTIME_DISTANCE_EVALUATION_COUNT = 379_260
+CORE_DOCK_RUNTIME_MINIMUM_SAMPLED_CLEARANCE_MM = 4.3592095380000915
+CORE_DOCK_RUNTIME_MAXIMUM_TOPOLOGY_MOTION_BOUND_MM = 0.13870802188957512
+CORE_DOCK_RUNTIME_CONTINUOUS_CLEARANCE_LOWER_BOUND_MM = 4.220501516110517
+CORE_DOCK_RUNTIME_REQUIRED_CLEARANCE_MM = 0.20
+CORE_DOCK_RUNTIME_SUPPORT_MINIMUM_SAMPLED_CLEARANCE_MM = 16.34024798273126
+CORE_DOCK_RUNTIME_SUPPORT_CONTINUOUS_CLEARANCE_LOWER_BOUND_MM = (
+    16.201539960841686
+)
+CORE_DOCK_RUNTIME_MAXIMUM_SUBSTEP_SUM_ABS_DQ_RAD = 0.0008238065187196941
+CORE_DOCK_RUNTIME_TOPOLOGY_GLOBAL_CHAIN_RADIUS_BOUND_M = 0.3987479600566484
+CORE_DOCK_RUNTIME_STARTUP_CONTACT_COUNT = 65
+CORE_DOCK_RUNTIME_STARTUP_PENETRATION_COUNT = 0
+CORE_DOCK_RUNTIME_SUPPORT_TANGENCY_COUNT = 15
+
 # The assembly datums are public source authority for downstream simulation.
 STOCK_TOOL_PLATE_ASSEMBLY_POS_MM = (0.0, 0.0, PLATE_THICKNESS)
 STOCK_FIXED_STEP_ASSEMBLY_POS_MM = (
@@ -1470,10 +1512,11 @@ def core_dock_release_roster() -> list[dict[str, object]]:
 def core_dock_support_contract() -> dict[str, object]:
     """Return the fail-closed rolled-dock installation source contract.
 
-    The geometric fields are executable dimensions.  Audit-only FK and
-    collision results are pinned separately and never turn the release green:
-    runtime adoption, material allowables, substrate authority, and physical
-    contact dynamics remain explicit blockers.
+    The geometric fields are executable dimensions.  Exact rolled-runtime FK,
+    compiled collision, topology and startup evidence closes the geometric
+    recomputation only.  Material/process allowables, fastener and substrate
+    authority, dimensional qualification, and physical contact/release
+    dynamics remain explicit blockers.
     """
 
     roster = core_dock_release_roster()
@@ -1528,16 +1571,19 @@ def core_dock_support_contract() -> dict[str, object]:
         / (4.0 * post_length**2)
     )
     blockers = [
-        "runtime_placements_and_matcha_base_authority_are_stale",
         "vendor_or_normative_source_missing_for_selected_M4_and_M6_fasteners",
         "floor_fixture_substrate_and_M6_thread_authority_missing",
         "PA12_modulus_strength_creep_and_process_allowables_unqualified",
         "printed_dimensional_tolerance_and_anchor_strength_unqualified",
         "cam_contact_friction_reverse_insertion_and_capture_dynamics_unvalidated",
-        "full_compiled_arm_collision_screen_not_yet_regenerated_from_this_source",
     ]
+    runtime_report_binding = {
+        "path": CORE_DOCK_RUNTIME_REPORT_REPOSITORY_PATH,
+        "required_schema_version": CORE_DOCK_RUNTIME_REPORT_SCHEMA_VERSION,
+        "method": CORE_DOCK_RUNTIME_GEOMETRIC_METHOD,
+    }
     return {
-        "schema_version": "1.0-source-checkpoint",
+        "schema_version": "1.1-source-runtime-geometric-closure",
         "frame": {
             "position_m": list(CORE_DOCK_WORLD_POS_M),
             "quat_wxyz": list(CORE_DOCK_WORLD_QUAT_WXYZ),
@@ -1560,10 +1606,18 @@ def core_dock_support_contract() -> dict[str, object]:
             "maximum_joint_step_deg": maximum_joint_step_deg,
             "endpoint_q_deg": [math.degrees(q) for q in roster[-1]["q_rad"]],
             "solver_audit": {
-                "method": "deterministic_continuation_from_exact_seated_state",
-                "maximum_fk_position_error_mm": 1.4152622167509189e-13,
-                "maximum_fk_orientation_error_deg": 3.6184477995385756e-14,
-                "runtime_recomputation_pending": True,
+                "source_method": (
+                    "deterministic_continuation_from_exact_seated_state"
+                ),
+                "runtime_report": dict(runtime_report_binding),
+                "maximum_row_fk_position_error_mm": (
+                    CORE_DOCK_RUNTIME_MAXIMUM_ROW_FK_POSITION_ERROR_MM
+                ),
+                "maximum_row_fk_orientation_error_rad": (
+                    CORE_DOCK_RUNTIME_MAXIMUM_ROW_FK_ORIENTATION_ERROR_RAD
+                ),
+                "runtime_recomputation_pending": False,
+                "passed": True,
             },
         },
         "passive_release": {
@@ -1717,16 +1771,75 @@ def core_dock_support_contract() -> dict[str, object]:
             "moving_jaw_mesh_count": 1,
             "legacy_report_count_with_both_mutually_exclusive_sliders_and_jaw": 23,
             "full_arm_screen": {
-                "compiled_arm_geometry_count": 14,
-                "continuation_substeps_per_interval": 10,
-                "evaluated_transform_states": 3062,
-                "minimum_sampled_outer_aabb_lower_bound_mm": 14.717707794,
-                "compiled_chain_radius_bound_m": 0.547662487,
-                "maximum_subsample_sum_abs_dq_rad": 0.000823806519,
-                "between_sample_motion_bound_mm": 0.451445972,
-                "continuous_clearance_lower_bound_mm": 14.266261822,
-                "nearest_static_fixture_distance_mm": 27.832,
-                "runtime_recomputation_pending": True,
+                "runtime_report": dict(runtime_report_binding),
+                "scope": (
+                    "upstream_compiled_arm_meshes_against_static_core_dock_"
+                    "targets_along_the_exact_31_row_joint_linear_release_only"
+                ),
+                "explicit_exclusions": [
+                    "robot_self_collision",
+                    "controller_execution_or_tracking",
+                    "matcha_physical_base_or_floor_fixture_authority",
+                    "contact_force_friction_or_dynamics",
+                    "material_fastener_substrate_or_load_path_authority",
+                    "reverse_insertion_or_physical_release_authority",
+                ],
+                "compiled_arm_mesh_count": (
+                    CORE_DOCK_RUNTIME_COMPILED_ARM_MESH_COUNT
+                ),
+                "dock_target_geom_count": (
+                    CORE_DOCK_RUNTIME_DOCK_TARGET_GEOM_COUNT
+                ),
+                "support_geom_count": CORE_DOCK_RUNTIME_SUPPORT_GEOM_COUNT,
+                "release_interval_count": (
+                    CORE_DOCK_RUNTIME_RELEASE_INTERVAL_COUNT
+                ),
+                "joint_linear_substeps_per_interval": (
+                    CORE_DOCK_RUNTIME_SUBSTEPS_PER_INTERVAL
+                ),
+                "evaluated_state_count": (
+                    CORE_DOCK_RUNTIME_EVALUATED_STATE_COUNT
+                ),
+                "distance_evaluation_count": (
+                    CORE_DOCK_RUNTIME_DISTANCE_EVALUATION_COUNT
+                ),
+                "minimum_sampled_outer_aabb_lower_bound_mm": (
+                    CORE_DOCK_RUNTIME_MINIMUM_SAMPLED_CLEARANCE_MM
+                ),
+                "maximum_pair_specific_topology_motion_bound_mm": (
+                    CORE_DOCK_RUNTIME_MAXIMUM_TOPOLOGY_MOTION_BOUND_MM
+                ),
+                "continuous_clearance_lower_bound_mm": (
+                    CORE_DOCK_RUNTIME_CONTINUOUS_CLEARANCE_LOWER_BOUND_MM
+                ),
+                "required_clearance_mm": (
+                    CORE_DOCK_RUNTIME_REQUIRED_CLEARANCE_MM
+                ),
+                "support_minimum_sampled_outer_aabb_lower_bound_mm": (
+                    CORE_DOCK_RUNTIME_SUPPORT_MINIMUM_SAMPLED_CLEARANCE_MM
+                ),
+                "support_continuous_clearance_lower_bound_mm": (
+                    CORE_DOCK_RUNTIME_SUPPORT_CONTINUOUS_CLEARANCE_LOWER_BOUND_MM
+                ),
+                "maximum_substep_sum_abs_dq_rad": (
+                    CORE_DOCK_RUNTIME_MAXIMUM_SUBSTEP_SUM_ABS_DQ_RAD
+                ),
+                "topology_global_chain_radius_bound_m": (
+                    CORE_DOCK_RUNTIME_TOPOLOGY_GLOBAL_CHAIN_RADIUS_BOUND_M
+                ),
+                "startup_contact_count": (
+                    CORE_DOCK_RUNTIME_STARTUP_CONTACT_COUNT
+                ),
+                "startup_penetration_count": (
+                    CORE_DOCK_RUNTIME_STARTUP_PENETRATION_COUNT
+                ),
+                "support_tangency_count": (
+                    CORE_DOCK_RUNTIME_SUPPORT_TANGENCY_COUNT
+                ),
+                "runtime_recomputation_pending": False,
+                "geometric_clearance_authority": True,
+                "physical_release_authority": False,
+                "passed": True,
             },
         },
         "tolerance_budget": {

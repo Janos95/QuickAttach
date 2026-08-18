@@ -10,7 +10,9 @@ import json
 import math
 from pathlib import Path
 import sys
+import tempfile
 import unittest
+from unittest import mock
 
 import cadquery as cq
 
@@ -810,16 +812,12 @@ class CoreCadClearanceUnitTests(unittest.TestCase):
                 hashlib.sha256(path.read_bytes()).hexdigest(),
             )
 
-    def test_core_manifest_is_deliberately_stale_at_source_checkpoint(self) -> None:
+    def test_core_manifest_is_stale_only_for_the_source_semantic_update(self) -> None:
         self.assertEqual(
             clearance.validate_core_manifest(),
             [
                 "core_manifest_generator_record_mismatch",
                 "core_manifest_contract_mismatch",
-                "core_manifest_file_inventory_mismatch",
-                "core_export_missing:so101_core_dock_support_bracket.step",
-                "core_export_missing:so101_core_dock_support_bracket.stl",
-                "core_manifest_file_count_mismatch",
             ],
         )
         manifest = json.loads(clearance.CORE_MANIFEST_PATH.read_text())
@@ -871,6 +869,365 @@ class CoreDockFloorSupportSourceCheckpointTests(unittest.TestCase):
             )
         )
         self.assertEqual(release["slider_q_mm"][-1], 3.0)
+
+    def test_runtime_geometric_projection_is_exact_acyclic_and_closed(self) -> None:
+        self.assertEqual(
+            self.contract["schema_version"],
+            "1.1-source-runtime-geometric-closure",
+        )
+        self.assertEqual(
+            self.contract["blockers"],
+            [
+                "vendor_or_normative_source_missing_for_selected_M4_and_M6_fasteners",
+                "floor_fixture_substrate_and_M6_thread_authority_missing",
+                "PA12_modulus_strength_creep_and_process_allowables_unqualified",
+                "printed_dimensional_tolerance_and_anchor_strength_unqualified",
+                "cam_contact_friction_reverse_insertion_and_capture_dynamics_unvalidated",
+            ],
+        )
+        self.assertNotIn(
+            "runtime_placements_and_matcha_base_authority_are_stale",
+            self.contract["blockers"],
+        )
+        self.assertNotIn(
+            "full_compiled_arm_collision_screen_not_yet_regenerated_from_this_source",
+            self.contract["blockers"],
+        )
+
+        binding = {
+            "path": (
+                "QuickChange/SO101_Magnetic/sim/"
+                "rolled_core_dock_runtime_report.json"
+            ),
+            "required_schema_version": (
+                "1.0-rolled-core-dock-runtime-authority"
+            ),
+            "method": (
+                "actual_compiled_mesh_outer_AABB_to_actual_compiled_static_"
+                "dock_geom_outer_AABB_with_topology_joint_motion_bound"
+            ),
+        }
+        solver = self.contract["release_roster"]["solver_audit"]
+        self.assertEqual(solver["runtime_report"], binding)
+        self.assertEqual(
+            solver["maximum_row_fk_position_error_mm"],
+            1.3645432973688894e-13,
+        )
+        self.assertEqual(
+            solver["maximum_row_fk_orientation_error_rad"],
+            6.990106082579211e-16,
+        )
+        self.assertIs(solver["runtime_recomputation_pending"], False)
+        self.assertIs(solver["passed"], True)
+
+        screen = self.contract["geometry_audit"]["full_arm_screen"]
+        self.assertEqual(screen["runtime_report"], binding)
+        self.assertEqual(
+            {
+                key: screen[key]
+                for key in clearance.ROLLED_CORE_DOCK_RUNTIME_EXPECTED[
+                    "compiled_collision_sweep"
+                ]
+            },
+            clearance.ROLLED_CORE_DOCK_RUNTIME_EXPECTED[
+                "compiled_collision_sweep"
+            ],
+        )
+        self.assertIs(screen["runtime_recomputation_pending"], False)
+        self.assertIs(screen["geometric_clearance_authority"], True)
+        self.assertIs(screen["physical_release_authority"], False)
+        self.assertIs(screen["passed"], True)
+        self.assertIn("robot_self_collision", screen["explicit_exclusions"])
+        self.assertIn(
+            "matcha_physical_base_or_floor_fixture_authority",
+            screen["explicit_exclusions"],
+        )
+        self.assertFalse(
+            any("sha" in key.lower() or "hash" in key.lower() for key in binding)
+        )
+
+        evidence = clearance._rolled_core_dock_runtime_geometric_evidence()
+        self.assertTrue(evidence["passed"], evidence)
+        self.assertTrue(all(evidence["checks"].values()), evidence)
+        self.assertFalse(evidence["release_ready"])
+        self.assertTrue(
+            self.record["checks"][
+                "rolled_runtime_geometric_evidence_closes"
+            ]
+        )
+        self.assertTrue(self.record["engineering_checks_passed"])
+        self.assertFalse(self.record["release_ready"])
+
+    def test_runtime_geometric_projection_mutations_fail_closed(self) -> None:
+        published = json.loads(
+            clearance.ROLLED_CORE_DOCK_RUNTIME_REPORT_PATH.read_text()
+        )
+
+        def validate_payload(payload: object) -> dict[str, object]:
+            with tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / "rolled-runtime.json"
+                path.write_text(json.dumps(payload), encoding="utf-8")
+                with mock.patch.object(
+                    clearance,
+                    "ROLLED_CORE_DOCK_RUNTIME_REPORT_PATH",
+                    path,
+                ):
+                    return (
+                        clearance._rolled_core_dock_runtime_geometric_evidence()
+                    )
+
+        mutations = {}
+        mutations["coherently_shifted_clearance"] = copy.deepcopy(published)
+        shifted = mutations["coherently_shifted_clearance"][
+            "continuous_clearance"
+        ]
+        shifted["minimum_sampled_outer_aabb_lower_bound_mm"] += 1.0
+        shifted["continuous_clearance_lower_bound_mm"] += 1.0
+
+        mutations["resealed_state_and_evaluation_counts"] = copy.deepcopy(
+            published
+        )
+        resealed = mutations["resealed_state_and_evaluation_counts"]
+        resealed["sampling"]["unique_state_count"] = 302
+        resealed["sampling"]["expected_unique_state_count"] = 302
+        resealed["sampling"]["distance_evaluation_count"] = 380_520
+        resealed_families = resealed["continuous_clearance"][
+            "target_family_clearance"
+        ]
+        resealed_families["core_dock_fixture"][
+            "distance_evaluation_count"
+        ] = 334_012
+        resealed_families["floor_support_proxy"][
+            "distance_evaluation_count"
+        ] = 46_508
+
+        mutations["physical_authority_promotion"] = copy.deepcopy(published)
+        mutations["physical_authority_promotion"]["release_ready"] = True
+        mutations["physical_authority_promotion"]["authority_scope"][
+            "physical_release_authority"
+        ] = True
+
+        mutations["malformed_family_count"] = copy.deepcopy(published)
+        mutations["malformed_family_count"]["continuous_clearance"][
+            "target_family_clearance"
+        ]["core_dock_fixture"]["target_geom_count"] = "79"
+
+        mutations["malformed_nested_mapping"] = copy.deepcopy(published)
+        mutations["malformed_nested_mapping"]["continuous_clearance"][
+            "target_family_clearance"
+        ] = []
+
+        mutations["row_count_float"] = copy.deepcopy(published)
+        mutations["row_count_float"]["release_route"]["row_count"] = 31.0
+
+        mutations["penetration_count_bool"] = copy.deepcopy(published)
+        mutations["penetration_count_bool"]["startup"][
+            "penetration_count"
+        ] = False
+
+        mutations["support_geom_count_float"] = copy.deepcopy(published)
+        mutations["support_geom_count_float"]["continuous_clearance"][
+            "target_family_clearance"
+        ]["floor_support_proxy"]["target_geom_count"] = 11.0
+
+        mutations["tangency_distance_string"] = copy.deepcopy(published)
+        mutations["tangency_distance_string"]["support_topology"][
+            "tangencies"
+        ][0]["distance_m"] = "0.0"
+
+        mutations["zero_distance_int"] = copy.deepcopy(published)
+        mutations["zero_distance_int"]["startup"][
+            "max_penetration_m"
+        ] = 0
+
+        mutations["contact_distance_string"] = copy.deepcopy(published)
+        mutations["contact_distance_string"]["startup"][
+            "contact_records"
+        ][0]["signed_distance_m"] = "-1.4268967951647227e-13"
+
+        mutations["startup_contact_distance_not_tangent"] = copy.deepcopy(
+            published
+        )
+        mutations["startup_contact_distance_not_tangent"]["startup"][
+            "contact_records"
+        ][0]["signed_distance_m"] = 2.0e-9
+
+        mutations["startup_contact_name_changed"] = copy.deepcopy(published)
+        mutations["startup_contact_name_changed"]["startup"][
+            "contact_records"
+        ][0]["geom_a"] = "invented_startup_contact_geom"
+
+        mutations["support_tangency_duplicated"] = copy.deepcopy(published)
+        duplicated_tangencies = mutations["support_tangency_duplicated"][
+            "support_topology"
+        ]["tangencies"]
+        duplicated_tangencies[1] = copy.deepcopy(duplicated_tangencies[0])
+
+        mutations["support_tangency_fake_pair"] = copy.deepcopy(published)
+        mutations["support_tangency_fake_pair"]["support_topology"][
+            "tangencies"
+        ][0]["first"] = "invented_support_tangency_geom"
+
+        mutations["support_tangency_distance_not_zero"] = copy.deepcopy(
+            published
+        )
+        mutations["support_tangency_distance_not_zero"][
+            "support_topology"
+        ]["tangencies"][0]["distance_m"] = 2.0e-12
+
+        mutations["core_family_clearance_resealed"] = copy.deepcopy(published)
+        core_family = mutations["core_family_clearance_resealed"][
+            "continuous_clearance"
+        ]["target_family_clearance"]["core_dock_fixture"]
+        core_family["minimum_sampled_outer_aabb_lower_bound_mm"] = -100.0
+        core_family["continuous_clearance_lower_bound_mm"] = -100.0
+        core_family["required_clearance_mm"] = 100.0
+        core_family["passed"] = True
+
+        mutations["support_required_clearance_resealed"] = copy.deepcopy(
+            published
+        )
+        mutations["support_required_clearance_resealed"][
+            "continuous_clearance"
+        ]["target_family_clearance"]["floor_support_proxy"][
+            "required_clearance_mm"
+        ] = -100.0
+
+        mutations["top_level_bool_as_int"] = copy.deepcopy(published)
+        mutations["top_level_bool_as_int"]["geometry_passed"] = 1
+
+        for field, expected in (
+            clearance.ROLLED_CORE_DOCK_RUNTIME_AUTHORITY_FLAGS.items()
+        ):
+            mutated = copy.deepcopy(published)
+            mutated["authority_scope"][field] = not expected
+            mutations[f"authority_scope_{field}"] = mutated
+
+        mutations["unknown_authority_key"] = copy.deepcopy(published)
+        mutations["unknown_authority_key"]["authority_scope"][
+            "fabrication_authority"
+        ] = True
+
+        mutations["missing_authority_key"] = copy.deepcopy(published)
+        mutations["missing_authority_key"]["authority_scope"].pop(
+            "mass_authority"
+        )
+
+        for field in (
+            clearance.ROLLED_CORE_DOCK_RUNTIME_SUPPORT_PROXY_FALSE_AUTHORITIES
+        ):
+            mutated = copy.deepcopy(published)
+            mutated["support_proxy"][field] = True
+            mutations[f"support_proxy_{field}"] = mutated
+
+        mutations["support_proxy_unknown_authority_key"] = copy.deepcopy(
+            published
+        )
+        mutations["support_proxy_unknown_authority_key"]["support_proxy"][
+            "fabrication_authority"
+        ] = True
+
+        mutations["passage_witness_inside_proxy"] = copy.deepcopy(published)
+        mutations["passage_witness_inside_proxy"]["support_proxy"][
+            "passage_witness_inside_proxy"
+        ] = True
+
+        mutations["release_in_default_controller_actions"] = copy.deepcopy(
+            published
+        )
+        mutations["release_in_default_controller_actions"]["release_route"][
+            "included_in_default_controller_actions"
+        ] = True
+
+        mutations["static_release_in_default_actions"] = copy.deepcopy(
+            published
+        )
+        mutations["static_release_in_default_actions"]["default_actions"][
+            "static_release_continuation_included"
+        ] = True
+
+        mutations["rack_exit_rejection_disabled"] = copy.deepcopy(published)
+        mutations["rack_exit_rejection_disabled"]["default_actions"][
+            "rack_exit_flag_rejected"
+        ] = False
+
+        mutations["gravity_feedforward_dynamics_authority"] = copy.deepcopy(
+            published
+        )
+        mutations["gravity_feedforward_dynamics_authority"][
+            "gravity_feedforward"
+        ]["dynamics_authority"] = True
+
+        for name, mutated in mutations.items():
+            with self.subTest(name=name):
+                result = validate_payload(mutated)
+                self.assertFalse(result["passed"], result)
+                self.assertFalse(result["release_ready"])
+
+        source_projection_mutations = {}
+        source_projection_mutations["source_row_count_float"] = copy.deepcopy(
+            clearance.ROLLED_CORE_DOCK_RUNTIME_EXPECTED
+        )
+        source_projection_mutations["source_row_count_float"][
+            "release_roster"
+        ]["row_count"] = 31.0
+        source_projection_mutations["source_penetration_count_bool"] = (
+            copy.deepcopy(clearance.ROLLED_CORE_DOCK_RUNTIME_EXPECTED)
+        )
+        source_projection_mutations["source_penetration_count_bool"][
+            "compiled_collision_sweep"
+        ]["startup_penetration_count"] = False
+        for name, source_projection in source_projection_mutations.items():
+            with self.subTest(name=name), mock.patch.object(
+                clearance,
+                "_rolled_core_dock_source_projection",
+                return_value=source_projection,
+            ):
+                result = validate_payload(published)
+                self.assertFalse(result["passed"], result)
+                self.assertFalse(result["release_ready"])
+
+        digest_free = copy.deepcopy(published)
+        digest_free.pop("source_binding")
+        for key in list(digest_free["release_route"]):
+            if "sha256" in key:
+                digest_free["release_route"].pop(key)
+        digest_free_result = validate_payload(digest_free)
+        self.assertTrue(digest_free_result["passed"], digest_free_result)
+        self.assertNotIn(
+            "sha256",
+            json.dumps(digest_free_result["observed_projection"]),
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            missing = Path(directory) / "missing.json"
+            with mock.patch.object(
+                clearance,
+                "ROLLED_CORE_DOCK_RUNTIME_REPORT_PATH",
+                missing,
+            ):
+                result = (
+                    clearance._rolled_core_dock_runtime_geometric_evidence()
+                )
+        self.assertFalse(result["available"])
+        self.assertFalse(result["passed"])
+        self.assertFalse(result["release_ready"])
+
+        deep_json = '{"nested":' * 10_000 + "null" + "}" * 10_000
+        with tempfile.TemporaryDirectory() as directory:
+            deep = Path(directory) / "deep.json"
+            deep.write_text(deep_json, encoding="utf-8")
+            with mock.patch.object(
+                clearance,
+                "ROLLED_CORE_DOCK_RUNTIME_REPORT_PATH",
+                deep,
+            ):
+                result = (
+                    clearance._rolled_core_dock_runtime_geometric_evidence()
+                )
+        self.assertFalse(result["available"])
+        self.assertFalse(result["passed"])
+        self.assertFalse(result["release_ready"])
 
     def test_exact_brep_has_positive_internal_unions_and_fastener_holes(self) -> None:
         brep = self.record["brep"]
