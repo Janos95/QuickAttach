@@ -74,7 +74,7 @@
   },
   "final_serving_vessel": "bowl_station",
   "fixture_support_chains": {
-    "dock_gripper": ["dock_gripper_support_anchor_collision", "dock_gripper_support_collision", "matcha_floor_collision"],
+    "dock_gripper": ["dock_gripper_qc_col_dock_stop_part_000__dock_stop_land", "dock_gripper_floor_support_head_collision", "dock_gripper_floor_support_neck_collision", "dock_gripper_floor_support_post_x_min_wall_collision", "dock_gripper_floor_support_base_x_min_wall_collision", "matcha_floor_collision"],
     "dock_spoon": ["dock_spoon_support_anchor_collision", "dock_spoon_support_collision", "matcha_floor_collision"],
     "dock_whisk": ["dock_whisk_support_anchor_collision", "dock_whisk_support_collision", "matcha_floor_collision"],
     "bowl_station": ["bowl_base_collision", "bowl_support_collision", "matcha_floor_collision"],
@@ -82,6 +82,19 @@
     "rinse_station": ["rinse_collision", "rinse_support_collision", "matcha_floor_collision"],
     "hot_water": ["hot_water_collision", "hot_water_support_collision", "matcha_floor_collision"],
     "milk": ["milk_collision", "milk_support_collision", "matcha_floor_collision"]
+  },
+  "fixture_support_topology": {
+    "dock_gripper": {
+      "runtime_contract_api": "qc_collision_geometry.core_dock_floor_support_runtime_contract",
+      "frame": "dock_gripper",
+      "component_geom_names": ["dock_gripper_floor_support_head_collision", "dock_gripper_floor_support_reinforcement_collision", "dock_gripper_floor_support_neck_collision", "dock_gripper_floor_support_post_x_min_wall_collision", "dock_gripper_floor_support_post_x_max_wall_collision", "dock_gripper_floor_support_post_z_min_wall_collision", "dock_gripper_floor_support_post_z_max_wall_collision", "dock_gripper_floor_support_base_x_min_wall_collision", "dock_gripper_floor_support_base_x_max_wall_collision", "dock_gripper_floor_support_base_z_min_wall_collision", "dock_gripper_floor_support_base_z_max_wall_collision"],
+      "floor_contact_geom_names": ["dock_gripper_floor_support_base_x_min_wall_collision", "dock_gripper_floor_support_base_x_max_wall_collision", "dock_gripper_floor_support_base_z_min_wall_collision", "dock_gripper_floor_support_base_z_max_wall_collision"],
+      "removed_legacy_geom_names": ["dock_gripper_support_collision", "dock_gripper_support_anchor_collision"],
+      "mass_authority": false,
+      "load_path_authority": false,
+      "physical_release_authority": false,
+      "release_ready": false
+    }
   },
   "limitations": [
     "Exact purchased sieve, bellows, tubing, nozzle, and latch hardware geometry remains pending fabrication selection.",
