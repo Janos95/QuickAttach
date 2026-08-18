@@ -1208,6 +1208,17 @@ CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_SHA256 = (
 _FROZEN_CORE_CAPTURE_ROUTE_IDENTITY_SHA256 = (
     "a8111a9931ebe770198de0397978cdaef06a67705219a9453a0d22abe1edbe4e"
 )
+# Preserve the exact import-time route preimage as an immutable canonical
+# string.  The public preimage and its advertised digest are intentionally
+# mutable Python objects for inspection, so neither can be its own runtime
+# authority.  A caller coherently resealing both after changing a route guard
+# must still fail against this private snapshot and the literal digest above.
+_FROZEN_CORE_CAPTURE_ROUTE_IDENTITY_PREIMAGE_CANONICAL_JSON = json.dumps(
+    CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_DIGEST_PREIMAGE,
+    sort_keys=True,
+    separators=(",", ":"),
+    allow_nan=False,
+)
 _FROZEN_CORE_CAPTURE_DESIRED_START_Q_SHA256 = (
     "7216752cb39dc68608396f33d09eadc018c4d936b510a50f456e978e94df0618"
 )
@@ -1235,6 +1246,48 @@ _FROZEN_CORE_CAPTURE_GRAVITY_BIAS_LIGHTWEIGHT_IDENTITY_SHA256 = (
 _FROZEN_CORE_CAPTURE_GRAVITY_BIAS_CONTRACT_IDENTITY_SHA256 = (
     "51d3dda6f1653796a6ba371f3eb5acf8d466627c245b507c68ecc34f89629b9b"
 )
+
+
+def _verified_core_capture_route_identity() -> tuple[dict[str, Any], str]:
+    """Rebuild and bind the route to private, non-resealable authority."""
+
+    builder_binding_matches = bool(
+        _current_core_capture_route_identity_preimage
+        is _CORE_CAPTURE_ROUTE_IDENTITY_PREIMAGE_IMPLEMENTATION
+        and _current_core_capture_route_identity_preimage.__code__
+        is _CORE_CAPTURE_ROUTE_IDENTITY_PREIMAGE_CODE_OBJECT
+    )
+    observed_preimage = _current_core_capture_route_identity_preimage()
+    observed_canonical_json = json.dumps(
+        observed_preimage,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+    observed_sha256 = hashlib.sha256(
+        observed_canonical_json.encode("utf-8")
+    ).hexdigest()
+    public_canonical_json = json.dumps(
+        CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_DIGEST_PREIMAGE,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+    if not (
+        builder_binding_matches
+        and observed_canonical_json
+        == _FROZEN_CORE_CAPTURE_ROUTE_IDENTITY_PREIMAGE_CANONICAL_JSON
+        and public_canonical_json
+        == _FROZEN_CORE_CAPTURE_ROUTE_IDENTITY_PREIMAGE_CANONICAL_JSON
+        and observed_preimage
+        == CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_DIGEST_PREIMAGE
+        and observed_sha256
+        == _FROZEN_CORE_CAPTURE_ROUTE_IDENTITY_SHA256
+        and CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_SHA256
+        == _FROZEN_CORE_CAPTURE_ROUTE_IDENTITY_SHA256
+    ):
+        raise RuntimeError("core capture route identity drifted")
+    return observed_preimage, observed_sha256
 
 
 def _core_cam_tab_source_q_max_mm(preseat_mm: float, source_x_mm: float) -> float:
@@ -5564,17 +5617,9 @@ def _move_action_command_kinematics(
 
 
 def _positive_lock_cam_capture_route_contract_cached() -> dict[str, Any]:
-    route_identity_preimage = _current_core_capture_route_identity_preimage()
-    route_identity_sha256 = _canonical_json_sha256(
-        route_identity_preimage
+    route_identity_preimage, route_identity_sha256 = (
+        _verified_core_capture_route_identity()
     )
-    if (
-        route_identity_sha256
-        != CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_SHA256
-        or route_identity_preimage
-        != CORE_CAPTURE_ROUTE_CONTRACT_IDENTITY_DIGEST_PREIMAGE
-    ):
-        raise RuntimeError("core capture route identity drifted")
     model = build_model()
     initialized_data = mujoco.MjData(model)
     initialize(model, initialized_data)
@@ -5876,7 +5921,12 @@ def _positive_lock_cam_capture_route_contract_cached() -> dict[str, Any]:
 def positive_lock_cam_capture_route_contract() -> dict[str, Any]:
     """Return independently replayable static route authority evidence."""
 
-    return copy.deepcopy(_positive_lock_cam_capture_route_contract_cached())
+    report = _positive_lock_cam_capture_route_contract_cached()
+    # Recheck after report construction as well as at the cached builder's
+    # entry so the public API never returns under a coherently resealed public
+    # preimage/digest pair.
+    _verified_core_capture_route_identity()
+    return copy.deepcopy(report)
 
 
 def core_capture_route_runtime_contract() -> dict[str, Any]:
