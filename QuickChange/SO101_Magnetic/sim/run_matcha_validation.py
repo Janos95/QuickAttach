@@ -97,6 +97,10 @@ DEVELOPMENT_TESTS = (
     ),
     qualified(
         "CoreCamTabContactCheckpointATests",
+        "test_result_helper_requires_external_binding_and_replay_authority",
+    ),
+    qualified(
+        "CoreCamTabContactCheckpointATests",
         "test_retired_negative_z_suffix_and_complete_cam_overlap_stay_red",
     ),
     qualified(
@@ -289,6 +293,10 @@ DEVELOPMENT_TESTS = (
     qualified(
         "MatchaShowcaseContractTests",
         "test_renderer_compiles_production_scene_with_one_camera",
+    ),
+    qualified(
+        "ValidationTierContractTests",
+        "test_development_tier_can_never_publish_release_ready",
     ),
 )
 

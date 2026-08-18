@@ -14126,8 +14126,13 @@ class SimCadPlacementContractTests(unittest.TestCase):
             locked_rotation, np.eye(3), rtol=0.0, atol=1.0e-12
         )
 
-    def test_axial_lock_release_stroke_clears_full_source_assembly(self) -> None:
-        """Certify phase-A lock release without laundering it into rack exit."""
+    def retired_negative_z_lock_release_stroke_contract(self) -> None:
+        """Retained history for the superseded negative-Z release concept.
+
+        The rolled core dock uses the source-authored negative-Y static route
+        certified by ``RolledCoreDockRuntimeAuthorityTests``.  This older
+        physical-release test must not be discovered as a current contract.
+        """
 
         cad = self.clearance.CAD
         self.assertEqual(
@@ -14309,7 +14314,8 @@ class SimCadPlacementContractTests(unittest.TestCase):
         )
 
 
-class BoundedDynamicSmokeTests(unittest.TestCase):
+class RetiredNegativeZDynamicSmokeContracts(unittest.TestCase):
+    """Historical physical-release oracle superseded by the rolled red gate."""
     @classmethod
     def setUpClass(cls) -> None:
         cls.demo = import_file(
@@ -15050,7 +15056,7 @@ class BoundedDynamicSmokeTests(unittest.TestCase):
             result,
         )
 
-    def test_real_substep_capture_lock_and_release_is_collision_safe(self) -> None:
+    def retired_real_substep_capture_lock_and_release_smoke(self) -> None:
         require_path(MATCHA_DEMO, "matcha workflow simulator")
         result_process = subprocess.run(
             [
@@ -16215,6 +16221,16 @@ class ValidationTierContractTests(unittest.TestCase):
         self.assertNotEqual(payload.get("development_pass"), True)
         self.assertLessEqual(int(payload["hard_timeout_seconds"]), 300)
         self.assertGreater(int(payload["test_count"]), 0)
+        discovered = {
+            f"test_matcha_workflow_validation.{class_node.name}.{method.name}"
+            for class_node in ast.parse(Path(__file__).read_text()).body
+            if isinstance(class_node, ast.ClassDef)
+            for method in class_node.body
+            if isinstance(method, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and method.name.startswith("test_")
+        }
+        self.assertEqual(set(payload["tests"]), discovered)
+        self.assertEqual(int(payload["test_count"]), len(discovered))
 
 
 if __name__ == "__main__":
