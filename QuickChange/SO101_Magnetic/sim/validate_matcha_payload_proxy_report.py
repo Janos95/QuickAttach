@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed validator API for matcha runtime-collision certificates.
+"""Canonical validator API for matcha runtime-collision certificates.
 
 No release report is emitted at this recovery checkpoint.  The validator is
 nevertheless geometry-backed: callers must provide the hash-pinned source and
@@ -71,14 +71,6 @@ def _validate_direction_schema(direction: Any, *, label: str) -> None:
         raise ValueError(f"{label} did not replay the original float64 triangles")
 
 
-def _validate_topology_schema(topology: Any, *, label: str) -> None:
-    if not isinstance(topology, dict):
-        raise ValueError(f"{label} must be a mapping")
-    for field in ("watertight", "orientation_consistent", "positive_volume", "passed"):
-        if not isinstance(topology.get(field), bool):
-            raise ValueError(f"{label}.{field} must be boolean")
-
-
 def validate_bidirectional_runtime_collision_certificate(
     certificate: Any,
     source_triangles: Any,
@@ -94,16 +86,6 @@ def validate_bidirectional_runtime_collision_certificate(
         raise ValueError("certificate must be a mapping")
     if certificate.get("release_ready") is not False:
         raise ValueError("component/development certificates cannot publish release readiness")
-    _validate_topology_schema(certificate.get("source_topology"), label="source_topology")
-    _validate_topology_schema(certificate.get("proxy_topology"), label="proxy_topology")
-    occupancy = certificate.get("occupancy")
-    if not isinstance(occupancy, dict):
-        raise ValueError("occupancy must be a mapping")
-    if occupancy.get("signed") is not True or occupancy.get("union_occupancy") is not True:
-        raise ValueError("occupancy must use signed union semantics")
-    tolerance = float(occupancy["signed_distance_tolerance_mm"])
-    if not math.isfinite(tolerance) or not 0.0 <= tolerance <= 1.0e-6:
-        raise ValueError("signed-distance tolerance is invalid")
     for label in ("source_to_proxy", "proxy_to_source"):
         _validate_direction_schema(certificate.get(label), label=label)
 

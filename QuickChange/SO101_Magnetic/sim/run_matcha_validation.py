@@ -248,7 +248,7 @@ DEVELOPMENT_TESTS = (
     ),
     qualified(
         "FcpwFastGateContractTests",
-        "test_fast_gate_declares_signed_occupancy_tolerance_and_step_mesh_error",
+        "test_fast_gate_is_only_a_bidirectional_surface_error_bound",
     ),
     qualified(
         "FcpwFastGateContractTests",
@@ -260,23 +260,11 @@ DEVELOPMENT_TESTS = (
     ),
     qualified(
         "FcpwFastGateContractTests",
-        "test_public_certificate_is_bidirectional_signed_and_never_release_ready",
+        "test_public_certificate_is_bidirectional_and_never_release_ready",
     ),
     qualified(
         "FcpwFastGateContractTests",
         "test_public_certificate_rejects_invalid_thresholds_and_error_bounds",
-    ),
-    qualified(
-        "FcpwFastGateContractTests",
-        "test_topology_and_sign_gate_rejects_open_or_flipped_meshes",
-    ),
-    qualified(
-        "FcpwFastGateContractTests",
-        "test_topology_sign_is_order_invariant_for_disconnected_components",
-    ),
-    qualified(
-        "FcpwFastGateContractTests",
-        "test_topology_accepts_a_correctly_oriented_nested_cavity",
     ),
     qualified(
         "FcpwFastGateContractTests",

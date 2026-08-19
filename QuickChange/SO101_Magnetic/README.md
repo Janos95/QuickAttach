@@ -78,6 +78,37 @@ arcing, printed-part strength, fatigue, or wear.
 
 ## CAD/simulation geometry contract
 
+### Collision strategy
+
+The production MuJoCo model uses one collision representation: ordinary,
+named rigid geoms. Those geoms are convex in MuJoCo, whether expressed as an
+analytic primitive or a mesh. Functional contact regions use small named
+primitives; already-convex parts use one mesh; genuinely non-convex parts use
+a deterministic set of convex pieces. Rigid flex and SDF collision are not
+part of the runtime model.
+
+This keeps contact identity, explicit contact pairs, mass/inertia accounting,
+and solver behavior uniform across the robot, changer, tools, and fixture. It
+also keeps the model fast enough for the full workcell. Mass properties are
+source-derived and must not be inferred from the number of collision pieces.
+
+The offline fidelity check is intentionally narrower than the runtime model:
+
+1. tessellate the selected CAD surface with a known absolute deflection;
+2. tessellate the convex runtime pieces with their known error bound;
+3. cover both triangle surfaces with bounded witness cells;
+4. measure source-to-runtime and runtime-to-source distances using FCPW only
+   for candidate selection, replaying the selected triangles in float64; and
+5. add both faceting bounds and the witness-cell radius to each observed
+   maximum.
+
+Both directed upper bounds must fit the tolerance. The reverse direction is
+what rejects extra or hole-filling collision material; the forward direction
+rejects missing material. This verifier does not reconstruct topology, perform
+signed occupancy, run Boolean unions, or duplicate CAD-kernel containment.
+Those operations added a second geometry system without changing the runtime
+collision representation.
+
 `generate_cad.py` publishes the exact core dock-stop bounds, stock-gripper STEP
 mount, full-depth robot-plate cam-relief bounds, swept keyhole-capsule contract,
 and executable passive-cam `p/x/q` and `-Y/q` laws in both
