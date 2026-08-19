@@ -15449,20 +15449,17 @@ class FcpwFastGateContractTests(unittest.TestCase):
             np.all(first + 1.0e-12 >= brute_force), (first, brute_force)
         )
 
-    def test_fast_gate_declares_signed_occupancy_tolerance_and_step_mesh_error(self) -> None:
+    def test_fast_gate_is_only_a_bidirectional_surface_error_bound(self) -> None:
         source = inspect.getsource(self.authority).lower()
         self.assertIn("fcpw", source)
-        self.assertRegex(source, r"contain|signed.?distance|occupancy")
-        self.assertRegex(source, r"watertight|edge.?incidence")
-        self.assertRegex(source, r"orient")
         self.assertRegex(source, r"source_selector_sha256|source_artifact")
         self.assertRegex(source, r"selected_feature_geometry_sha256|geometry_sha256")
         self.assertRegex(source, r"deflection")
+        self.assertIn("bidirectional", source)
+        self.assertIn("covering_radius", source)
         self.assertIn("float64", source)
-        self.assertNotRegex(
-            source,
-            r"fast.*(?:requires|authority).*occt.*(?:subset|contain|union)",
-        )
+        for removed_layer in ("_surface_topology", "_signed_union_occupancy"):
+            self.assertNotIn(removed_layer, source)
 
     def _certify(self, source: np.ndarray, proxy: np.ndarray) -> dict[str, Any]:
         public = getattr(
@@ -15541,7 +15538,7 @@ class FcpwFastGateContractTests(unittest.TestCase):
             SURFACE_RELEASE_LIMIT_MM,
         )
 
-    def test_public_certificate_is_bidirectional_signed_and_never_release_ready(
+    def test_public_certificate_is_bidirectional_and_never_release_ready(
         self,
     ) -> None:
         surface = box_triangles((0.0, 0.0, 0.0), (1.0, 1.0, 1.0))
@@ -15558,25 +15555,9 @@ class FcpwFastGateContractTests(unittest.TestCase):
         )
         self.assertIs(certificate.get("release_ready"), False, certificate)
         self.assertTrue(certificate.get("passed"), certificate)
-        for topology_name in ("source_topology", "proxy_topology"):
-            topology = certificate.get(topology_name)
-            self.assertIsInstance(topology, dict, topology_name)
-            for field in (
-                "watertight",
-                "orientation_consistent",
-                "positive_volume",
-                "passed",
-            ):
-                self.assertIs(topology.get(field), True, (topology_name, topology))
-        occupancy = certificate.get("occupancy")
-        self.assertIsInstance(occupancy, dict)
-        self.assertIs(occupancy.get("signed"), True, occupancy)
-        self.assertIs(occupancy.get("union_occupancy"), True, occupancy)
-        self.assertIs(occupancy.get("passed"), True, occupancy)
-        sign_tolerance = float(occupancy["signed_distance_tolerance_mm"])
-        self.assertTrue(math.isfinite(sign_tolerance), occupancy)
-        self.assertGreaterEqual(sign_tolerance, 0.0, occupancy)
-        self.assertLessEqual(sign_tolerance, 1.0e-6, occupancy)
+        self.assertNotIn("source_topology", certificate)
+        self.assertNotIn("proxy_topology", certificate)
+        self.assertNotIn("occupancy", certificate)
         for direction_name in ("source_to_proxy", "proxy_to_source"):
             direction = certificate.get(direction_name)
             self.assertIsInstance(direction, dict, direction_name)
@@ -15668,102 +15649,6 @@ class FcpwFastGateContractTests(unittest.TestCase):
                 continue
             self.assertIs(certificate.get("release_ready"), False, certificate)
             self.assertFalse(bool(certificate.get("passed")), (kwargs, certificate))
-
-    def test_topology_and_sign_gate_rejects_open_or_flipped_meshes(self) -> None:
-        closed = box_triangles((0.0, 0.0, 0.0), (1.0, 1.0, 1.0))
-        open_surface = closed[1:].copy()
-        flipped = closed.copy()
-        flipped[0] = flipped[0, ::-1]
-        inside_out = closed[:, ::-1].copy()
-        public = getattr(
-            self.authority, "certify_bidirectional_runtime_collision", None
-        )
-        self.assertIsNotNone(public, "public synthetic fidelity API is required")
-        for label, proxy in (
-            ("open", open_surface),
-            ("locally_flipped", flipped),
-            ("inside_out", inside_out),
-        ):
-            try:
-                certificate = public(
-                    closed,
-                    proxy,
-                    threshold_mm=SURFACE_INTERNAL_TARGET_MM,
-                    source_error_mm=0.0,
-                    proxy_error_mm=0.0,
-                )
-            except (AssertionError, RuntimeError, ValueError):
-                continue
-            self.assertFalse(bool(certificate.get("passed")), (label, certificate))
-            topology = certificate.get("proxy_topology")
-            self.assertIsInstance(topology, dict, (label, certificate))
-            self.assertFalse(bool(topology.get("passed")), (label, topology))
-
-    def test_topology_sign_is_order_invariant_for_disconnected_components(
-        self,
-    ) -> None:
-        # A large positive shell must not hide a smaller inside-out shell in
-        # aggregate signed volume.  Triangle ordering also must not let a
-        # bounded face-sampling sanity check skip the bad component.
-        positive = box_triangles((0.0, 0.0, 0.0), (10.0, 10.0, 10.0))
-        inside_out = box_triangles((20.0, 20.0, 20.0), (21.0, 21.0, 21.0))[
-            :, ::-1
-        ]
-        positive_slots = {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 23}
-        positive_iterator = iter(positive)
-        negative_iterator = iter(inside_out)
-        mixed = np.ascontiguousarray(
-            [
-                next(positive_iterator)
-                if index in positive_slots
-                else next(negative_iterator)
-                for index in range(len(positive) + len(inside_out))
-            ],
-            dtype=np.float64,
-        )
-        public = getattr(
-            self.authority, "certify_bidirectional_runtime_collision", None
-        )
-        self.assertIsNotNone(public, "public synthetic fidelity API is required")
-        certificate = public(
-            mixed,
-            mixed.copy(),
-            threshold_mm=SURFACE_INTERNAL_TARGET_MM,
-            source_error_mm=0.0,
-            proxy_error_mm=0.0,
-        )
-        self.assertFalse(bool(certificate.get("passed")), certificate)
-        self.assertFalse(
-            bool(certificate["source_topology"].get("passed"))
-            and bool(certificate["occupancy"].get("passed")),
-            certificate,
-        )
-
-    def test_topology_accepts_a_correctly_oriented_nested_cavity(self) -> None:
-        # The disconnected inner shell of a closed cavity is intentionally
-        # negative: orientation follows solid material, not "positive per
-        # component".  A nesting-aware topology gate must retain this valid
-        # OCCT/STEP representation while rejecting an external negative shell.
-        outer = box_triangles((0.0, 0.0, 0.0), (10.0, 10.0, 10.0))
-        cavity = box_triangles((2.0, 2.0, 2.0), (3.0, 3.0, 3.0))[:, ::-1]
-        hollow_solid = np.ascontiguousarray(
-            np.concatenate((outer, cavity)), dtype=np.float64
-        )
-        public = getattr(
-            self.authority, "certify_bidirectional_runtime_collision", None
-        )
-        self.assertIsNotNone(public, "public synthetic fidelity API is required")
-        certificate = public(
-            hollow_solid,
-            hollow_solid.copy(),
-            threshold_mm=SURFACE_INTERNAL_TARGET_MM,
-            source_error_mm=0.0,
-            proxy_error_mm=0.0,
-        )
-        self.assertTrue(certificate.get("passed"), certificate)
-        self.assertTrue(certificate["source_topology"].get("passed"), certificate)
-        self.assertTrue(certificate["proxy_topology"].get("passed"), certificate)
-        self.assertTrue(certificate["occupancy"].get("passed"), certificate)
 
     def test_validator_recomputes_and_rejects_fabricated_evidence(self) -> None:
         validator = import_file(

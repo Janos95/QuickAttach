@@ -1,7 +1,7 @@
 {
   "active_geom_count": 504,
   "active_geom_inventory_sha256": "0df3d418b641b567a5b78989473c0033cbc93bce3c2e12c2c8a7e40d38776d7e",
-  "canonical_sha256_without_this_field": "691d0ff004f6c862595e4407adce2ce5af3fcc9b7d16d00e97c9232260747479",
+  "canonical_sha256_without_this_field": "88aba921d6cfe5e12c8cb3a2a814ba18c729ad4a9245bd8c518850833088d96a",
   "continuous_swept_clearance_authority": false,
   "fcpw_required_version": "1.2.0",
   "groups": [
@@ -536,13 +536,13 @@
   "release_ready": false,
   "runtime_proxy_is_release_clearance_authority": false,
   "schema_version": "1.0.0-matcha-payload-runtime-inventory",
-  "source_records_sha256": "081af1d4b621ae0ff0a82f81e2063b9de1e391edf53f56c6e7c5089992389ce8",
+  "source_records_sha256": "8df2c47b4b57f3788e16461cfce0feba5706ba1d6ca434199194acf2df4474e4",
   "sources": [
     {
       "bytes": 462659,
       "path": "QuickChange/SO101_Magnetic/sim/matcha_workflow_demo.py",
       "role": "compiled_model_builder",
-      "sha256": "6fd3e99b5be79b3652993ad9effb90239700454d1256f817e75a7d6cf83cb728"
+      "sha256": "42414b1acdffe39c2affef94f6dd1df28f125670851036e54e6b4910d208ca7c"
     },
     {
       "bytes": 8901,
@@ -551,16 +551,16 @@
       "sha256": "00ee089eb5d65981f47c8ec9d89d0ae22743e14b41f4c4c338c7a167ce1db7b5"
     },
     {
-      "bytes": 29432,
+      "bytes": 18569,
       "path": "QuickChange/SO101_Magnetic/sim/generate_matcha_payload_proxy_report.py",
       "role": "payload_certificate_generator",
-      "sha256": "cda23780500bf9c80fdb95860cb8bd16bb184c72346da524e301cd682c1579d5"
+      "sha256": "3cb174b6c2bd87f392f8ab1d23551d68524359f1c726adf2c8de697337b5c44b"
     },
     {
-      "bytes": 7481,
+      "bytes": 6423,
       "path": "QuickChange/SO101_Magnetic/sim/validate_matcha_payload_proxy_report.py",
       "role": "independent_report_validator",
-      "sha256": "405b7db5ea3a168b8d0b8d513bd2a045195e798ddbd53d8dc7566bb4da5e42db"
+      "sha256": "09fc5ddb214473c54f3b748e56c4ac486d2cb9ed78a0120382bf2b65e853397e"
     }
   ]
 }
