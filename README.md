@@ -97,28 +97,18 @@ For CI or a machine without a display:
 .venv/bin/python QuickChange/SO101_Magnetic/sim/so101_gripper_change_demo.py --headless
 ```
 
-To record the same MuJoCo state sequence on a headless machine without EGL,
-OSMesa, X11, or a GPU, use the deterministic CPU z-buffer renderer (system
-`ffmpeg` is required):
+The canonical presentation is the interactive Three.js app in
+[`web/quickattach-control`](web/quickattach-control). It starts with a bare
+wrist and all three tools in the printable fixture, supports orbit/top camera
+control, joint controls, and a flange gizmo for moving, attaching, detaching,
+and returning tools. Its CAD tab compares each source STL with the emitted
+collision geometry.
 
-```bash
-.venv/bin/python QuickChange/SO101_Magnetic/sim/render_gripper_change_video.py
-```
-
-The recorder produces a split-screen view of the complete arm and a tracked
-coupler close-up. It renders MuJoCo's compiled geometry and live body poses; it
-does not reuse the discarded conceptual animation.
-
-For the complete single-camera Matcha story (stock gripper handles both
-pitchers, spoon doses, powered whisk mixes, and every tool returns to its
-rack), run:
-
-```bash
-.venv/bin/python QuickChange/SO101_Magnetic/sim/render_matcha_workflow_video.py
-```
-
-The associated report identifies this as visualization evidence and keeps all
-physical-release authority false.
+The same browser scene is also the only video renderer. Run the page locally,
+then use `web/quickattach-control/scripts/render-threejs-video.py` to drive it
+through Playwright and encode an MP4 with FFmpeg. See the web app README for
+exact commands. MuJoCo/Python remain the numerical validation authority; the
+page and video are presentation views, not physical-release evidence.
 
 The XML file beside the controller is a scene overlay. The controller merges it
 with the upstream robot in memory so there is no duplicated SO-101 description

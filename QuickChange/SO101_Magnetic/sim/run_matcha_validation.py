@@ -271,18 +271,6 @@ DEVELOPMENT_TESTS = (
         "test_validator_recomputes_and_rejects_fabricated_evidence",
     ),
     qualified(
-        "MatchaShowcaseContractTests",
-        "test_single_camera_story_contains_every_tool_task_and_return",
-    ),
-    qualified(
-        "MatchaShowcaseContractTests",
-        "test_timeline_is_continuous_ordered_and_ends_exactly",
-    ),
-    qualified(
-        "MatchaShowcaseContractTests",
-        "test_renderer_compiles_production_scene_with_one_camera",
-    ),
-    qualified(
         "ValidationTierContractTests",
         "test_development_tier_can_never_publish_release_ready",
     ),

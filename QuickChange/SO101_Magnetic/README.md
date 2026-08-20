@@ -191,32 +191,16 @@ For CI or a machine without a display:
 .venv/bin/python QuickChange/SO101_Magnetic/sim/so101_gripper_change_demo.py --headless
 ```
 
-To record the same MuJoCo state sequence on a headless machine without EGL,
-OSMesa, X11, or a GPU, use the deterministic CPU z-buffer renderer (system
-`ffmpeg` is required):
+The canonical presentation is the interactive Three.js app at
+[`../../web/quickattach-control`](../../web/quickattach-control). It exposes
+the bare-wrist robot, all three tools, the printable fixture, camera and joint
+controls, a draggable flange gizmo, and a CAD-versus-collision inspector.
 
-```bash
-.venv/bin/python QuickChange/SO101_Magnetic/sim/render_gripper_change_video.py
-```
-
-The recorder produces a split-screen view of the complete arm and a tracked
-coupler close-up. It renders MuJoCo's compiled geometry and live body poses; it
-does not reuse the discarded conceptual animation.
-
-The complete Matcha showcase uses the collision-complete three-tool workcell
-and one fixed scene camera. It acquires and returns the stock gripper, spoon,
-and powered whisk; the gripper handles the hot-water and milk pitchers, the
-spoon doses through the sieve, and the whisk mixes in the bowl:
-
-```bash
-XDG_CACHE_HOME=/tmp/cq-cache .venv/bin/python \
-  QuickChange/SO101_Magnetic/sim/render_matcha_workflow_video.py
-```
-
-The emitted JSON report binds the H.264 file to the ordered visual story. This
-is a presentation proof over compiled MuJoCo geometry, not physical release
-evidence; material, fastener, friction, reverse-insertion, and durability
-blockers remain fail-closed.
+Its Playwright renderer drives that exact browser scene and encodes it with
+FFmpeg; the old CPU-only video scenes have been retired. See the web app README
+for local and headless rendering commands. Presentation remains separate from
+the MuJoCo/Python validation authority and does not constitute physical-release
+evidence.
 
 The XML file beside the controller is a scene overlay. The controller merges it
 with the upstream robot in memory so there is no duplicated SO-101 description
