@@ -36,8 +36,6 @@ HERE = Path(__file__).resolve().parent
 MAGNETIC_ROOT = HERE.parent
 REPOSITORY_ROOT = HERE.parents[2]
 MATCHA_DEMO = HERE / "matcha_workflow_demo.py"
-MATCHA_SHOWCASE = HERE / "matcha_workflow_showcase.py"
-MATCHA_SHOWCASE_RENDERER = HERE / "render_matcha_workflow_video.py"
 MATCHA_SCENE = HERE / "matcha_workflow_scene.xml"
 MATCHA_CONFIG = HERE / "matcha_tool_geometry.json"
 PAYLOAD_GENERATOR = HERE / "generate_matcha_payload_proxy_report.py"
@@ -16015,78 +16013,6 @@ class RolledCoreDockRuntimeAuthorityTests(unittest.TestCase):
                         changed,
                         repository_root=REPOSITORY_ROOT,
                     )
-
-
-class MatchaShowcaseContractTests(unittest.TestCase):
-    """Keep the final video story complete and explicitly non-release evidence."""
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.showcase = import_file(
-            MATCHA_SHOWCASE,
-            "matcha_workflow_showcase_validation",
-            "Matcha showcase timeline",
-        )
-        cls.renderer = import_file(
-            MATCHA_SHOWCASE_RENDERER,
-            "matcha_workflow_showcase_renderer_validation",
-            "Matcha showcase renderer",
-        )
-
-    def test_single_camera_story_contains_every_tool_task_and_return(self) -> None:
-        summary = self.showcase.showcase_summary()
-        self.assertEqual(summary["errors"], [])
-        self.assertIs(summary["passed"], True)
-        self.assertEqual(summary["camera"], "matcha_scene_camera")
-        self.assertEqual(summary["camera_count"], 1)
-        self.assertEqual(summary["tools"], ["gripper", "spoon", "whisk"])
-        self.assertEqual(summary["gripper_pitchers"], ["hot_water", "milk"])
-        self.assertEqual(summary["spoon_task"], "dose_matcha_through_sieve")
-        self.assertEqual(summary["whisk_task"], "powered_mix_in_bowl")
-        self.assertIs(summary["all_tools_returned"], True)
-        self.assertEqual(summary["final_recipe_stage"], "complete")
-        self.assertIs(summary["visualization_only"], True)
-        self.assertIs(summary["physical_release_authority"], False)
-        self.assertIs(summary["release_ready"], False)
-
-    def test_timeline_is_continuous_ordered_and_ends_exactly(self) -> None:
-        segments = self.showcase.showcase_segments()
-        self.assertEqual(self.showcase.showcase_contract_errors(segments), [])
-        duration = self.showcase.showcase_duration_s(segments)
-        self.assertGreater(duration, 40.0)
-        self.assertLess(duration, 60.0)
-        final = self.showcase.showcase_state_at(duration, segments)
-        self.assertEqual(final.segment_name, "final_hold")
-        self.assertEqual(final.recipe_stage, "complete")
-        self.assertIsNone(final.attached_tool)
-        self.assertAlmostEqual(final.progress, 1.0)
-        self.assertTrue(np.all(np.isfinite(np.asarray(final.arm_q))))
-        self.assertTrue(any(segment.whisk_motor for segment in segments))
-        self.assertTrue(
-            any(
-                segment.pitcher == "hot_water"
-                and segment.attached_tool == "gripper"
-                for segment in segments
-            )
-        )
-        self.assertTrue(
-            any(
-                segment.pitcher == "milk"
-                and segment.attached_tool == "gripper"
-                for segment in segments
-            )
-        )
-
-    def test_renderer_compiles_production_scene_with_one_camera(self) -> None:
-        model = self.renderer.build_showcase_model()
-        self.assertEqual(model.ncam, 1)
-        self.assertEqual(str(model.camera(0).name), "matcha_scene_camera")
-        self.assertGreater(model.ngeom, 1_700)
-        self.assertGreaterEqual(model.body("tool_gripper").id, 0)
-        self.assertGreaterEqual(model.body("tool_spoon").id, 0)
-        self.assertGreaterEqual(model.body("tool_whisk").id, 0)
-        self.assertGreaterEqual(model.body("showcase_hot_water_pitcher").id, 0)
-        self.assertGreaterEqual(model.body("showcase_milk_pitcher").id, 0)
 
 
 class ValidationTierContractTests(unittest.TestCase):

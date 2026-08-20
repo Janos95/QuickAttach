@@ -1,0 +1,589 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #eef6ff;
+  --muted: #90a7ba;
+  --line: rgba(166, 198, 222, 0.18);
+  --cyan: #42c7ee;
+}
+
+* { box-sizing: border-box; }
+
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #071019;
+  color: var(--ink);
+}
+
+body,
+button {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button { color: inherit; }
+
+.scene-page,
+.viewport-wrap {
+  width: 100%;
+  height: 100svh;
+}
+
+.scene-page { background: #071019; }
+
+.viewport-wrap {
+  position: relative;
+  overflow: hidden;
+}
+
+.render-surface,
+.render-surface canvas,
+.render-surface svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: 0;
+  touch-action: none;
+}
+
+.render-surface svg { background: #071019; }
+
+.mode-tabs {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 4;
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(5, 12, 18, 0.72);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(12px);
+}
+
+.mode-tabs button,
+.geometry-toggle button,
+.cad-refit {
+  height: 32px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #9fb4c4;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 780;
+  letter-spacing: 0.035em;
+}
+
+.mode-tabs button { padding: 0 13px; }
+
+.mode-tabs button:hover,
+.mode-tabs button:focus-visible,
+.mode-tabs button.active,
+.geometry-toggle button:hover,
+.geometry-toggle button:focus-visible,
+.geometry-toggle button.active,
+.cad-refit:hover,
+.cad-refit:focus-visible {
+  outline: none;
+  background: rgba(66, 199, 238, 0.13);
+  color: #e8f9ff;
+}
+
+.cad-browser {
+  position: absolute;
+  top: 72px;
+  bottom: 18px;
+  left: 18px;
+  z-index: 3;
+  width: 286px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(5, 12, 18, 0.78);
+  box-shadow: 0 14px 42px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(14px);
+}
+
+.cad-browser-heading {
+  padding: 13px;
+  border-bottom: 1px solid rgba(166, 198, 222, 0.12);
+}
+
+.cad-browser-heading > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cad-browser-heading strong { font-size: 12px; }
+.cad-browser-heading span { color: var(--muted); font-size: 9px; }
+
+.cad-browser-heading input {
+  width: 100%;
+  height: 31px;
+  margin-top: 10px;
+  padding: 0 10px;
+  border: 1px solid rgba(166, 198, 222, 0.14);
+  border-radius: 7px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--ink);
+  font-size: 10px;
+}
+
+.cad-browser-heading input:focus { border-color: rgba(66, 199, 238, 0.48); }
+
+.cad-file-list {
+  flex: 1;
+  overflow: auto;
+  padding: 7px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(117, 154, 181, 0.35) transparent;
+}
+
+.cad-file-list section + section { margin-top: 9px; }
+
+.cad-file-list h2 {
+  margin: 0;
+  padding: 6px 7px 5px;
+  color: #6f899c;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.cad-file-list button {
+  width: 100%;
+  padding: 8px 9px;
+  display: block;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #aac0cf;
+  cursor: pointer;
+  text-align: left;
+}
+
+.cad-file-list button:hover,
+.cad-file-list button:focus-visible,
+.cad-file-list button.active {
+  outline: none;
+  border-color: rgba(66, 199, 238, 0.22);
+  background: rgba(66, 199, 238, 0.09);
+  color: #ecf9ff;
+}
+
+.cad-file-list button span,
+.cad-file-list button small { display: block; }
+.cad-file-list button span { font-size: 10px; font-weight: 720; }
+.cad-file-list button small {
+  margin-top: 2px;
+  overflow: hidden;
+  color: #718a9c;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cad-view-controls {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 4;
+  display: flex;
+  gap: 6px;
+}
+
+.geometry-toggle {
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(5, 12, 18, 0.72);
+  backdrop-filter: blur(12px);
+}
+
+.geometry-toggle button { padding: 0 11px; }
+
+.cad-refit {
+  height: 42px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  background: rgba(5, 12, 18, 0.72);
+  backdrop-filter: blur(12px);
+}
+
+.cad-file-info {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 3;
+  max-width: min(380px, calc(100vw - 340px));
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(5, 12, 18, 0.72);
+  backdrop-filter: blur(12px);
+}
+
+.cad-file-info > strong,
+.cad-file-info > span { display: block; }
+.cad-file-info > strong { font-size: 11px; }
+.cad-file-info > span { margin-top: 2px; color: var(--muted); font-size: 9px; }
+.cad-file-info > div { margin-top: 8px; display: flex; gap: 5px; flex-wrap: wrap; }
+.cad-file-info b {
+  padding: 4px 6px;
+  border-radius: 5px;
+  background: rgba(66, 199, 238, 0.09);
+  color: #9ddff2;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.cad-hint {
+  position: absolute;
+  left: 322px;
+  bottom: 18px;
+  margin: 0;
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: rgba(5, 12, 18, 0.55);
+  color: var(--muted);
+  font-size: 9px;
+  backdrop-filter: blur(8px);
+}
+
+.tool-ui {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  max-width: min(520px, calc(100vw - 36px));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 9px 8px 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(5, 12, 18, 0.74);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+}
+
+.tool-status {
+  min-width: 178px;
+}
+
+.tool-status strong,
+.tool-status span {
+  display: block;
+}
+
+.tool-status strong {
+  color: #e8f6ff;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.tool-status span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.tool-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.tool-actions button {
+  height: 31px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #9eb3c3;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 760;
+  letter-spacing: 0.035em;
+}
+
+.tool-actions button:hover,
+.tool-actions button:focus-visible,
+.tool-actions button.active {
+  outline: none;
+  border-color: rgba(66, 199, 238, 0.34);
+  background: rgba(66, 199, 238, 0.12);
+  color: #e5f8ff;
+}
+
+.tool-actions button.attach-action:not(:disabled) {
+  border-color: rgba(94, 229, 164, 0.46);
+  background: rgba(94, 229, 164, 0.14);
+  color: #bff7dc;
+}
+
+.tool-actions button.detach-action {
+  border-color: rgba(255, 200, 87, 0.42);
+  background: rgba(255, 200, 87, 0.12);
+  color: #ffe0a0;
+}
+
+.tool-actions button:disabled {
+  opacity: 0.34;
+  cursor: not-allowed;
+}
+
+.camera-ui {
+  position: absolute;
+  inset: 18px 18px auto auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.view-actions {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(5, 12, 18, 0.68);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+}
+
+.view-actions button {
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #b8cad8;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+
+.view-actions button:hover,
+.view-actions button:focus-visible {
+  outline: none;
+  background: rgba(66, 199, 238, 0.12);
+  color: #e8f9ff;
+}
+
+.camera-ui p {
+  margin: 0;
+  padding: 6px 9px;
+  border-radius: 7px;
+  background: rgba(5, 12, 18, 0.55);
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 0.035em;
+  backdrop-filter: blur(8px);
+}
+
+.arm-ui {
+  position: absolute;
+  top: 92px;
+  right: 18px;
+  width: 254px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(5, 12, 18, 0.72);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(12px);
+}
+
+.arm-ui summary {
+  width: max-content;
+  min-width: 92px;
+  height: 34px;
+  margin-left: auto;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  color: #b8cad8;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  list-style: none;
+}
+
+.arm-ui summary::-webkit-details-marker { display: none; }
+
+.arm-ui summary:hover,
+.arm-ui summary:focus-visible,
+.arm-ui[open] summary {
+  outline: none;
+  background: rgba(66, 199, 238, 0.12);
+  color: #e8f9ff;
+}
+
+.arm-ui:not([open]) {
+  width: max-content;
+  background: rgba(5, 12, 18, 0.68);
+}
+
+.arm-controls {
+  padding: 2px 11px 11px;
+  border-top: 1px solid rgba(166, 198, 222, 0.1);
+}
+
+.arm-heading {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.arm-heading strong {
+  font-size: 10px;
+  letter-spacing: 0.03em;
+}
+
+.arm-presets { display: flex; gap: 4px; }
+
+.arm-presets button {
+  height: 25px;
+  padding: 0 8px;
+  border: 1px solid rgba(166, 198, 222, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #a9bdcc;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 760;
+}
+
+.arm-presets button:hover,
+.arm-presets button:focus-visible {
+  outline: none;
+  border-color: rgba(66, 199, 238, 0.34);
+  color: #e5f8ff;
+}
+
+.joint-control {
+  min-height: 27px;
+  display: grid;
+  grid-template-columns: 54px 1fr 32px;
+  align-items: center;
+  gap: 7px;
+  color: #9fb3c3;
+  font-size: 9px;
+}
+
+.joint-control input {
+  width: 100%;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--cyan);
+  cursor: ew-resize;
+}
+
+.joint-control output {
+  color: #c8d9e5;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.loading-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  min-width: 190px;
+  padding: 23px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(8, 16, 24, 0.9);
+  text-align: center;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+}
+
+.loading-card strong {
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.loading-card p {
+  max-width: 300px;
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.spinner {
+  width: 27px;
+  height: 27px;
+  border: 2px solid rgba(66, 199, 238, 0.16);
+  border-top-color: var(--cyan);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.error-mark {
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(242, 91, 91, 0.14);
+  color: #ff7f7f;
+  font-weight: 900;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.headless .camera-ui,
+.headless .tool-ui,
+.headless .arm-ui { display: none; }
+
+@media (max-width: 600px) {
+  .mode-tabs { top: 12px; left: 12px; }
+  .cad-browser { top: 66px; bottom: 12px; left: 12px; width: min(238px, calc(100vw - 24px)); }
+  .cad-view-controls { top: 12px; right: 12px; }
+  .geometry-toggle button { padding: 0 7px; font-size: 8px; }
+  .cad-refit { display: none; }
+  .cad-file-info { right: 12px; bottom: 12px; max-width: calc(100vw - 274px); }
+  .cad-hint { display: none; }
+  .camera-ui { inset: 12px 12px auto auto; }
+  .camera-ui p { max-width: 190px; text-align: right; line-height: 1.35; }
+  .view-actions button { height: 34px; padding: 0 11px; }
+  .tool-ui {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-width: none;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .tool-actions { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .tool-actions button { min-width: 0; padding: 0 7px; }
+  .arm-ui { top: 88px; right: 12px; }
+}

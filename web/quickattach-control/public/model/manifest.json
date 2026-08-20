@@ -1,0 +1,703 @@
+{
+  "armJoints": [
+    "shoulder_pan",
+    "shoulder_lift",
+    "elbow_flex",
+    "wrist_flex",
+    "wrist_roll"
+  ],
+  "assets": [
+    "printable_fixture_front_gripper_spoon.stl",
+    "printable_fixture_front_spoon_whisk.stl",
+    "printable_fixture_rear_gripper_spoon.stl",
+    "printable_fixture_rear_spoon_whisk.stl",
+    "printable_fixture_saddle_gripper.stl",
+    "printable_fixture_saddle_spoon.stl",
+    "printable_fixture_saddle_whisk.stl",
+    "printable_fixture_station_gripper.stl",
+    "printable_fixture_station_spoon.stl",
+    "printable_fixture_station_whisk.stl",
+    "so101_0_waveshare_mounting_plate_so101_v2.stl",
+    "so101_10_motor_holder_so101_wrist_v1.stl",
+    "so101_11_sts3215_03a_no_horn_v1.stl",
+    "so101_12_base_so101_v2.stl",
+    "so101_1_sts3215_03a_v1.stl",
+    "so101_2_motor_holder_so101_base_v1.stl",
+    "so101_3_wrist_roll_follower_so101_v1.stl",
+    "so101_4_moving_jaw_so101_v1.stl",
+    "so101_5_base_motor_holder_so101_v1.stl",
+    "so101_6_upper_arm_so101_v1.stl",
+    "so101_7_wrist_roll_pitch_so101_v2.stl",
+    "so101_8_under_arm_so101_v1.stl",
+    "so101_9_rotation_pitch_so101_v1.stl"
+  ],
+  "cadAssets": [
+    {
+      "asset": "cad/robot-plate.stl",
+      "bodyRoots": [
+        "robot_plate_frame"
+      ],
+      "category": "Quick changer",
+      "geomPrefixes": [
+        "qc_col_robot_plate_"
+      ],
+      "id": "robot-plate",
+      "label": "Robot plate",
+      "sourceFile": "so101_robot_plate.step"
+    },
+    {
+      "asset": "cad/positive-lock-slider.stl",
+      "bodyRoots": [
+        "qc_positive_lock_slider"
+      ],
+      "category": "Quick changer",
+      "geomPrefixes": [
+        "qc_col_lock_slider_"
+      ],
+      "id": "positive-lock-slider",
+      "label": "Positive-lock slider",
+      "sourceFile": "so101_positive_lock_slider.step"
+    },
+    {
+      "asset": "cad/passive-tool-dock.stl",
+      "bodyRoots": [
+        "dock_gripper"
+      ],
+      "category": "Quick changer",
+      "geomPrefixes": [
+        "dock_gripper_qc_col_",
+        "dock_gripper_cam",
+        "dock_gripper_keeper"
+      ],
+      "id": "passive-tool-dock",
+      "label": "Passive tool dock",
+      "sourceFile": "so101_passive_tool_dock.step"
+    },
+    {
+      "asset": "cad/dock-support-bracket.stl",
+      "bodyRoots": [
+        "dock_gripper"
+      ],
+      "category": "Quick changer",
+      "geomPrefixes": [
+        "dock_gripper_floor_support_"
+      ],
+      "id": "dock-support-bracket",
+      "label": "Core dock support bracket",
+      "sourceFile": "so101_core_dock_support_bracket.step"
+    },
+    {
+      "asset": "cad/gripper-tool-plate.stl",
+      "bodyRoots": [
+        "tool_gripper"
+      ],
+      "category": "Tool interfaces",
+      "geomPrefixes": [
+        "matcha_col_gripper_plate_"
+      ],
+      "id": "gripper-tool-plate",
+      "label": "Stock gripper tool plate",
+      "sourceFile": "so101_stock_gripper_tool_plate.step"
+    },
+    {
+      "asset": "cad/generic-tool-plate.stl",
+      "bodyRoots": [
+        "tool_spoon"
+      ],
+      "category": "Tool interfaces",
+      "geomPrefixes": [
+        "matcha_col_spoon_plate_"
+      ],
+      "id": "generic-tool-plate",
+      "label": "Generic tool plate",
+      "sourceFile": "so101_tool_plate.step"
+    },
+    {
+      "asset": "cad/contact-board.stl",
+      "bodyRoots": [
+        "tool_spoon"
+      ],
+      "category": "Tool interfaces",
+      "geomPrefixes": [
+        "spoon_pad_",
+        "spoon_contact_board_"
+      ],
+      "id": "contact-board",
+      "label": "Tool contact board",
+      "sourceFile": "so101_tool_contact_board_reference.step"
+    },
+    {
+      "asset": "cad/spoon-body.stl",
+      "bodyRoots": [
+        "tool_spoon"
+      ],
+      "category": "Tools",
+      "geomPrefixes": [
+        "spoon_carrier_",
+        "spoon_handle_",
+        "spoon_bowl_",
+        "spoon_set_screw_"
+      ],
+      "id": "spoon-body",
+      "label": "Matcha spoon body",
+      "sourceFile": "so101_matcha_spoon_printed_body.step"
+    },
+    {
+      "asset": "cad/whisk-body.stl",
+      "bodyRoots": [
+        "tool_whisk"
+      ],
+      "category": "Tools",
+      "geomPrefixes": [
+        "whisk_housing_",
+        "whisk_electronics_",
+        "whisk_eccentric_",
+        "whisk_carriage_",
+        "whisk_bellows_",
+        "whisk_collet_",
+        "chasen_"
+      ],
+      "id": "whisk-body",
+      "label": "Matcha whisk body",
+      "sourceFile": "so101_matcha_whisk_printed_body.step"
+    },
+    {
+      "asset": "printable_fixture_station_gripper.stl",
+      "bodyRoots": [
+        "radial_three_tool_fixture"
+      ],
+      "category": "Printable fixture",
+      "geomPrefixes": [
+        "tool_fixture_gripper_base_",
+        "tool_fixture_gripper_front_rib_",
+        "tool_fixture_gripper_rear_rib_",
+        "tool_fixture_gripper_cantilever_",
+        "tool_fixture_gripper_front_foot_",
+        "tool_fixture_gripper_rear_foot_"
+      ],
+      "id": "fixture-station-gripper",
+      "label": "Station Gripper",
+      "printEnvelopeMm": [
+        135.0,
+        116.21,
+        94.7
+      ],
+      "sourceFile": "printable_fixture_station_gripper.stl",
+      "volumeMm3": 57313.403
+    },
+    {
+      "asset": "printable_fixture_station_spoon.stl",
+      "bodyRoots": [
+        "radial_three_tool_fixture"
+      ],
+      "category": "Printable fixture",
+      "geomPrefixes": [
+        "tool_fixture_spoon_base_",
+        "tool_fixture_spoon_front_rib_",
+        "tool_fixture_spoon_rear_rib_",
+        "tool_fixture_spoon_cantilever_",
+        "tool_fixture_spoon_front_foot_",
+        "tool_fixture_spoon_rear_foot_"
+      ],
+      "id": "fixture-station-spoon",
+      "label": "Station Spoon",
+      "printEnvelopeMm": [
+        135.0,
+        113.66,
+        58.05
+      ],
+      "sourceFile": "printable_fixture_station_spoon.stl",
+      "volumeMm3": 56091.707
+    },
+    {
+      "asset": "printable_fixture_station_whisk.stl",
+      "bodyRoots": [
+        "radial_three_tool_fixture"
+      ],
+      "category": "Printable fixture",
+      "geomPrefixes": [
+        "tool_fixture_whisk_base_",
+        "tool_fixture_whisk_front_rib_",
+        "tool_fixture_whisk_rear_rib_",
+        "tool_fixture_whisk_cantilever_",
+        "tool_fixture_whisk_front_foot_",
+        "tool_fixture_whisk_rear_foot_"
+      ],
+      "id": "fixture-station-whisk",
+      "label": "Station Whisk",
+      "printEnvelopeMm": [
+        135.0,
+        116.21,
+        94.7
+      ],
+      "sourceFile": "printable_fixture_station_whisk.stl",
+      "volumeMm3": 57313.403
+    },
+    {
+      "asset": "printable_fixture_saddle_gripper.stl",
+      "bodyRoots": [
+        "radial_three_tool_fixture"
+      ],
+      "category": "Printable fixture",
+      "geomPrefixes": [
+        "tool_fixture_gripper_saddle_",
+        "tool_fixture_gripper_stay_pad_",
+        "tool_fixture_gripper_dock_boss_"
+      ],
+      "id": "fixture-saddle-gripper",
+      "label": "Saddle Gripper",
+      "printEnvelopeMm": [
+        67.08,
+        62.23,
+        14.5
+      ],
+      "sourceFile": "printable_fixture_saddle_gripper.stl",
+      "volumeMm3": 10613.975
+    },
+    {
+      "asset": "printable_fixture_saddle_spoon.stl",
+      "bodyRoots": [
+        "radial_three_tool_fixture"
+      ],
+      "category": "Printable fixture",
+      "geomPrefixes": [
+        "tool_fixture_spoon_saddle_",
+        "tool_fixture_spoon_stay_pad_",
+        "tool_fixture_spoon_dock_boss_"
+      ],
+      "id": "fixture-saddle-spoon",
+      "label": "Saddle Spoon",
+      "printEnvelopeMm": [
+        79.0,
+        65.98,
+        14.5
+      ],
+      "sourceFile": "printable_fixture_saddle_spoon.stl",
+      "volumeMm3": 12434.208
+    },
+    {
+      "asset": "printable_fixture_saddle_whisk.stl",
+      "bodyRoots": [
+        "radial_three_tool_fixture"
+      ],
+      "category": "Printable fixture",
+      "geomPrefixes": [
+        "tool_fixture_whisk_saddle_",
+        "tool_fixture_whisk_stay_pad_",
+        "tool_fixture_whisk_dock_boss_"
+      ],
+      "id": "fixture-saddle-whisk",
+      "label": "Saddle Whisk",
+      "printEnvelopeMm": [
+        70.91,
+        62.23,
+        14.5
+      ],
+      "sourceFile": "printable_fixture_saddle_whisk.stl",
+      "volumeMm3": 12434.208
+    },
+    {
+      "asset": "printable_fixture_front_gripper_spoon.stl",
+      "bodyRoots": [
+        "radial_three_tool_fixture"
+      ],
+      "category": "Printable fixture",
+      "geomPrefixes": [
+        "tool_fixture_front_gripper_spoon_"
+      ],
+      "id": "fixture-front-gripper-spoon",
+      "label": "Front Gripper Spoon",
+      "printEnvelopeMm": [
+        148.49,
+        53.58,
+        5.5
+      ],
+      "sourceFile": "printable_fixture_front_gripper_spoon.stl",
+      "volumeMm3": 8257.479
+    },
+    {
+      "asset": "printable_fixture_front_spoon_whisk.stl",
+      "bodyRoots": [
+        "radial_three_tool_fixture"
+      ],
+      "category": "Printable fixture",
+      "geomPrefixes": [
+        "tool_fixture_front_spoon_whisk_"
+      ],
+      "id": "fixture-front-spoon-whisk",
+      "label": "Front Spoon Whisk",
+      "printEnvelopeMm": [
+        148.06,
+        53.56,
+        5.5
+      ],
+      "sourceFile": "printable_fixture_front_spoon_whisk.stl",
+      "volumeMm3": 8234.472
+    },
+    {
+      "asset": "printable_fixture_rear_gripper_spoon.stl",
+      "bodyRoots": [
+        "radial_three_tool_fixture"
+      ],
+      "category": "Printable fixture",
+      "geomPrefixes": [
+        "tool_fixture_rear_gripper_spoon_"
+      ],
+      "id": "fixture-rear-gripper-spoon",
+      "label": "Rear Gripper Spoon",
+      "printEnvelopeMm": [
+        190.39,
+        66.76,
+        5.5
+      ],
+      "sourceFile": "printable_fixture_rear_gripper_spoon.stl",
+      "volumeMm3": 10673.406
+    },
+    {
+      "asset": "printable_fixture_rear_spoon_whisk.stl",
+      "bodyRoots": [
+        "radial_three_tool_fixture"
+      ],
+      "category": "Printable fixture",
+      "geomPrefixes": [
+        "tool_fixture_rear_spoon_whisk_"
+      ],
+      "id": "fixture-rear-spoon-whisk",
+      "label": "Rear Spoon Whisk",
+      "printEnvelopeMm": [
+        189.85,
+        66.74,
+        5.5
+      ],
+      "sourceFile": "printable_fixture_rear_spoon_whisk.stl",
+      "volumeMm3": 10644.744
+    }
+  ],
+  "camera": {
+    "name": "matcha_scene_camera",
+    "position": [
+      0.7,
+      0.0,
+      0.55
+    ],
+    "quaternionWxyz": [
+      0.5924862153367702,
+      0.3571430591889493,
+      0.3727770288845094,
+      0.6184223529636576
+    ],
+    "verticalFovDegrees": 58.0
+  },
+  "counts": {
+    "bodies": 31,
+    "geoms": 1729,
+    "joints": 17,
+    "meshes": 1328
+  },
+  "dockCapture": {
+    "gripper": [
+      -0.72,
+      -0.5,
+      0.8,
+      -0.3,
+      -1.522116811941435
+    ],
+    "spoon": [
+      0.0,
+      -0.5,
+      0.8,
+      -0.3,
+      0.0
+    ],
+    "whisk": [
+      0.72,
+      -0.5,
+      0.8,
+      -0.3,
+      0.0
+    ]
+  },
+  "fixture": {
+    "assembly": "three under-slung A-frame stations, three T-saddles, two front links, and two rear links",
+    "design": "modular-rounded-underslung-truss-v2",
+    "hardware": {
+      "baseLinkFasteners": 8,
+      "benchAnchors": "6 x M5",
+      "dockMountFasteners": 10,
+      "recommended": "M4 screws, heat-set inserts, 0.75 mm link washers, 0.5 mm saddle washers, and two 3.5 mm metal stays per side-anchor dock",
+      "saddleFasteners": 6,
+      "thread": "M4"
+    },
+    "largestPrintDimensionMm": 190.39,
+    "partCount": 10,
+    "parts": [
+      {
+        "assembledBoundsMm": [
+          116.211,
+          94.699,
+          135.0
+        ],
+        "name": "station_gripper",
+        "printEnvelopeMm": [
+          135.0,
+          116.21,
+          94.7
+        ],
+        "printOrientation": "print upright on rounded feet; support the short cantilever",
+        "stl": "printable_fixture_station_gripper.stl",
+        "volumeMm3": 57313.403
+      },
+      {
+        "assembledBoundsMm": [
+          113.658,
+          58.054,
+          135.0
+        ],
+        "name": "station_spoon",
+        "printEnvelopeMm": [
+          135.0,
+          113.66,
+          58.05
+        ],
+        "printOrientation": "print upright on rounded feet; support the short cantilever",
+        "stl": "printable_fixture_station_spoon.stl",
+        "volumeMm3": 56091.707
+      },
+      {
+        "assembledBoundsMm": [
+          116.211,
+          94.699,
+          135.0
+        ],
+        "name": "station_whisk",
+        "printEnvelopeMm": [
+          135.0,
+          116.21,
+          94.7
+        ],
+        "printOrientation": "print upright on rounded feet; support the short cantilever",
+        "stl": "printable_fixture_station_whisk.stl",
+        "volumeMm3": 57313.403
+      },
+      {
+        "assembledBoundsMm": [
+          62.234,
+          67.08,
+          14.5
+        ],
+        "name": "saddle_gripper",
+        "printEnvelopeMm": [
+          67.08,
+          62.23,
+          14.5
+        ],
+        "printOrientation": "lay flat with dock bosses facing up",
+        "stl": "printable_fixture_saddle_gripper.stl",
+        "volumeMm3": 10613.975
+      },
+      {
+        "assembledBoundsMm": [
+          65.98,
+          79.0,
+          14.5
+        ],
+        "name": "saddle_spoon",
+        "printEnvelopeMm": [
+          79.0,
+          65.98,
+          14.5
+        ],
+        "printOrientation": "lay flat with dock bosses facing up",
+        "stl": "printable_fixture_saddle_spoon.stl",
+        "volumeMm3": 12434.208
+      },
+      {
+        "assembledBoundsMm": [
+          62.234,
+          70.908,
+          14.5
+        ],
+        "name": "saddle_whisk",
+        "printEnvelopeMm": [
+          70.91,
+          62.23,
+          14.5
+        ],
+        "printOrientation": "lay flat with dock bosses facing up",
+        "stl": "printable_fixture_saddle_whisk.stl",
+        "volumeMm3": 12434.208
+      },
+      {
+        "assembledBoundsMm": [
+          53.579,
+          148.492,
+          5.5
+        ],
+        "name": "front_gripper_spoon",
+        "printEnvelopeMm": [
+          148.49,
+          53.58,
+          5.5
+        ],
+        "printOrientation": "lay broad face on bed",
+        "stl": "printable_fixture_front_gripper_spoon.stl",
+        "volumeMm3": 8257.479
+      },
+      {
+        "assembledBoundsMm": [
+          53.555,
+          148.061,
+          5.5
+        ],
+        "name": "front_spoon_whisk",
+        "printEnvelopeMm": [
+          148.06,
+          53.56,
+          5.5
+        ],
+        "printOrientation": "lay broad face on bed",
+        "stl": "printable_fixture_front_spoon_whisk.stl",
+        "volumeMm3": 8234.472
+      },
+      {
+        "assembledBoundsMm": [
+          66.764,
+          190.392,
+          5.5
+        ],
+        "name": "rear_gripper_spoon",
+        "printEnvelopeMm": [
+          190.39,
+          66.76,
+          5.5
+        ],
+        "printOrientation": "lay broad face on bed",
+        "stl": "printable_fixture_rear_gripper_spoon.stl",
+        "volumeMm3": 10673.406
+      },
+      {
+        "assembledBoundsMm": [
+          66.74,
+          189.853,
+          5.5
+        ],
+        "name": "rear_spoon_whisk",
+        "printEnvelopeMm": [
+          189.85,
+          66.74,
+          5.5
+        ],
+        "printOrientation": "lay broad face on bed",
+        "stl": "printable_fixture_rear_spoon_whisk.stl",
+        "volumeMm3": 10644.744
+      }
+    ],
+    "totalPrintedVolumeCm3": 244.01,
+    "units": "mm",
+    "validation": {
+      "allPartsValidSingleSolids": true,
+      "largestPrintDimensionMm": 190.39,
+      "minimumDockClearanceMm": 1.0,
+      "printedPartOverlapMm3": 0.0,
+      "stationTopZMm": 135.0
+    }
+  },
+  "joints": {
+    "elbow_flex": {
+      "qposAddress": 2,
+      "range": [
+        -1.69,
+        1.69
+      ]
+    },
+    "gripper": {
+      "qposAddress": 17,
+      "range": [
+        -0.17453297762778586,
+        1.7453291995659765
+      ]
+    },
+    "qc_positive_lock_slider_joint": {
+      "qposAddress": 5,
+      "range": [
+        0.0,
+        0.003
+      ]
+    },
+    "shoulder_lift": {
+      "qposAddress": 1,
+      "range": [
+        -1.7453292519943224,
+        1.7453292519943366
+      ]
+    },
+    "shoulder_pan": {
+      "qposAddress": 0,
+      "range": [
+        -1.9198621771937616,
+        1.9198621771937634
+      ]
+    },
+    "wrist_flex": {
+      "qposAddress": 3,
+      "range": [
+        -1.6580628494556928,
+        1.6580627293335335
+      ]
+    },
+    "wrist_roll": {
+      "qposAddress": 4,
+      "range": [
+        -2.7438472969992493,
+        2.841206309382605
+      ]
+    }
+  },
+  "presets": {
+    "gripperDock": [
+      -0.7200000000000006,
+      -1.1177085425081206,
+      1.1350213393902684,
+      -0.017312796882147836,
+      -1.522116811941434
+    ],
+    "home": [
+      0.0,
+      -0.5,
+      0.8,
+      -0.3,
+      0.0
+    ],
+    "parked": [
+      -0.07,
+      -1.65,
+      0.02,
+      1.35,
+      0.0
+    ],
+    "spoonDock": [
+      0.0,
+      -1.11771,
+      1.13502,
+      -0.01731,
+      0.0
+    ],
+    "whiskDock": [
+      0.72,
+      -1.11771,
+      1.13502,
+      -0.01731,
+      0.0
+    ]
+  },
+  "qualification": "digital validation only; physical qualification remains open",
+  "releaseReady": false,
+  "schemaVersion": 1,
+  "source": "QuickAttach/QuickChange/SO101_Magnetic/sim/matcha_workflow_demo.py",
+  "tools": [
+    "gripper",
+    "spoon",
+    "whisk"
+  ],
+  "xmlSha256": "59458a33b80abaa512b10c370319c37c9f1b9238a4b9f9412cd561b4e4536ca9"
+}
